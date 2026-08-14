@@ -1,0 +1,2 @@
+Data_pedestrians/raw/pedestrian_historical/Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv filter=lfs diff=lfs merge=lfs -text
+Data_pedestrians/processed/pedestrian_counts_processed.csv filter=lfs diff=lfs merge=lfs -text
