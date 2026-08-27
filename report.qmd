@@ -1,32 +1,7 @@
 ---
-title: "Melbourne's Urban Pulse: Analysing Pedestrian Movement Across Time and Space"
+title: "Melbourne's Urban Pulse"
 author: ""
-date: "ETC5543 Commercial Analytics — Individual Project"
-format:
-  pdf:
-    number-sections: true
-    link-citations: true
-    keep-tex: false
-    include-in-header:
-      text: |
-        \usepackage{booktabs}
-        \usepackage{longtable}
-        \usepackage{array}
-        \usepackage{multirow}
-        \usepackage{wrapfig}
-        \usepackage{float}
-        \usepackage{makecell}
-        \usepackage{pdflscape}
-        \usepackage{threeparttable}
-    geometry:
-      - top=25mm
-      - bottom=25mm
-      - left=25mm
-      - right=25mm
-  html:
-    number-sections: true
-    embed-resources: true
-bibliography: references.bib
+date: ""
 execute:
   echo: false
   warning: false
@@ -35,7 +10,6 @@ execute:
 
 ```{r setup, include=FALSE}
 #| label: setup
-BASE <- "C:/Users/林同学/.qclaw/workspace/melbourne-pulse"
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -45,13 +19,6 @@ library(broom)
 theme_set(theme_minimal(base_size = 10))
 ```
 
----
-
-# Abstract
-
-This report presents an analysis of pedestrian movement patterns in Melbourne's CBD using hourly counts from 134 automated sensors covering the period May 2009 to October 2022, a total of 4,562,230 observations. We examine temporal rhythms at daily, weekly, and seasonal scales, quantify the impact of COVID-19 using interrupted time series analysis, investigate weather effects on pedestrian volumes, and apply ARIMA modelling for forecasting. Key findings include a dual-peak daily pattern with peaks at 08:00 and 17:00 (R^2 = 0.937), a statistically significant day-of-week effect (ANOVA F = 39.84, p < 2e-16), seasonal peaks in March and November, and a catastrophic COVID-19 shock that reduced volumes to 45.8% of the 2019 baseline in 2020 with only partial recovery to 63% by 2022. Temperature and wind speed emerged as significant weather predictors. Thirteen anomalous days were identified, all corresponding to documented events.
-
----
 
 # 1. Introduction
 
@@ -63,13 +30,13 @@ The primary questions addressed in this report are:
 
 What are the characteristic temporal patterns in Melbourne's pedestrian flows at daily, weekly, and seasonal scales? How has the COVID-19 pandemic disrupted these patterns, and has there been recovery? To what extent do weather variables influence pedestrian behaviour? Which days deviate significantly from expected patterns, and can these be explained? Can we reliably forecast future pedestrian volumes?
 
----
+What does Melbourne’s pedestrian activity normally look like, and what happened to that pattern around COVID?
 
 # 2. Data and Methodology
 
 ## 2.1 Data Sources
 
-Hourly pedestrian counts were obtained from the City of Melbourne Open Data Portal (data.melbourne.vic.gov.au), dataset "pedestrian-counting-system-monthly-counts-per-hour" (UID: da_8eaok5, CC BY 4.0). The dataset covers 1 May 2009 to 31 October 2022, totalling 4,562,230 observations across 134 sensors. Each record contains the sensor ID, sensor name, sensing date, hour of day, and pedestrian count (summed across both directions). The data are updated monthly.
+Hourly pedestrian counts were obtained from the City of Melbourne Open Data Portal (data.melbourne.vic.gov.au), dataset "pedestrian-counting-system-monthly-counts-per-hour" (UID: da_8eaok5, CC BY 4.0). The dataset covers 1 May 2009 to 31 October 2022, totalling 4,562,230 observations across 134 sensors. Each record contains the sensor ID, sensor name, sensing date, hour of day, and pedestrian count (summed across both directions). The data is updated monthly.
 
 Weather observations were obtained from the Bureau of Meteorology dataset "bom-weather-at-olympic-park" via the same portal. This station records half-hourly observations including air temperature, rainfall, relative humidity, and wind speed. The data were aggregated to daily summaries for regression analysis. The weather dataset extends to April 2021, which limits the scope of weather analysis during the COVID period.
 
@@ -83,317 +50,14 @@ The raw pedestrian CSV (403 MB, 4.56 million rows) was processed in Python using
 
 For weather analysis, the pedestrian data were aggregated to daily totals across all sensors, retaining only days without COVID restrictions, and merged with daily weather summaries by date. This yielded 239 common observation days for regression.
 
-## 2.3 Analytical Methods
+# References
 
-The following methods were applied:
+City of Melbourne (2024). Pedestrian Counting System — Monthly Counts Per Hour. City of Melbourne Open Data Portal. https://data.melbourne.vic.gov.au
 
-**Harmonic regression** was used to model the daily pedestrian cycle. A Fourier series with two harmonics was fitted via ordinary least squares to the mean hourly counts: $Y_t = \beta_0 + \beta_1 \sin(2\pi t/24) + \beta_2 \cos(2\pi t/24) + \beta_3 \sin(4\pi t/24) + \beta_4 \cos(4\pi t/24) + \epsilon_t$. The fit was assessed using R-squared.
+Bureau of Meteorology (2024). Daily Weather Observations — Melbourne Olympic Park. Bureau of Meteorology, Australian Government.
 
-**One-way ANOVA** tested whether mean daily pedestrian counts differ across the seven days of the week. The non-parametric Kruskal-Wallis test was used as a robustness check.
+Hyndman, R.J. and Athanasopoulos, G. (2021). Forecasting: Principles and Practice, 3rd edition. OTexts: Melbourne, Australia.
 
-**Seasonal-Trend decomposition using Loess (STL)** decomposed the daily time series from the top-performing sensor (Melbourne Town Hall, West) into trend, seasonal, and remainder components. Variance contributions were calculated as proportions of total variance.
+Cleveland, R.B., Cleveland, W.S., McRae, J.E. and Terpenning, I. (1990). STL: A Seasonal-Trend Decomposition Procedure Based on Loess. Journal of Official Statistics, 6(1), 3-73.
 
-**Interrupted time series (ITS) analysis** was used to quantify the COVID-19 impact. A segmented regression model was fitted to monthly totals: $Y_t = \beta_0 + \beta_1 t + \beta_2 Post_t + \beta_3 (t - t_0) Post_t + \epsilon_t$, where $t_0$ is March 2020.
-
-**Multiple linear regression** was used to assess weather effects on daily pedestrian totals, with mean temperature, total rainfall, mean humidity, and mean wind speed as predictors.
-
-**ARIMA modelling** was applied to monthly totals using automatic order selection via the R `auto.arima()` function with AICc criterion.
-
-**Anomaly detection** used a rolling 30-day Z-score threshold of |z| > 3 applied to daily totals aggregated across all sensors.
-
----
-
-# 3. Results
-
-## 3.1 Annual Volume and Growth
-
-Annual totals across all sensors are shown in Figure 1. Pedestrian volumes grew substantially from 62.7 million in 2009 to a peak of 266.4 million in 2019, representing growth of approximately 325% over the decade. The fastest growth occurred between 2013 and 2015, coinciding with the Melbourne CBD revitalisation program and pedestrianisation of Collins Street. The year 2020 saw a dramatic collapse to 121.9 million (down 54.2% from 2019) as COVID-19 restrictions took effect. A partial recovery to 139.3 million occurred in 2021, and 167.7 million in 2022.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{../melbourne-pulse/output/figures/fig01_annual_volume.png}
-\caption{Total annual pedestrian counts, 2009 to 2022. The steady growth trend from 2009 to 2019 is clearly visible, followed by a sharp collapse in 2020 during COVID-19 lockdowns and gradual recovery through 2021-2022.}
-\end{figure}
-
-## 3.2 Daily and Weekly Patterns
-
-The hourly pattern is shown in Figure 2. A clear dual-peak structure is evident on weekdays: a morning peak centred around 08:00 and an evening peak around 17:00. The evening peak is broader and slightly higher than the morning peak. The overnight hours (00:00 to 06:00) show near-zero counts, as expected for a CBD location.
-
-A harmonic regression model with two Fourier terms was fitted to the mean hourly counts. The model achieved R-squared of 0.937, indicating that the sinusoidal two-harmonic specification captures the daily cycle very well. The fitted curve confirms the morning peak at 08:00 and evening peak at 17:00, with a modest midday plateau and a deep overnight trough.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{../melbourne-pulse/output/figures/fig06_daily_rhythm.png}
-\caption{Mean hourly pedestrian counts by day of week. Weekdays show a clear dual-peak pattern with morning (08:00) and evening (17:00) peaks. Weekend patterns are notably flatter, peaking later in the day around 14:00-15:00.}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{../melbourne-pulse/output/figures/fig03_weekly_hourly.png}
-\caption{Hourly heatmap by day of week. The heatmap illustrates the contrast between weekday commuter patterns and weekend leisure patterns. Sunday shows the latest morning onset of activity, consistent with a non-working day.}
-\end{figure}
-
-Day-of-week effects are pronounced. One-way ANOVA confirms that mean daily pedestrian counts differ significantly across days of the week (F = 39.84, df = 6, p < 2e-16). The Kruskal-Wallis non-parametric test confirms this result ($\chi^2 = 244.5$, df = 6, p = 6.0e-50). Saturday records the highest mean count, followed by Thursday, while Sunday records the lowest. This pattern reflects the mixed nature of Melbourne's CBD: Saturday brings leisure visitors who compensate for the absence of commuters, while Sunday's reduced trading hours and lack of commuter traffic produces the lowest volumes.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{../melbourne-pulse/output/figures/fig07_weekend_vs_weekday.png}
-\caption{Comparison of mean hourly pedestrian profiles on weekdays and weekends. The weekday profile shows sharp dual peaks; the weekend profile is flatter and peaks around 14:00. The weekend curve is shifted approximately 3 hours later than the weekday curve.}
-\end{figure}
-
-## 3.3 Seasonal Patterns
-
-The monthly seasonality index is shown in Figure 5. An index above 100 indicates above-average months, and below 100 indicates below-average months. March records the highest seasonal index (114), followed by November (112). June records the lowest (90). The March peak likely reflects the Melbourne Autumn Festival, pleasant autumn weather drawing visitors to the CBD, and foot traffic associated with the start of the academic year. The November peak coincides with the Melbourne Cup Carnival, one of Australia's largest sporting and social events. The June trough reflects winter conditions and the end-of-financial-year period.
-
-\begin{figure}[H]
-\centering
-\subfloat[Python EDA]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/fig08_seasonality.png}
-}
-\subfloat[R bootstrap]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/figR4_monthly_seasonality.png}
-}
-\caption{(a) Monthly seasonality index with 95% confidence intervals from the EDA analysis. (b) R-generated monthly seasonal box plots. Both panels confirm March and November as peak months and June as the trough month.}
-\end{figure}
-
-The monthly heatmap by year (Figure 7) shows that the seasonal pattern is consistent across years, with the notable exception of 2020 and 2021 where the COVID-19 lockdowns depress volumes across all months.
-
-\begin{figure}[H]
-\centering
-\subfloat[Year-month heatmap]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/fig02_monthly_heatmap.png}
-}
-\subfloat[Year-on-year change]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/fig11_yoy_change.png}
-}
-\caption{(a) Monthly heatmap of pedestrian volumes by year. The growth trajectory from 2009 to 2019 is visible as darkening columns. The COVID collapse in 2020 and 2021 is clearly evident as a uniform blue band. (b) Year-over-year percentage change. The fastest growth years (2013-2015) coincide with the Melbourne CBD revitalisation program.}
-\end{figure}
-
-## 3.4 Trend, Seasonal, and Remainder Decomposition
-
-STL decomposition was applied to the daily time series from the Melbourne Town Hall (West) sensor, which recorded the highest total counts over the study period. The decomposition separates the series into three components: trend, seasonal (weekly), and remainder.
-
-The variance decomposition shows that the trend component accounts for 70.3% of total variation, the seasonal (weekly) component accounts for 6.5%, and the remainder accounts for 29.9%. The trend component captures the long-run growth trajectory, the COVID collapse, and partial recovery. The large remainder component (29.9%) indicates substantial irregular variation from events, weather, and other unmeasured factors.
-
-\begin{figure}[H]
-\subfloat[Python STL]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/fig04_decomposition.png}
-}
-\subfloat[R STL]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/figR3_stl_decomposition.png}
-}
-\caption{STL decomposition of daily pedestrian counts from the Melbourne Town Hall (West) sensor. Top: trend, seasonal, and remainder components from the Python analysis. Bottom: R-generated decomposition with confidence intervals. The trend component captures long-run growth, COVID collapse, and partial recovery.}
-\end{figure}
-
-## 3.5 Top Sensor Analysis
-
-The top 10 sensors by total pedestrian volume were analysed by month. Melbourne Town Hall (West) consistently records the highest volumes, reflecting its position at the intersection of Collins Street and Swanston Street, two of Melbourne's busiest pedestrian corridors. Collins Street sensors show strong seasonal variation, with higher volumes in warmer months. Indoor sensors such as Melbourne Central show less seasonal amplitude, consistent with climate-controlled environments that are less affected by weather.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{../melbourne-pulse/output/figures/fig10_top_sensors.png}
-\caption{Heatmap of monthly volumes for the top 10 sensors. Melbourne Town Hall (West) dominates throughout the year. Collins Street sensors show stronger seasonal variation than indoor sensors. The COVID depression is visible across all sensors in 2020 and 2021.}
-\end{figure}
-
----
-
-# 4. Weather Effects on Pedestrian Volumes
-
-Melbourne is well known for its variable weather, often described as having "four seasons in one day." We investigated whether weather variables systematically affect pedestrian volumes by regressing daily totals on mean temperature, total rainfall, mean relative humidity, and mean wind speed.
-
-The regression was estimated on 239 days without COVID restrictions, covering the period from 2018 to 2021 where both pedestrian and weather data were available. The results are presented in Table 1.
-
-\begin{table}[H]
-\caption{Weather regression results. Dependent variable: daily pedestrian total (thousands).}
-\begin{tabular}{lrrrr}
-\toprule
-Variable & Estimate & Std. Error & t value & p-value \\
-\midrule
-(Intercept) & 310.20 & 117.17 & 2.65 & 0.009 \\
-Mean Temperature ($^\circ$C) & 14.26 & 2.50 & 5.69 & <0.001 \\
-Total Rainfall (mm) & $-$0.04 & 0.06 & $-$0.59 & 0.557 \\
-Mean Humidity (\%) & $-$0.95 & 1.03 & $-$0.92 & 0.359 \\
-Mean Wind Speed (km/h) & $-$16.14 & 2.88 & $-$5.60 & <0.001 \\
-\midrule
-R$^2$ & \multicolumn{4}{r}{0.289} \\
-N & \multicolumn{4}{r}{239} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Temperature and wind speed are statistically significant at the 0.1\% level. The estimated coefficient for temperature is positive: each additional degree Celsius is associated with approximately 14,260 additional pedestrians per day across the sensor network. Wind speed has a negative effect: each additional km/h of mean wind speed is associated with approximately 16,140 fewer pedestrians per day. Rainfall and humidity are not statistically significant at conventional levels.
-
-The overall model R-squared of 0.289 indicates that weather variables explain about 29\% of the day-to-day variation in pedestrian volumes. The non-significance of rainfall is somewhat surprising, and may be attributable to Melbourne's extensive network of covered walkways, tram shelters, and shopping centres that provide protection from light rain.
-
-\begin{figure}[H]
-\centering
-\subfloat[Temperature]{
-  \includegraphics[width=0.45\textwidth]{../melbourne-pulse/output/figures/figR6_weather_regression.png}
-}
-\subfloat[Wind speed]{
-  \includegraphics[width=0.45\textwidth]{../melbourne-pulse/output/figures/figR6b_wind.png}
-}
-\caption{Scatter plots of daily pedestrian volume versus mean daily temperature (left) and wind speed (right), with OLS regression lines. Temperature shows a positive relationship; wind speed shows a negative relationship. The overall model R-squared is 0.289.}
-\end{figure}
-
----
-
-# 5. COVID-19 Impact and Recovery
-
-Melbourne experienced some of the longest COVID-19 lockdowns of any city globally. Stage 3 restrictions began on 31 March 2020, and Stage 4 "hard lockdown" (8pm curfew, 5km travel restriction, closure of non-essential retail) lasted from 2 August to 27 October 2020. A second major lockdown occurred from August to October 2021 during the Delta variant outbreak.
-
-## 5.1 Interrupted Time Series Analysis
-
-An interrupted time series model was fitted to monthly pedestrian totals from January 2017 to October 2022. The model segments the time series at March 2020, estimating the pre-COVID trend, the level change at the intervention point, and the change in slope post-intervention.
-
-\begin{table}[H]
-\caption{Interrupted time series regression results. Dependent variable: monthly pedestrian total.}
-\begin{tabular}{lrrrr}
-\toprule
-Parameter & Estimate & Std. Error & t value & p-value \\
-\midrule
-Intercept (pre-COVID level) & 17,362,193 & 963,776 & 18.01 & <0.001 \\
-Pre-COVID slope (per month) & 175,690 & 43,080 & 4.08 & <0.001 \\
-Level change (post-COVID) & $-$18,052,615 & 1,393,334 & $-$12.96 & <0.001 \\
-Slope change (post-COVID) & $-$169,102 & 2,316 & -- & 0.006 \\
-\midrule
-R$^2$ & \multicolumn{4}{r}{0.74} \\
-N & \multicolumn{4}{r}{82 months} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The pre-COVID slope of +175,690 pedestrians per month represents strong underlying growth. The COVID level change of approximately $-$18.1 million pedestrians per month represents the immediate shock of restrictions. The slope change of $-$169,102 per month means that the recovery trajectory is dramatically slower than the pre-COVID growth trend. Even by October 2022, the monthly trajectory had not recovered to pre-COVID levels.
-
-\begin{figure}[H]
-\subfloat[Monthly totals]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/fig05_covid_impact.png}
-}
-\subfloat[R ITS]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/figR5_covid_its.png}
-}
-\caption{(a) Monthly pedestrian totals with segmented regression fit from the Python EDA. (b) R-generated interrupted time series with segmented regression lines. Both panels show the pre-COVID upward trend, the sharp COVID collapse in 2020, and the near-flat post-COVID trajectory.}
-\end{figure}
-
-\section{5.2 Recovery Trajectory}
-
-Annual volumes relative to the 2019 baseline are shown in Figure 11. In 2020, volumes collapsed to 45.8\% of the 2019 level. Recovery to 52.3\% occurred in 2021 and 63.0\% in 2022. No year has recovered to the 2019 benchmark, suggesting that structural changes in how Melburnians work, particularly the widespread adoption of hybrid and remote work arrangements, may have permanently altered CBD pedestrian patterns.
-
-\begin{figure}[H]
-\centering
-\subfloat[COVID impact]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/figR8_covid_recovery.png}
-}
-\subfloat[Day-of-week]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/figR2_dow_boxplot.png}
-}
-\caption{(a) Annual pedestrian volumes as a percentage of the 2019 baseline. Recovery is gradual: 45.8\% in 2020, 52.3\% in 2021, 63.0\% in 2022. (b) Box plots of mean daily counts by day of week from the R analysis. Saturday has the highest median; Sunday has the lowest.}
-\end{figure}
-
----
-
-# 6. Anomalous Days
-
-Anomalous days were identified using a rolling 30-day Z-score threshold of |z| > 3 applied to daily totals across all sensors. This method flags days whose pedestrian counts deviate by more than three standard deviations from the local mean, which is a standard approach in statistical process control.
-
-Thirteen anomalous days were identified across the study period. In each case, a documented major event explains the deviation.
-
-\begin{table}[H]
-\caption{Anomalous days detected (|z| > 3). All days have an identifiable cause.}
-\begin{tabular}{lll}
-\toprule
-Date & Z-score & Event \\
-\midrule
-31 Dec 2009 & +4.12 & New Year's Eve celebrations \\
-25 Apr 2013 & +5.34 & Anzac Day (centenary of Gallipoli landing) \\
-3 Oct 2015 & +4.89 & AFL Grand Final parade \\
-25 Mar 2020 & $-$4.78 & Stage 3 lockdown begins, CBD empties \\
-7 Sep 2020 & $-$5.67 & Stage 4 lockdown, strictest restrictions \\
-24 Aug 2021 & $-$4.23 & Anti-lockdown protest, city-wide demonstration \\
-\midrule
-Total anomalous days & \multicolumn{2}{r}{13} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{../melbourne-pulse/output/figures/fig12_anomalies.png}
-\caption{Detected anomalous days with event labels. Positive anomalies (red) indicate exceptionally high pedestrian volumes; negative anomalies (blue) indicate exceptionally low volumes. AFL Grand Final days, New Year's Eve, and Anzac Day appear as positive outliers. COVID lockdown days appear as large negative outliers.}
-\end{figure}
-
-The detection of the 2020 lockdown days confirms that the method is sensitive to genuine disruptions. The detection of New Year's Eve, AFL Grand Final, and Anzac Day as positive outliers confirms that it is equally sensitive to genuine surges. This approach could be operationalised as an urban event detection system for city managers, alerting them to days with unusually high or low pedestrian activity.
-
----
-
-# 7. Forecasting with ARIMA
-
-An ARIMA model was fitted to monthly pedestrian totals using automatic order selection via the R `auto.arima()` function from the `forecast` package. The training period was January 2010 to December 2019. The selected model was ARIMA(2,1,2)(1,0,0)[12], with a seasonal AR(1) term to capture annual periodicity.
-
-\begin{table}[H]
-\caption{ARIMA model results. Series: monthly pedestrian totals (thousands).}
-\begin{tabular}{lr}
-\toprule
-Parameter & Estimate \\
-\midrule
-AR(1) & $-$0.438 \\
-AR(2) & $-$0.832 \\
-MA(1) & 0.596 \\
-MA(2) & 0.724 \\
-SAR(1) & 0.290 \\
-\midrule
-AIC & 5125.5 \\
-AICc & 5126.0 \\
-BIC & 5144.0 \\
-Training MAPE & 10.9\% \\
-Training MASE & 0.332 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The negative AR coefficients indicate strong mean-reversion in the differenced series. The positive SAR(1) coefficient confirms annual seasonality. The training MAPE of 10.9\% is reasonable for pedestrian data, which are inherently noisy.
-
-\begin{figure}[H]
-\centering
-\subfloat[Harmonic regression]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/figR1_hourly_harmonic.png}
-}
-\subfloat[ARIMA forecast]{
-  \includegraphics[width=0.48\textwidth]{../melbourne-pulse/output/figures/figR7_arima_forecast.png}
-}
-\caption{(a) Harmonic regression fit of the daily pedestrian pattern. The two-harmonic Fourier model achieves R-squared of 0.937. (b) ARIMA forecast of monthly totals. The model was trained on 2010-2019 data. The COVID disruption falls well outside the prediction intervals, as expected given that the model has no knowledge of the pandemic.}
-\end{figure}
-
-The model's failure to anticipate the COVID-19 disruption is expected and informative. Standard ARIMA models assume continuity of the data-generating process, and COVID-19 represents a clear structural break. For operational forecasting, particularly during the current recovery phase, regime-switching models such as Markov-switching ARIMA or threshold models that can adapt to post-COVID behavioural regimes would be more appropriate.
-
----
-
-# 8. Discussion and Conclusion
-
-This analysis has characterised the temporal structure of pedestrian movement in Melbourne's CBD across multiple timescales, quantified the impact of COVID-19, and identified significant weather effects and anomalous days.
-
-The dual-peak daily pattern (08:00 and 17:00) confirms Melbourne's mixed-use character: it functions simultaneously as a financial district with a morning commuter peak and a retail and entertainment hub with an evening leisure peak. The absence of a single dominant peak distinguishes Melbourne's CBD from pure employment centres (which would show a single morning peak) or pure retail destinations (which would show a midday peak).
-
-The strong day-of-week effect, with Saturday as the highest-volume day, reflects the success of Melbourne's laneway and retail strategy in attracting weekend visitors. The low Sunday volume is consistent with reduced CBD trading hours.
-
-The seasonal pattern, with peaks in March and November, has clear implications for event scheduling and retail planning. The Melbourne Cup Carnival timing in November is well-aligned with pedestrian flow patterns. The June trough suggests that winter programming or incentives to encourage CBD visits during the coldest month could boost pedestrian activity.
-
-The COVID-19 impact is the most significant finding in terms of policy implications. The fact that volumes have only recovered to 63\% of the 2019 baseline by October 2022, despite the lifting of all restrictions, suggests a structural rather than cyclical change. The widespread adoption of hybrid working arrangements appears to have permanently reduced the weekday commuter component of CBD pedestrian traffic. This has implications for public transport funding models, retail strategy in the CBD, and the financial viability of CBD businesses that rely on weekday foot traffic.
-
-Several limitations should be noted. The weather dataset ends in April 2021, limiting the ability to assess weather effects during the COVID recovery period. The pedestrian dataset ends in October 2022, so the full extent of post-COVID recovery cannot be assessed. The analysis treats all sensors equally; sensor-level heterogeneity and the functional specialisation of different corridors warrant further investigation.
-
-Future work should consider incorporating tourism data and public holiday calendars as covariates, applying regime-switching models to detect structural breaks and adaptive recovery trajectories, and conducting spatial analysis to map sensors to land-use zones.
-
-\begin{thebibliography}{99}
-
-\item City of Melbourne (2024). \textit{Pedestrian Counting System --- Monthly Counts Per Hour}. City of Melbourne Open Data Portal. \url{https://data.melbourne.vic.gov.au}
-
-\item Bureau of Meteorology (2024). \textit{Daily Weather Observations --- Melbourne Olympic Park}. Bureau of Meteorology, Australian Government. Station 95936.
-
-\item Hyndman, R.J. and Athanasopoulos, G. (2021). \textit{Forecasting: Principles and Practice}, 3rd edition. OTexts: Melbourne, Australia.
-
-\item Cleveland, R.B., Cleveland, W.S., McRae, J.E. and Terpenning, I. (1990). STL: A Seasonal-Trend Decomposition Procedure Based on Loess. \textit{Journal of Official Statistics}, 6(1), 3--73.
-
-\item Victoria State Government, Department of Health and Human Services (2020--2021). \textit.COVID-19 Restricted Areas}. Victorian Government.
-
-\end{thebibliography}
+Victoria State Government (2020-2021). COVID-19 Restricted Areas. Victorian Government Department of Health and Human Services.
