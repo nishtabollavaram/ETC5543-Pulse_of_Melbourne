@@ -1,0 +1,10 @@
+=== Day-of-Week ANOVA ===
+
+ANOVA table:
+                      Df    Sum Sq   Mean Sq F value Pr(>F)    
+factor(day_of_week)    6 9.609e+12 1.602e+12   39.84 <2e-16 ***
+Residuals           4925 1.980e+14 4.020e+10                   
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Kruskal-Wallis chi2: 244.5415 df: 6 p: 6.014501e-50 

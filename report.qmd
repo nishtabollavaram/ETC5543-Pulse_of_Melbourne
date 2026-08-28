@@ -40,7 +40,7 @@ Hourly pedestrian counts were obtained from the City of Melbourne Open Data Port
 
 Weather observations were obtained from the Bureau of Meteorology dataset "bom-weather-at-olympic-park" via the same portal. This station records half-hourly observations including air temperature, rainfall, relative humidity, and wind speed. The data were aggregated to daily summaries for regression analysis. The weather dataset extends to April 2021, which limits the scope of weather analysis during the COVID period.
 
-Sensor metadata (sensor name, location description, latitude/longitude, installation date, and status) were obtained from the "pedestrian-counting-system-sensor-locations" dataset, which contains 134 records.
+Sensor metadata (sensor name, location description, latitude/longitude, installation date, and status were obtained from the "pedestrian-counting-system-sensor-locations" dataset, which contains 134 records.
 
 All data were accessed via the OpenDataSoft Explore API v2.0, which replaced the previous Socrata API in 2024. Historical pedestrian data were downloaded as a CSV zip file from the exports endpoint; weather and sensor data were fetched via paginated records API calls.
 

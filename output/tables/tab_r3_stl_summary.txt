@@ -1,0 +1,4 @@
+=== STL Decomposition Summary ===
+Trend contribution: 70.3 %
+Seasonal contribution: 6.5 %
+Remainder contribution: 29.9 %

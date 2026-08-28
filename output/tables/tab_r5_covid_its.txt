@@ -1,0 +1,22 @@
+=== Interrupted Time Series ===
+
+Call:
+lm(formula = total ~ t + post_covid + post_time, data = monthly_ts)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-7339201 -1728183   -86470  1386982 10414871 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  17362193     963776  18.015  < 2e-16 ***
+t              175690      43080   4.078 0.000125 ***
+post_covid  -18052615    1393335 -12.956  < 2e-16 ***
+post_time        6588       2316   2.845 0.005911 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 2912000 on 66 degrees of freedom
+Multiple R-squared:  0.7696,	Adjusted R-squared:  0.7591 
+F-statistic: 73.48 on 3 and 66 DF,  p-value: < 2.2e-16
+
