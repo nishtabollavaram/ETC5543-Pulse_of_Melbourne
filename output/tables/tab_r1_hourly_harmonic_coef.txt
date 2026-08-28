@@ -1,0 +1,9 @@
+=== Harmonic Regression Coefficients ===
+                            Estimate Std. Error     t value     Pr(>|t|)
+(Intercept)               493.519645   20.21922  24.4084370 8.286822e-16
+sin(2 * pi * hourday/24) -306.745190   28.59430 -10.7274942 1.678439e-09
+cos(2 * pi * hourday/24) -370.124769   28.59430 -12.9440051 7.137145e-11
+sin(4 * pi * hourday/24)   10.941613   28.59430   0.3826501 7.062262e-01
+cos(4 * pi * hourday/24)   -7.739119   28.59430  -0.2706525 7.895766e-01
+
+R-squared: 0.937054 
