@@ -1,0 +1,12 @@
+# Large pedestrian datasets - do not commit to Git
+Data_pedestrians/raw/
+Data_pedestrians/processed/
+
+# RStudio files
+.Rhistory
+.RData
+.Rproj.user/
+
+# Quarto generated files
+*_cache/
+*_files/
