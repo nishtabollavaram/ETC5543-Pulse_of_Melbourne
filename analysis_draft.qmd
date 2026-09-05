@@ -1,0 +1,42 @@
+---
+title: "analysis_draft"
+format: html
+editor: visual
+execute:
+  echo: false
+  warning: false
+  message: false
+  freeze: auto
+---
+
+```{r}
+library(fs)
+
+dir_create("R")
+dir_create("Data_pedestrians/raw2")
+```
+
+```{r}
+library(httr2)
+library(fs)
+
+# Location where the raw dataset will be stored
+raw_path <- path(
+  "Data_pedestrians",
+  "raw2",
+  "pedestrian_counts_raw.csv"
+)
+
+# City of Melbourne hourly pedestrian dataset
+pedestrian_url <- paste0(
+  "https://data.melbourne.vic.gov.au/",
+  "api/explore/v2.1/catalog/datasets/",
+  "pedestrian-counting-system-monthly-counts-per-hour/",
+  "exports/csv?delimiter=%2C&with_bom=false"
+)
+
+# Download the dataset
+request(pedestrian_url) |>
+  req_perform(path = raw_path)
+```
+
