@@ -1,6 +1,5 @@
-# Large pedestrian datasets - do not commit to Git
-Data_pedestrians/raw/
-Data_pedestrians/processed/
+# Large pedestrian datasets
+Data_pedestrians/raw2/
 
 # RStudio files
 .Rhistory

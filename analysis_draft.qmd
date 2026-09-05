@@ -10,24 +10,14 @@ execute:
 ---
 
 ```{r}
-library(fs)
-
-dir_create("R")
-dir_create("Data_pedestrians/raw2")
-```
-
-```{r}
 library(httr2)
+library(tidyverse)
 library(fs)
 
-# Location where the raw dataset will be stored
-raw_path <- path(
-  "Data_pedestrians",
-  "raw2",
-  "pedestrian_counts_raw.csv"
-)
+dir_create("Data_pedestrians/raw2")
 
-# City of Melbourne hourly pedestrian dataset
+raw_path <- "Data_pedestrians/raw2/pedestrian_counts_raw.csv"
+
 pedestrian_url <- paste0(
   "https://data.melbourne.vic.gov.au/",
   "api/explore/v2.1/catalog/datasets/",
@@ -35,8 +25,8 @@ pedestrian_url <- paste0(
   "exports/csv?delimiter=%2C&with_bom=false"
 )
 
-# Download the dataset
 request(pedestrian_url) |>
   req_perform(path = raw_path)
 ```
+
 
