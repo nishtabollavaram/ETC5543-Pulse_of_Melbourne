@@ -1,0 +1,156 @@
+---
+title: "Pedestrian EDA"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+api_file <- "../Data_pedestrians/raw2/pedestrian_counts_raw.csv"
+
+pedestrians <- read_csv(
+  api_file,
+  col_select = c(
+    sensing_date,
+    hourday,
+    location_id,
+    sensor_name,
+    pedestriancount,
+    location
+  ),
+  show_col_types = FALSE
+) %>%
+  mutate(
+    sensing_date = as.Date(sensing_date),
+    Year = year(sensing_date)
+  )
+```
+
+```{r}
+
+range(pedestrians$sensing_date, na.rm = TRUE)
+```
+
+```{r}
+
+pedestrians %>%
+  group_by(Year) %>%
+  summarise(
+    observations = n(),
+    sensors = n_distinct(location_id),
+    .groups = "drop"
+  )
+```
+
+```{r}
+
+ped_2025 <- pedestrians %>%
+  filter(Year == 2025)
+```
+
+```{r}
+
+ped_2025 %>%
+  summarise(
+    start_date = min(sensing_date, na.rm = TRUE),
+    end_date = max(sensing_date, na.rm = TRUE),
+    observations = n(),
+    sensors = n_distinct(location_id),
+    missing_counts = sum(is.na(pedestriancount))
+  )
+```
+
+```{r}
+
+hourly_pulse <- ped_2025 %>%
+  group_by(hourday) %>%
+  summarise(
+    avg_pedestrians = mean(pedestriancount, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+hourly_pulse
+```
+
+```{r}
+ggplot(hourly_pulse, aes(x = hourday, y = avg_pedestrians)) +
+  geom_line(linewidth = 1) +
+  geom_point() +
+  scale_x_continuous(breaks = 0:23) +
+  labs(
+    title = "Melbourne's Hourly Pedestrian Pulse in 2025",
+    subtitle = "Average pedestrian count per sensor-hour",
+    x = "Hour of day",
+    y = "Average pedestrian count"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+ped_2025 <- ped_2025 %>%
+  mutate(
+    Day = wday(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE,
+      week_start = 1
+    )
+  )
+```
+
+```{r}
+weekly_pulse <- ped_2025 %>%
+  group_by(Day) %>%
+  summarise(
+    avg_pedestrians = mean(pedestriancount, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+weekly_pulse
+```
+
+```{r}
+ggplot(weekly_pulse, aes(x = Day, y = avg_pedestrians)) +
+  geom_col() +
+  labs(
+    title = "Melbourne's Weekly Pedestrian Pulse in 2025",
+    subtitle = "Average pedestrian count by day of week",
+    x = "Day of week",
+    y = "Average pedestrian count"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+heatmap_data <- ped_2025 %>%
+  group_by(Day, hourday) %>%
+  summarise(
+    avg_pedestrians = mean(pedestriancount, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+ggplot(
+  heatmap_data,
+  aes(x = hourday, y = Day, fill = avg_pedestrians)
+) +
+  geom_tile() +
+  scale_x_continuous(breaks = 0:23) +
+  labs(
+    title = "Melbourne's Weekly Pedestrian Rhythm in 2025",
+    subtitle = "Average pedestrian activity by day and hour",
+    x = "Hour of day",
+    y = "Day of week",
+    fill = "Average\npedestrian count"
+  ) +
+  theme_minimal()
+```
