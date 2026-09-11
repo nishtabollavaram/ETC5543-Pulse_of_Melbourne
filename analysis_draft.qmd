@@ -29,4 +29,165 @@ request(pedestrian_url) |>
   req_perform(path = raw_path)
 ```
 
+```{r}
+library(tidyverse)
+library(janitor)
+library(lubridate)
+
+#Historical data
+historical <- read_csv(
+  "Data_pedestrians/raw/Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv",
+  show_col_types = FALSE
+) |>
+  clean_names()
+
+#Current API data
+current <- read_csv(
+  "Data_pedestrians/raw2/pedestrian_counts_raw.csv",
+  show_col_types = FALSE
+) |>
+  clean_names()
+
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+
+#Historical data
+historical_clean <- historical |>
+  mutate(
+    sensing_date = mdy(
+      str_c(month, mdate, year, sep = " ")
+    )
+  ) |>
+  transmute(
+    location_id = sensor_id,
+    sensing_date,
+    hourday = time,
+    pedestrian_count = hourly_counts,
+    source = "Historical"
+  )
+
+#Current API data
+current_clean <- current |>
+  transmute(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count = pedestriancount,
+    source = "Current API"
+  )
+
+#Combine
+pedestrian_full <- bind_rows(
+  historical_clean,
+  current_clean
+) |>
+  arrange(
+    sensing_date,
+    location_id,
+    hourday
+  )
+```
+
+
+
+```{r}
+pedestrian_full <- pedestrian_full |>
+  mutate(
+    year = year(sensing_date),
+    month = month(sensing_date),
+    month_name = month(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE
+    ),
+    day_name = wday(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE,
+      week_start = 1
+    ),
+    day_of_week = wday(
+      sensing_date,
+      week_start = 1
+    ),
+    is_weekend = day_of_week >= 6,
+    season = case_when(
+      month %in% c(12, 1, 2) ~ "Summer",
+      month %in% c(3, 4, 5) ~ "Autumn",
+      month %in% c(6, 7, 8) ~ "Winter",
+      month %in% c(9, 10, 11) ~ "Spring"
+    )
+  )
+```
+
+```{r}
+#Check for missing values
+pedestrian_full |>
+  summarise(
+    observations = n(),
+    locations = n_distinct(location_id),
+    first_date = min(sensing_date, na.rm = TRUE),
+    last_date = max(sensing_date, na.rm = TRUE),
+    missing_dates = sum(is.na(sensing_date)),
+    missing_hours = sum(is.na(hourday)),
+    missing_counts = sum(is.na(pedestrian_count))
+  )
+
+pedestrian_full |>
+  summarise(
+    negative_counts = sum(pedestrian_count < 0, na.rm = TRUE),
+    invalid_hours = sum(
+      hourday < 0 | hourday > 23,
+      na.rm = TRUE
+    )
+  )
+
+#Check for duplicates
+duplicates <- pedestrian_full |>
+  count(
+    location_id,
+    sensing_date,
+    hourday,
+    name = "n"
+  ) |>
+  filter(n > 1)
+
+duplicates
+```
+
+
+
+
+```{r}
+# ID matching
+sensor_sources <- pedestrian_full |>
+  distinct(
+    location_id,
+    source
+  ) |>
+  count(
+    location_id,
+    name = "number_of_sources"
+  )
+
+sensor_sources |>
+  count(number_of_sources)
+
+
+```
+
+```{r}
+# IDs that are common in both datasets
+sensor_sources |>
+  filter(number_of_sources == 2)
+```
+
+```{r}
+#IDs that are in either of the two
+sensor_sources |>
+  filter(number_of_sources == 1)
+```
 
