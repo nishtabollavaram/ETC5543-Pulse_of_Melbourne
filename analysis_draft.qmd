@@ -61,11 +61,31 @@ historical_clean <- historical |>
       str_c(month, mdate, year, sep = " ")
     )
   ) |>
+  group_by(
+    sensor_id,
+    sensing_date
+  ) |>
+  arrange(
+    id,
+    .by_group = TRUE
+  ) |>
+  mutate(
+    hour_repaired =
+      n() == 24 & n_distinct(time) == 1,
+
+    hourday = if_else(
+      hour_repaired,
+      row_number() - 1,
+      time
+    )
+  ) |>
+  ungroup() |>
   transmute(
     location_id = sensor_id,
     sensing_date,
-    hourday = time,
+    hourday,
     pedestrian_count = hourly_counts,
+    hour_repaired,
     source = "Historical"
   )
 
@@ -157,52 +177,26 @@ duplicates <- pedestrian_full |>
 
 duplicates
 ```
-
-```{r}
-historical |>
-  filter(
-    sensor_id == 1,
-    year == 2010,
-    month == "September",
-    mdate == 1
-  ) |>
-  select(
-    date_time,
-    time,
-    sensor_id,
-    hourly_counts
-  )
-```
+- A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
 
 
 
 ```{r}
-# ID matching
-sensor_sources <- pedestrian_full |>
-  distinct(
-    location_id,
-    source
-  ) |>
-  count(
-    location_id,
-    name = "number_of_sources"
-  )
+#Downloading the sensors location dataset
 
-sensor_sources |>
-  count(number_of_sources)
+sensor_locations <- read_csv(
+  paste0(
+    "https://data.melbourne.vic.gov.au/",
+    "api/explore/v2.1/catalog/datasets/",
+    "pedestrian-counting-system-sensor-locations/",
+    "exports/csv?delimiter=%2C"
+  ),
+  show_col_types = FALSE
+) |>
+  clean_names()
 
-
+sensor_locations |>
+  glimpse()
 ```
 
-```{r}
-# IDs that are common in both datasets
-sensor_sources |>
-  filter(number_of_sources == 2)
-```
-
-```{r}
-#IDs that are in either of the two
-sensor_sources |>
-  filter(number_of_sources == 1)
-```
 
