@@ -158,6 +158,21 @@ duplicates <- pedestrian_full |>
 duplicates
 ```
 
+```{r}
+historical |>
+  filter(
+    sensor_id == 1,
+    year == 2010,
+    month == "September",
+    mdate == 1
+  ) |>
+  select(
+    date_time,
+    time,
+    sensor_id,
+    hourly_counts
+  )
+```
 
 
 
