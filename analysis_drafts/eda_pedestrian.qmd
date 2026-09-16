@@ -155,3 +155,193 @@ ggplot(
   theme_minimal()
 ```
 
+
+## Data Preparation
+
+
+# Load historical pedestrian data
+
+```{r}
+historical_file <- "../Data_pedestrians/raw/Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
+
+historical_raw <- read_csv(
+  historical_file,
+  show_col_types = FALSE
+)
+
+```
+
+
+# Standardise historical data
+
+```{r}
+
+historical_clean <- historical_raw %>%
+  mutate(
+    sensing_date = mdy(
+      str_c(Month, Mdate, Year, sep = " ")
+    )
+  ) %>%
+  group_by(Sensor_ID, sensing_date) %>%
+  arrange(ID, .by_group = TRUE) %>%
+  mutate(
+    hour_repaired = n() == 24 & n_distinct(Time) == 1,
+    hourday = if_else(
+      hour_repaired,
+      as.integer(row_number() - 1),
+      as.integer(Time)
+    )
+  ) %>%
+  ungroup() %>%
+  transmute(
+    location_id = Sensor_ID,
+    sensing_date,
+    hourday,
+    pedestrian_count = Hourly_Counts,
+    source = "Historical"
+  )
+```
+
+
+# Standardise current API data
+
+
+```{r}
+
+current_clean <- pedestrians %>%
+  transmute(
+    location_id,
+    sensing_date,
+    hourday = as.integer(hourday),
+    pedestrian_count = pedestriancount,
+    source = "Current API"
+  )
+```
+
+# Combine historical and current data
+
+```{r}
+pedestrian_full <- bind_rows(
+  historical_clean,
+  current_clean
+) %>%
+  mutate(
+    year = year(sensing_date)
+  ) %>%
+  arrange(
+    sensing_date,
+    location_id,
+    hourday
+  )
+```
+ 
+### Check Combined Data Coverage
+
+```{r}
+sort(unique(pedestrian_full$year))
+
+```
+
+
+## Daily and Weekly Pedestrian Rhythm
+
+### Daily Rhythm Across the Available Years, 2009–2026
+
+```{r}
+# Calculate the average hourly pattern for each sensor within each year
+hourly_by_sensor_year <- pedestrian_full %>%
+  filter(
+    !is.na(hourday),
+    hourday >= 0,
+    hourday <= 23
+  ) %>%
+  group_by(year, location_id, hourday) %>%
+  summarise(
+    sensor_hour_avg = mean(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+
+
+```{r}
+
+# Average across sensors within each year
+hourly_by_year <- hourly_by_sensor_year %>%
+  group_by(year, hourday) %>%
+  summarise(
+    avg_pedestrians = mean(sensor_hour_avg, na.rm = TRUE),
+    .groups = "drop"
+  )
+hourly_index <- hourly_by_year %>%
+  group_by(year) %>%
+  mutate(
+    yearly_mean = mean(avg_pedestrians, na.rm = TRUE),
+    activity_index = avg_pedestrians / yearly_mean * 100
+  ) %>%
+  ungroup()
+hourly_summary <- hourly_index %>%
+  group_by(hourday) %>%
+  summarise(
+    median_index = median(activity_index, na.rm = TRUE),
+    q25 = quantile(activity_index, 0.25, na.rm = TRUE),
+    q75 = quantile(activity_index, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+
+### Typical Daily Pedestrian Rhythm
+
+```{r}
+ggplot(
+  hourly_summary,
+  aes(x = hourday, y = median_index)
+) +
+  geom_ribbon(
+    aes(ymin = q25, ymax = q75),
+    alpha = 0.2
+  ) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  geom_hline(
+    yintercept = 100,
+    linetype = "dashed"
+  ) +
+  scale_x_continuous(breaks = 0:23) +
+  labs(
+    title = "Typical Daily Pedestrian Rhythm Across Years",
+    subtitle = "Median pattern across years; shaded area shows the middle 50% of years",
+    x = "Hour of day",
+    y = "Activity index (100 = yearly average)"
+  ) +
+  theme_minimal()
+
+```
+
+
+### Daily Rhythm by Year
+
+```{r}
+ggplot(
+  hourly_index,
+  aes(
+    x = hourday,
+    y = factor(year, levels = 2009:2026),
+    fill = activity_index
+  )
+) +
+  geom_tile() +
+  scale_x_continuous(breaks = 0:23) +
+  scale_y_discrete(drop = FALSE) +
+  labs(
+    title = "Melbourne's Daily Pedestrian Rhythm Across Years",
+    subtitle = "Activity relative to each year's average (100 = yearly average)",
+    x = "Hour of day",
+    y = "Year",
+    fill = "Activity\nindex"
+  ) +
+  theme_minimal()
+
+```
