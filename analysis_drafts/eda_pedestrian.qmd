@@ -94,6 +94,35 @@ historical_clean <- historical_raw %>%
   )
 ```
 
+
+```{r}
+api_file <- "../Data_pedestrians/raw2/pedestrian_counts_raw.csv"
+
+pedestrians <- read_csv(
+  api_file,
+  col_select = c(
+    sensing_date,
+    hourday,
+    location_id,
+    sensor_name,
+    pedestriancount,
+    location
+  ),
+  show_col_types = FALSE
+) %>%
+  mutate(
+    sensing_date = as.Date(sensing_date),
+    Year = year(sensing_date)
+  )
+
+```
+
+
+```{r}
+
+glimpse(pedestrians)
+```
+
 # Standardise current API data
 
 ```{r}
@@ -136,8 +165,12 @@ sort(unique(pedestrian_full$year))
 
 ### Daily Rhythm Across the Available Years, 2009–2026
 
+
+#### Calculate the average hourly pattern for each sensor within each year
+
+
 ```{r}
-# Calculate the average hourly pattern for each sensor within each year
+
 hourly_by_sensor_year <- pedestrian_full %>%
   filter(
     !is.na(hourday),
@@ -341,3 +374,166 @@ ggplot(
   theme_minimal()
 
 ```
+
+
+
+## Long-Term Change in Pedestrian Activity
+
+### Check Year Coverage
+
+```{r}
+year_coverage <- pedestrian_full %>%
+  group_by(year) %>%
+  summarise(
+    first_date = min(sensing_date, na.rm = TRUE),
+    last_date = max(sensing_date, na.rm = TRUE),
+    sensors = n_distinct(location_id),
+    observations = n(),
+    .groups = "drop"
+  )
+
+print(year_coverage, n = Inf)
+
+```
+
+### Identify Full Calendar Years
+
+
+```{r}
+full_years <- year_coverage %>%
+  filter(
+    month(first_date) == 1,
+    day(first_date) == 1,
+    month(last_date) == 12,
+    day(last_date) == 31
+  ) %>%
+  pull(year)
+
+full_years
+```
+
+### Identify Common Sensors
+
+```{r}
+common_sensors <- pedestrian_full %>%
+  filter(year %in% full_years) %>%
+  distinct(year, location_id) %>%
+  count(location_id, name = "years_present") %>%
+  filter(years_present == length(full_years))
+
+nrow(common_sensors)
+```
+
+### Calculate Annual Activity at Common Sensors
+
+```{r}
+common_sensor_ids <- common_sensors %>%
+  pull(location_id)
+
+common_sensor_year <- pedestrian_full %>%
+  filter(
+    year %in% full_years,
+    location_id %in% common_sensor_ids
+  ) %>%
+  group_by(year, location_id) %>%
+  summarise(
+    avg_hourly_count = mean(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+### Calculate Typical Activity for Each Year
+
+```{r}
+common_yearly_activity <- common_sensor_year %>%
+  group_by(year) %>%
+  summarise(
+    typical_activity = median(avg_hourly_count, na.rm = TRUE),
+    mean_activity = mean(avg_hourly_count, na.rm = TRUE),
+    sensors = n_distinct(location_id),
+    .groups = "drop"
+  )
+
+print(common_yearly_activity, n = Inf)
+
+```
+
+
+### Monthly Pedestrian Activity Over Time
+
+```{r}
+monthly_common_activity <- pedestrian_full %>%
+  filter(location_id %in% common_sensor_ids) %>%
+  mutate(
+    month_date = floor_date(sensing_date, "month")
+  ) %>%
+  group_by(month_date, location_id) %>%
+  summarise(
+    sensor_month_avg = mean(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(month_date) %>%
+  summarise(
+    typical_activity = median(sensor_month_avg, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+##### Check Monthly Sensor Coverage
+
+```{r}
+monthly_sensor_coverage <- pedestrian_full %>%
+  filter(location_id %in% common_sensor_ids) %>%
+  mutate(
+    month_date = floor_date(sensing_date, "month")
+  ) %>%
+  group_by(month_date) %>%
+  summarise(
+    sensors = n_distinct(location_id),
+    .groups = "drop"
+  )
+
+range(monthly_sensor_coverage$sensors)
+
+monthly_sensor_coverage %>%
+  count(sensors)
+
+monthly_sensor_coverage %>%
+  filter(sensors < 14)
+
+```
+
+#### Preserve Missing Periods
+
+```{r}
+monthly_common_activity <- monthly_common_activity %>%
+  complete(
+    month_date = seq.Date(
+      min(month_date),
+      max(month_date),
+      by = "month"
+    )
+  )
+```
+
+### Long-Term Monthly Pedestrian Trend
+
+```{r}
+ggplot(
+  monthly_common_activity,
+  aes(x = month_date, y = typical_activity)
+) +
+  geom_line(linewidth = 0.7, na.rm = TRUE) +
+  labs(
+    title = "Long-Term Pedestrian Activity Across Available Data",
+    subtitle = "Monthly median activity at common sensor locations",
+    x = "Year",
+    y = "Median hourly pedestrian count"
+  ) +
+  theme_minimal()
+
+```
+
+
+
