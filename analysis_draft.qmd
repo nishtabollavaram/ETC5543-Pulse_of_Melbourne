@@ -8,12 +8,20 @@ execute:
   message: false
   freeze: auto
 ---
+```{r}
+# Loading all the libraries
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(fs)
+library(httr2)
+library(arrow)
+```
 
 ```{r}
-library(httr2)
-library(tidyverse)
-library(fs)
-
 dir_create("Data_pedestrians/raw2")
 
 raw_path <- "Data_pedestrians/raw2/pedestrian_counts_raw.csv"
@@ -30,10 +38,6 @@ request(pedestrian_url) |>
 ```
 
 ```{r}
-library(tidyverse)
-library(janitor)
-library(lubridate)
-
 #Historical data
 historical <- read_csv(
   "Data_pedestrians/raw/Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv",
@@ -51,9 +55,6 @@ current <- read_csv(
 ```
 
 ```{r}
-library(tidyverse)
-library(lubridate)
-
 #Historical data
 historical_clean <- historical |>
   mutate(
@@ -182,7 +183,7 @@ duplicates
 
 
 ```{r}
-#Downloading the sensors location dataset
+#Download  the sensors location dataset
 
 sensor_locations <- read_csv(
   paste0(
@@ -198,5 +199,390 @@ sensor_locations <- read_csv(
 sensor_locations |>
   glimpse()
 ```
+```{r}
+year_window <- pedestrian_full |>
+  group_by(year) |>
+  summarise(
+    available_days = n_distinct(sensing_date),
+    .groups = "drop"
+  )
 
+sensor_year_coverage <- pedestrian_full |>
+  group_by(
+    year,
+    location_id
+  ) |>
+  summarise(
+    days_observed = n_distinct(sensing_date),
+    observations = n(),
+    .groups = "drop"
+  ) |>
+  left_join(
+    year_window,
+    by = "year"
+  ) |>
+  mutate(
+    coverage = days_observed / available_days
+  )
+```
+
+- Has the pedestrian monitoring network changed enough over time to affect comparisons? how many sensor locations were actually contributing usable pedestrian data in each year
+
+```{r}
+library(tidyverse)
+year_coverage <- sensor_year_coverage |>
+  group_by(year) |>
+  summarise(
+    active_locations = n_distinct(location_id),
+    well_covered_locations = sum(coverage >= 0.80),
+    .groups = "drop"
+  ) |>
+  complete(
+    year = full_seq(year, 1)
+  ) |>
+  pivot_longer(
+    cols = c(
+      active_locations,
+      well_covered_locations
+    ),
+    names_to = "coverage_type",
+    values_to = "locations"
+  ) |>
+  mutate(
+    coverage_type = recode(
+      coverage_type,
+      active_locations = "Any observations",
+      well_covered_locations = "At least 80% coverage"
+    )
+  )
+
+year_coverage |>
+  ggplot(
+    aes(
+      x = year,
+      y = locations,
+      linetype = coverage_type
+    )
+  ) +
+  geom_line(linewidth = 0.9) +
+  geom_point() +
+  labs(
+    title = "Melbourne's pedestrian monitoring network change over time",
+    subtitle = "2023 is left as a genuine data gap",
+    x = "Year",
+    y = "Number of sensor locations",
+    linetype = NULL
+  ) +
+  theme_minimal()
+```
+- When were the currently documented sensors installed? How many new sensors were installed in each year?
+```{r}
+sensor_installations <- sensor_locations |>
+  filter(!is.na(installation_date)) |>
+  mutate(
+    installation_year = year(installation_date)
+  ) |>
+  count(
+    installation_year,
+    name = "new_sensors"
+  )
+
+sensor_installations |>
+  ggplot(
+    aes(
+      x = installation_year,
+      y = new_sensors
+    )
+  ) +
+  geom_col() +
+  labs(
+    title = "Expansion of Melbourne's pedestrian sensor network",
+    x = "Installation year",
+    y = "Sensors installed"
+  ) +
+  theme_minimal()
+```
+- Is there a monthly or seasonal rhythm?
+```{r}
+# Monthly rhythm using the full available dataset: 2009–2026
+monthly_profile <- pedestrian_full |>
+  filter(
+    year >= 2009,
+    year <= 2026
+  ) |>
+  group_by(
+    location_id,
+    sensing_date,
+    month,
+    month_name
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  group_by(
+    location_id,
+    month,
+    month_name
+  ) |>
+  summarise(
+    sensor_month_mean = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  group_by(
+    month,
+    month_name
+  ) |>
+  summarise(
+    mean_daily_count = mean(
+      sensor_month_mean,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  arrange(month)
+```
+
+```{r}
+monthly_profile |>
+  ggplot(
+    aes(
+      x = month,
+      y = mean_daily_count
+    )
+  ) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(
+    breaks = monthly_profile$month,
+    labels = monthly_profile$month_name
+  ) +
+  labs(
+    title = "Melbourne's monthly pedestrian rhythm",
+    subtitle = "Average daily pedestrian activity across available data, 2009–2026",
+    x = NULL,
+    y = "Average daily pedestrian count"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+```
+- seasons
+```{r}
+seasonal_profile <- pedestrian_full |>
+  
+  # Step 1: Daily total for each sensor
+  group_by(
+    location_id,
+    year,
+    sensing_date,
+    season
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  
+  # Step 2: Typical activity for each sensor in each season/year
+  group_by(
+    location_id,
+    year,
+    season
+  ) |>
+  summarise(
+    sensor_season_mean = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  
+  # Step 3: Typical city activity within each year and season
+  group_by(
+    year,
+    season
+  ) |>
+  summarise(
+    yearly_season_mean = mean(
+      sensor_season_mean,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  
+  # Step 4: Average seasonal pattern across all available years
+  group_by(season) |>
+  summarise(
+    mean_daily_count = mean(
+      yearly_season_mean,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  
+  mutate(
+    season = fct_relevel(
+      season,
+      "Summer",
+      "Autumn",
+      "Winter",
+      "Spring"
+    )
+  )
+```
+
+```{r}
+seasonal_profile |>
+  ggplot(
+    aes(
+      x = season,
+      y = mean_daily_count
+    )
+  ) +
+  geom_col() +
+  labs(
+    title = "Seasonal pattern in Melbourne pedestrian activity",
+    subtitle = "Average daily pedestrian activity across available data, 2009–2026",
+    x = NULL,
+    y = "Average daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+- Covid disruption
+```{r}
+
+covid_daily <- pedestrian_full |>
+  filter(
+    source == "Historical",
+    year >= 2015,
+    year <= 2022
+  ) |>
+  group_by(
+    location_id,
+    sensing_date,
+    year,
+    month
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  mutate(
+    month_date = floor_date(
+      sensing_date,
+      "month"
+    )
+  )
+```
+
+```{r}
+sensor_monthly <- covid_daily |>
+  group_by(
+    location_id,
+    month_date,
+    month
+  ) |>
+  summarise(
+    mean_daily_count = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n_distinct(sensing_date),
+    .groups = "drop"
+  ) |>
+  filter(
+    days_observed >= 20
+  )
+```
+
+```{r}
+pre_covid_baseline <- sensor_monthly |>
+  filter(
+    year(month_date) >= 2015,
+    year(month_date) <= 2019
+  ) |>
+  group_by(
+    location_id,
+    month
+  ) |>
+  summarise(
+    baseline_count = mean(
+      mean_daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+```
+
+```{r}
+covid_index <- sensor_monthly |>
+  left_join(
+    pre_covid_baseline,
+    by = c(
+      "location_id",
+      "month"
+    )
+  ) |>
+  filter(
+    !is.na(baseline_count),
+    baseline_count > 0
+  ) |>
+  mutate(
+    activity_index =
+      mean_daily_count / baseline_count * 100
+  )
+```
+
+```{r}
+melbourne_covid_index <- covid_index |>
+  group_by(month_date) |>
+  summarise(
+    activity_index = median(
+      activity_index,
+      na.rm = TRUE
+    ),
+    sensors = n_distinct(location_id),
+    .groups = "drop"
+  )
+```
+
+```{r}
+melbourne_covid_index |>
+  ggplot(
+    aes(
+      x = month_date,
+      y = activity_index
+    )
+  ) +
+  geom_hline(
+    yintercept = 100,
+    linetype = "dashed"
+  ) +
+  geom_line(
+    linewidth = 0.9
+  ) +
+  labs(
+    title = "COVID-19 disrupted Melbourne's pedestrian pulse",
+    subtitle = "Monthly activity relative to the same-month 2015–2019 baseline",
+    x = NULL,
+    y = "Pedestrian activity index\n(100 = pre-COVID baseline)"
+  ) +
+  theme_minimal()
+```
 
