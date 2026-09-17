@@ -50,114 +50,7 @@ pedestrians %>%
   )
 ```
 
-```{r}
-
-ped_2025 <- pedestrians %>%
-  filter(Year == 2025)
-```
-
-```{r}
-
-ped_2025 %>%
-  summarise(
-    start_date = min(sensing_date, na.rm = TRUE),
-    end_date = max(sensing_date, na.rm = TRUE),
-    observations = n(),
-    sensors = n_distinct(location_id),
-    missing_counts = sum(is.na(pedestriancount))
-  )
-```
-
-```{r}
-
-hourly_pulse <- ped_2025 %>%
-  group_by(hourday) %>%
-  summarise(
-    avg_pedestrians = mean(pedestriancount, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-hourly_pulse
-```
-
-```{r}
-ggplot(hourly_pulse, aes(x = hourday, y = avg_pedestrians)) +
-  geom_line(linewidth = 1) +
-  geom_point() +
-  scale_x_continuous(breaks = 0:23) +
-  labs(
-    title = "Melbourne's Hourly Pedestrian Pulse in 2025",
-    subtitle = "Average pedestrian count per sensor-hour",
-    x = "Hour of day",
-    y = "Average pedestrian count"
-  ) +
-  theme_minimal()
-```
-
-```{r}
-ped_2025 <- ped_2025 %>%
-  mutate(
-    Day = wday(
-      sensing_date,
-      label = TRUE,
-      abbr = FALSE,
-      week_start = 1
-    )
-  )
-```
-
-```{r}
-weekly_pulse <- ped_2025 %>%
-  group_by(Day) %>%
-  summarise(
-    avg_pedestrians = mean(pedestriancount, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-weekly_pulse
-```
-
-```{r}
-ggplot(weekly_pulse, aes(x = Day, y = avg_pedestrians)) +
-  geom_col() +
-  labs(
-    title = "Melbourne's Weekly Pedestrian Pulse in 2025",
-    subtitle = "Average pedestrian count by day of week",
-    x = "Day of week",
-    y = "Average pedestrian count"
-  ) +
-  theme_minimal()
-```
-
-```{r}
-heatmap_data <- ped_2025 %>%
-  group_by(Day, hourday) %>%
-  summarise(
-    avg_pedestrians = mean(pedestriancount, na.rm = TRUE),
-    .groups = "drop"
-  )
-```
-
-```{r}
-ggplot(
-  heatmap_data,
-  aes(x = hourday, y = Day, fill = avg_pedestrians)
-) +
-  geom_tile() +
-  scale_x_continuous(breaks = 0:23) +
-  labs(
-    title = "Melbourne's Weekly Pedestrian Rhythm in 2025",
-    subtitle = "Average pedestrian activity by day and hour",
-    x = "Hour of day",
-    y = "Day of week",
-    fill = "Average\npedestrian count"
-  ) +
-  theme_minimal()
-```
-
-
 ## Data Preparation
-
 
 # Load historical pedestrian data
 
@@ -170,7 +63,6 @@ historical_raw <- read_csv(
 )
 
 ```
-
 
 # Standardise historical data
 
@@ -202,9 +94,7 @@ historical_clean <- historical_raw %>%
   )
 ```
 
-
 # Standardise current API data
-
 
 ```{r}
 
@@ -234,14 +124,13 @@ pedestrian_full <- bind_rows(
     hourday
   )
 ```
- 
+
 ### Check Combined Data Coverage
 
 ```{r}
 sort(unique(pedestrian_full$year))
 
 ```
-
 
 ## Daily and Weekly Pedestrian Rhythm
 
@@ -261,7 +150,6 @@ hourly_by_sensor_year <- pedestrian_full %>%
     .groups = "drop"
   )
 ```
-
 
 #### Average across sensors within each year
 
@@ -291,7 +179,6 @@ hourly_summary <- hourly_index %>%
 
 ```
 
-
 #### Typical Daily Pedestrian Rhythm
 
 ```{r}
@@ -320,7 +207,6 @@ ggplot(
 
 ```
 
-
 #### Daily Rhythm by Year
 
 ```{r}
@@ -346,7 +232,6 @@ ggplot(
 
 ```
 
-
 ### Weekly Rhythm Across the Years, 2009–2026
 
 ```{r}
@@ -362,7 +247,6 @@ pedestrian_full <- pedestrian_full %>%
 
 ```
 
-
 #### Calculate Sensor-Level Weekly Patterns
 
 ```{r}
@@ -373,7 +257,6 @@ weekly_by_sensor_year <- pedestrian_full %>%
     .groups = "drop"
   )
 ```
-
 
 #### Calculate Year-Level Weekly Patterns
 
@@ -412,7 +295,6 @@ weekly_summary <- weekly_index %>%
   )
 
 ```
-
 
 ### Typical Weekly Pedestrian Rhythm
 
@@ -459,5 +341,3 @@ ggplot(
   theme_minimal()
 
 ```
-
-
