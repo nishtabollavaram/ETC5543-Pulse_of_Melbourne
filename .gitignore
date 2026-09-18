@@ -1,9 +1,11 @@
 # Large pedestrian datasets
 Data_pedestrians/raw2/
+**/Data_pedestrians/raw2/
 
 # RStudio files
 .Rhistory
 .RData
+.RDataTmp*
 .Rproj.user/
 
 # Quarto generated files
