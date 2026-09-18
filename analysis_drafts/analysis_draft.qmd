@@ -8,6 +8,7 @@ execute:
   message: false
   freeze: auto
 ---
+
 ```{r}
 # Loading all the libraries
 #| message: false
@@ -40,14 +41,14 @@ request(pedestrian_url) |>
 ```{r}
 #Historical data
 historical <- read_csv(
-  "Data_pedestrians/raw/Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv",
+  "../Data_pedestrians/raw/Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv",
   show_col_types = FALSE
 ) |>
   clean_names()
 
 #Current API data
 current <- read_csv(
-  "Data_pedestrians/raw2/pedestrian_counts_raw.csv",
+  "../Data_pedestrians/raw2/pedestrian_counts_raw.csv",
   show_col_types = FALSE
 ) |>
   clean_names()
@@ -111,8 +112,6 @@ pedestrian_full <- bind_rows(
     hourday
   )
 ```
-
-
 
 ```{r}
 pedestrian_full <- pedestrian_full |>
@@ -178,9 +177,8 @@ duplicates <- pedestrian_full |>
 
 duplicates
 ```
+
 - A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
-
-
 
 ```{r}
 #Download  the sensors location dataset
@@ -199,6 +197,8 @@ sensor_locations <- read_csv(
 sensor_locations |>
   glimpse()
 ```
+
+- Has the pedestrian monitoring network changed enough over time to affect comparisons? how many sensor locations were actually contributing usable pedestrian data in each year
 ```{r}
 year_window <- pedestrian_full |>
   group_by(year) |>
@@ -226,10 +226,7 @@ sensor_year_coverage <- pedestrian_full |>
   )
 ```
 
-- Has the pedestrian monitoring network changed enough over time to affect comparisons? how many sensor locations were actually contributing usable pedestrian data in each year
-
 ```{r}
-library(tidyverse)
 year_coverage <- sensor_year_coverage |>
   group_by(year) |>
   summarise(
@@ -275,7 +272,9 @@ year_coverage |>
   ) +
   theme_minimal()
 ```
+
 - When were the currently documented sensors installed? How many new sensors were installed in each year?
+
 ```{r}
 sensor_installations <- sensor_locations |>
   filter(!is.na(installation_date)) |>
@@ -302,7 +301,9 @@ sensor_installations |>
   ) +
   theme_minimal()
 ```
+
 - Is there a monthly or seasonal rhythm?
+
 ```{r}
 # Monthly rhythm using the full available dataset: 2009–2026
 monthly_profile <- pedestrian_full |>
@@ -377,7 +378,9 @@ monthly_profile |>
     )
   )
 ```
+
 - seasons
+
 ```{r}
 seasonal_profile <- pedestrian_full |>
   
@@ -461,7 +464,9 @@ seasonal_profile |>
   ) +
   theme_minimal()
 ```
+
 - Covid disruption
+
 ```{r}
 
 covid_daily <- pedestrian_full |>
@@ -585,4 +590,3 @@ melbourne_covid_index |>
   ) +
   theme_minimal()
 ```
-
