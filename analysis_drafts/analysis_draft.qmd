@@ -20,6 +20,7 @@ library(janitor)
 library(fs)
 library(httr2)
 library(arrow)
+library(here)
 ```
 
 ```{r}
@@ -41,14 +42,23 @@ request(pedestrian_url) |>
 ```{r}
 #Historical data
 historical <- read_csv(
-  "../Data_pedestrians/raw/Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv",
+  here(
+    "Data_pedestrians",
+    "raw",
+    "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
+  ),
   show_col_types = FALSE
 ) |>
   clean_names()
 
+
 #Current API data
 current <- read_csv(
-  "../Data_pedestrians/raw2/pedestrian_counts_raw.csv",
+  here(
+    "Data_pedestrians",
+    "raw2",
+    "pedestrian_counts_raw.csv"
+  ),
   show_col_types = FALSE
 ) |>
   clean_names()
