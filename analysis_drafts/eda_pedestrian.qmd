@@ -536,4 +536,92 @@ ggplot(
 ```
 
 
+### Identify the Largest Drops in Pedestrian Activity
 
+
+```{r}
+### Identify the Largest Drops in Pedestrian Activity
+
+month_quality <- pedestrian_full %>%
+  filter(location_id %in% common_sensor_ids) %>%
+  mutate(
+    month_date = floor_date(sensing_date, "month")
+  ) %>%
+  group_by(month_date) %>%
+  summarise(
+    first_date = min(sensing_date, na.rm = TRUE),
+    last_date = max(sensing_date, na.rm = TRUE),
+    days_observed = n_distinct(sensing_date),
+    sensors = n_distinct(location_id),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    full_month = days_observed == days_in_month(month_date)
+  )
+```
+
+
+```{r}
+monthly_changes <- monthly_common_activity %>%
+  left_join(
+    month_quality %>%
+      select(month_date, sensors, full_month),
+    by = "month_date"
+  ) %>%
+  arrange(month_date) %>%
+  mutate(
+    previous_month = lag(month_date),
+    previous_activity = lag(typical_activity),
+    previous_sensors = lag(sensors),
+    previous_full_month = lag(full_month),
+
+    change = typical_activity - previous_activity,
+
+    pct_change =
+      (typical_activity - previous_activity) /
+      previous_activity * 100
+  )
+```
+
+
+```{r}
+biggest_dips <- monthly_changes %>%
+  filter(
+    full_month == TRUE,
+    previous_full_month == TRUE,
+    sensors >= 13,
+    previous_sensors >= 13,
+    !is.na(pct_change)
+  ) %>%
+  arrange(pct_change) %>%
+  slice_head(n = 5) %>%
+  select(
+    previous_month,
+    month_date,
+    previous_activity,
+    typical_activity,
+    change,
+    pct_change
+  )
+
+biggest_dips
+```
+
+
+```{r}
+june_july_changes <- monthly_changes %>%
+  filter(
+    month(previous_month) == 6,
+    month(month_date) == 7,
+    !is.na(pct_change)
+  ) %>%
+  arrange(pct_change) %>%
+  select(
+    previous_month,
+    month_date,
+    pct_change
+  )
+
+june_july_changes
+
+```
