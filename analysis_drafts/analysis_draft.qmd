@@ -21,6 +21,9 @@ library(fs)
 library(httr2)
 library(arrow)
 library(here)
+library(ggrepel)
+library(plotly)
+library(leaflet)
 ```
 
 ```{r}
@@ -602,94 +605,529 @@ melbourne_covid_index |>
   theme_minimal()
 ```
 
+
+- Where is the Melbourne's pulse the strongest currently?
 ```{r}
-library(data.table)
-library(ggplot2)
-library(ggrepel)
-
-proc <- fread("../pedestrian_counts_processed.csv")
-raw <- fread("../Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv")
-
-pre <- proc[year == 2019, .(daily = sum(pedestriancount)), by = .(location_id, sensing_date)]
-pre <- pre[, .(pre = mean(daily)), by = location_id]
-
-raw[, date := as.Date(paste(Year, Mdate, Month), format = "%Y %d %B")]
-post <- raw[Year == 2022, .(daily = sum(Hourly_Counts)), by = .(Sensor_ID, date)]
-post <- post[, .(post = mean(daily)), by = Sensor_ID]
-
-chg <- merge(pre, post, by.x = "location_id", by.y = "Sensor_ID")
-sname <- proc[, .(sensor_name = sensor_name[1]), by = location_id]
-chg <- merge(chg, sname, by = "location_id")
-chg[, pct := (post / pre - 1) * 100]
-chg[, direction := fifelse(pct >= 0, "up", "down")]
-chg[, sensor_name := reorder(sensor_name, pct)]
-
-p5 <- ggplot(chg, aes(x = pct, y = sensor_name)) +
-  geom_segment(aes(x = 0, xend = pct, yend = sensor_name, colour = direction)) +
-  geom_point(aes(colour = direction), size = 2.2) +
-  geom_text(aes(label = sprintf("%.0f%%", pct),
-                hjust = ifelse(pct >= 0, -0.3, 1.3)), size = 2.6) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
-  scale_colour_manual(values = c(up = "#1a9850", down = "#d73027"),
-                      labels = c(up = "Increased", down = "Decreased")) +
-  scale_x_continuous(expand = expansion(mult = c(0.1, 0.15))) +
-  labs(title = "Post-COVID change in daily pedestrian counts by sensor location",
-       subtitle = "Mean daily counts, 2019 vs 2022, common sensor locations",
-       x = "% change vs 2019 baseline", y = NULL, colour = NULL) +
-  theme_minimal(base_size = 11)
-
-ggsave("rq5_sensor_change.png", p5, width = 9, height = 11, dpi = 300)
-
-daily <- proc[, .(total = sum(pedestriancount)), by = sensing_date]
-daily[, date := as.Date(sensing_date)]
-daily[, yr := as.integer(format(date, "%Y"))]
-daily[, mo := as.integer(format(date, "%m"))]
-daily[, dow := as.integer(format(date, "%u"))]
-
-base <- daily[yr <= 2019, .(med = median(total)), by = .(mo, dow)]
-daily <- merge(daily, base, by = c("mo", "dow"))
-daily[, resid := total - med]
-
-k <- 12
-busy <- daily[order(-resid)][1:k, date]
-quiet <- daily[order(resid)][1:k, date]
-daily[, type := "normal"]
-daily[date %in% busy, type := "busy"]
-daily[date %in% quiet, type := "quiet"]
-
-ev <- proc[, .(mega_event = mega_event[1],
-               is_public_holiday = is_public_holiday[1],
-               covid_phase = covid_phase[1]), by = .(date = as.Date(sensing_date))]
-daily <- merge(daily, ev, by = "date", all.x = TRUE)
-
-daily[, explain := fifelse(mega_event, "mega event",
-        fifelse(is_public_holiday, "public holiday",
-        fifelse(covid_phase != "Normal", covid_phase, "")))]
-daily[type != "normal" & explain == "", explain := format(date, "%Y-%m-%d")]
-
-covid_span <- daily[covid_phase != "Normal", range(date)]
-
-p6 <- ggplot(daily, aes(date, resid)) +
-  annotate("rect", xmin = covid_span[1], xmax = covid_span[2],
-           ymin = -Inf, ymax = Inf, fill = "grey80", alpha = 0.35) +
-  geom_line(colour = "grey70", linewidth = 0.4) +
-  geom_point(data = daily[type != "normal"], aes(colour = type), size = 1.8) +
-  geom_text_repel(data = daily[type != "normal"], aes(label = explain),
-                  size = 2.6, max.overlaps = Inf, min.segment.length = 0,
-                  segment.size = 0.3) +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
-  scale_colour_manual(values = c(busy = "#d73027", quiet = "#2166ac"),
-                      labels = c(busy = "Unusually busy", quiet = "Unusually quiet")) +
-  scale_y_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
-  labs(title = "Days unusually busy or quiet vs calendar-adjusted expectation",
-       subtitle = "Calendar baseline: median count for the same month and day of week, pre-COVID years",
-       x = NULL, y = "Daily count minus calendar expectation", colour = NULL) +
-  theme_minimal(base_size = 11)
-
-ggsave("rq6_outlier_days.png", p6, width = 12, height = 6.5, dpi = 300)
-
-print(p5)
-print(p6)
+location_metadata <- sensor_locations |>
+  mutate(
+    relocation_flag = str_detect(
+      str_to_lower(
+        coalesce(note, "")
+      ),
+      "relocat|moved to|move to"
+    )
+  ) |>
+  filter(
+    !is.na(latitude),
+    !is.na(longitude)
+  ) |>
+  select(
+    location_id,
+    sensor_description,
+    sensor_name,
+    latitude,
+    longitude,
+    installation_date,
+    note,
+    relocation_flag
+  )
 ```
+
+```{r}
+sensor_daily_spatial <- pedestrian_full |>
+  group_by(
+    location_id,
+    sensing_date,
+    year,
+    month
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(
+    hours_observed >= 20
+  )
+```
+
+```{r}
+recent_strength <- sensor_daily_spatial |>
+  filter(
+    year == 2025
+  ) |>
+  group_by(location_id) |>
+  summarise(
+    typical_daily_count = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  filter(
+    days_observed >= 292
+  ) |>
+  inner_join(
+    location_metadata,
+    by = "location_id"
+  )
+```
+
+```{r}
+
+spatial_plot <- recent_strength |>
+  ggplot(
+    aes(
+      x = longitude,
+      y = latitude,
+      size = typical_daily_count,
+      text = paste0(
+        "<b>", sensor_description, "</b>",
+        "<br>Location ID: ", location_id,
+        "<br>Typical daily count: ",
+        scales::comma(round(typical_daily_count))
+      )
+    )
+  ) +
+  geom_point(alpha = 0.65) +
+  coord_quickmap() +
+  labs(
+    title = "Where is Melbourne's pedestrian pulse strongest?",
+    subtitle = "Typical daily pedestrian activity at well-covered sensor locations, 2025",
+    x = NULL,
+    y = NULL,
+    size = "Typical daily count"
+  ) +
+  theme_minimal()
+
+ggplotly(
+  spatial_plot,
+  tooltip = "text"
+)
+```
+```{r}
+
+top_10_locations |>
+  mutate(
+    sensor_description = fct_reorder(
+      sensor_description,
+      typical_daily_count
+    )
+  ) |>
+  ggplot(
+    aes(
+      x = sensor_description,
+      y = typical_daily_count
+    )
+  ) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Melbourne's busiest monitored pedestrian locations",
+    subtitle = "Typical daily pedestrian activity, 2025",
+    x = NULL,
+    y = "Typical daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+
+- How does recent pedestrian activity vary across Melbourne locations relative to their pre-COVID patterns?
+
+```{r}
+sensor_daily_change <- pedestrian_full |>
+  group_by(
+    location_id,
+    sensing_date,
+    year,
+    month
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(
+    hours_observed >= 20
+  )
+```
+
+```{r}
+sensor_monthly_change <- sensor_daily_change |>
+  mutate(
+    month_date = floor_date(
+      sensing_date,
+      "month"
+    )
+  ) |>
+  group_by(
+    location_id,
+    year,
+    month,
+    month_date
+  ) |>
+  summarise(
+    mean_daily_count = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  filter(
+    days_observed >= 20
+  )
+```
+
+```{r}
+pre_covid_location_baseline <- sensor_monthly_change |>
+  filter(
+    year >= 2015,
+    year <= 2019
+  ) |>
+  group_by(
+    location_id,
+    month
+  ) |>
+  summarise(
+    baseline_count = median(
+      mean_daily_count,
+      na.rm = TRUE
+    ),
+    baseline_years = n_distinct(year),
+    .groups = "drop"
+  ) |>
+  filter(
+    baseline_years >= 3
+  )
+```
+
+```{r}
+recent_location_change <- sensor_monthly_change |>
+  filter(
+    year >= 2024,
+    year <= 2026
+  ) |>
+  inner_join(
+    pre_covid_location_baseline,
+    by = c(
+      "location_id",
+      "month"
+    )
+  ) |>
+  mutate(
+    activity_index =
+      mean_daily_count / baseline_count * 100
+  )
+```
+
+
+```{r}
+location_recovery_robust <- recent_location_change |>
+  group_by(location_id) |>
+  summarise(
+    recovery_index = median(
+      activity_index,
+      na.rm = TRUE
+    ),
+    recent_months = n_distinct(month_date),
+    .groups = "drop"
+  ) |>
+  filter(recent_months >= 20) |>
+  mutate(
+    change_percent = recovery_index - 100
+  )
+
+location_recovery_robust |>
+  summarise(
+    locations = n(),
+    median_change = median(
+      change_percent,
+      na.rm = TRUE
+    ),
+    q25 = quantile(
+      change_percent,
+      0.25,
+      na.rm = TRUE
+    ),
+    q75 = quantile(
+      change_percent,
+      0.75,
+      na.rm = TRUE
+    ),
+    minimum_change = min(
+      change_percent,
+      na.rm = TRUE
+    ),
+    maximum_change = max(
+      change_percent,
+      na.rm = TRUE
+    )
+  )
+```
+
+```{r}
+location_recovery_final <- location_recovery_robust |>
+  inner_join(
+    location_metadata,
+    by = "location_id"
+  ) |>
+  filter(
+    !is.na(latitude),
+    !is.na(longitude),
+    !relocation_flag
+  )
+
+location_recovery_final |>
+  summarise(
+    locations = n_distinct(location_id)
+  )
+```
+
+
+```{r}
+
+recovery_plot <- location_recovery_final |>
+  ggplot(
+    aes(
+      x = longitude,
+      y = latitude,
+      colour = change_percent,
+      text = paste0(
+        "<b>", sensor_description, "</b>",
+        "<br>Location ID: ", location_id,
+        "<br>Recent activity index: ",
+        round(recovery_index, 1),
+        "<br>Change from pre-COVID: ",
+        round(change_percent, 1), "%",
+        "<br>Recent months available: ",
+        recent_months
+      )
+    )
+  ) +
+  geom_point(
+    size = 4,
+    alpha = 0.8
+  ) +
+  coord_quickmap() +
+  scale_colour_gradient2(
+    midpoint = 0
+  ) +
+  labs(
+    title = "Recent pedestrian activity varies across Melbourne locations",
+    subtitle = "Activity relative to location-specific, same-month 2015–2019 baselines",
+    x = NULL,
+    y = NULL,
+    colour = "Change (%)"
+  ) +
+  theme_minimal()
+
+
+
+ggplotly(
+  recovery_plot,
+  tooltip = "text"
+)
+```
+
+- How did each location change after the covid?
+
+- Does the extreme −72.6% change at Flinders Underpass represent a reliable behavioural shift, or is long-term comparability at this sensor uncertain?
+
+```{r}
+flinders_metadata <- sensor_locations |>
+  filter(location_id == 6) |>
+  select(
+    location_id,
+    sensor_description,
+    sensor_name,
+    installation_date,
+    status,
+    note
+  )
+
+flinders_metadata
+```
+
+```{r}
+flinders_monthly <- pedestrian_full |>
+  filter(location_id == 6) |>
+  group_by(
+    source,
+    sensing_date
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(
+    hours_observed >= 20
+  ) |>
+  mutate(
+    month_date = floor_date(
+      sensing_date,
+      "month"
+    )
+  ) |>
+  group_by(
+    source,
+    month_date
+  ) |>
+  summarise(
+    mean_daily_count = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n(),
+    .groups = "drop"
+  )
+```
+
+```{r}
+flinders_monthly |>
+  ggplot(
+    aes(
+      x = month_date,
+      y = mean_daily_count,
+      group = source,
+      linetype = source
+    )
+  ) +
+  geom_line() +
+  geom_vline(
+    xintercept = ymd("2021-09-08"),
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Pedestrian activity at Flinders Underpass – Myki Barriers",
+    subtitle = "Dashed vertical line marks the recorded sensor upgrade on 8 September 2021",
+    x = NULL,
+    y = "Average daily pedestrian count",
+    linetype = "Data source"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Inspecting the period around the upgrade
+flinders_monthly |>
+  filter(
+    month_date >= ymd("2021-01-01"),
+    month_date <= ymd("2022-10-01")
+  ) |>
+  ggplot(
+    aes(
+      x = month_date,
+      y = mean_daily_count
+    )
+  ) +
+  geom_line() +
+  geom_point() +
+  geom_vline(
+    xintercept = ymd("2021-09-08"),
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Flinders Underpass activity around the 2021 sensor upgrade",
+    x = NULL,
+    y = "Average daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+- There is no clear evidence that the September 2021 upgrade itself caused the long-term decline.
+
+```{r}
+flinders_source_summary <- pedestrian_full |>
+  filter(location_id == 6) |>
+  group_by(source) |>
+  summarise(
+    first_date = min(sensing_date),
+    last_date = max(sensing_date),
+    observations = n(),
+    .groups = "drop"
+  )
+
+flinders_source_summary
+```
+
+```{r}
+# Check whether the result is driven by this one sensor
+spatial_with_flinders <- location_recovery_final |>
+  summarise(
+    locations = n(),
+    median_change = median(
+      change_percent,
+      na.rm = TRUE
+    ),
+    q25 = quantile(
+      change_percent,
+      0.25,
+      na.rm = TRUE
+    ),
+    q75 = quantile(
+      change_percent,
+      0.75,
+      na.rm = TRUE
+    )
+  ) |>
+  mutate(
+    analysis = "Including Flinders Underpass"
+  )
+
+location_recovery_no_flinders <- location_recovery_final |>
+  filter(location_id != 6)
+
+spatial_without_flinders <- location_recovery_no_flinders |>
+  summarise(
+    locations = n(),
+    median_change = median(
+      change_percent,
+      na.rm = TRUE
+    ),
+    q25 = quantile(
+      change_percent,
+      0.25,
+      na.rm = TRUE
+    ),
+    q75 = quantile(
+      change_percent,
+      0.75,
+      na.rm = TRUE
+    )
+  ) |>
+  mutate(
+    analysis = "Excluding Flinders Underpass"
+  )
+
+flinders_sensitivity <- bind_rows(
+  spatial_with_flinders,
+  spatial_without_flinders
+) |>
+  select(
+    analysis,
+    locations,
+    median_change,
+    q25,
+    q75
+  )
+
+flinders_sensitivity
+```
+
+
+
+
+
+
 
 
