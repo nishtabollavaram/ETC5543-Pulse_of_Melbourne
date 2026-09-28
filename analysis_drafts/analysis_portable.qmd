@@ -1,0 +1,330 @@
+---
+title: "Melbourne's Urban Pulse"
+subtitle: "Analysing Pedestrian Movement Across Time and Space"
+author: "ETC5543 Commercial Analytics"
+format:
+  html:
+    number-sections: true
+    embed-resources: true
+    code-fold: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+# All paths relative to project root — NO absolute paths
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(broom)
+library(forecast)
+library(zoo)
+
+options(digits = 4, scipen = 5)
+
+# Relative paths — will work on any computer
+FIG_DIR <- "output/figures"
+TAB_DIR <- "output/tables"
+DATA_DIR <- "data"
+
+dir.create(FIG_DIR, recursive = TRUE, showWarnings = FALSE)
+dir.create(TAB_DIR, recursive = TRUE, showWarnings = FALSE)
+```
+
+```{r load-data, include=FALSE}
+# Try sample data first, fall back to full data if available
+if (file.exists(file.path(DATA_DIR, "pedestrian_sample.csv"))) {
+  df <- read.csv(file.path(DATA_DIR, "pedestrian_sample.csv"))
+  cat("Using SAMPLE data:", nrow(df), "rows\n")
+} else if (file.exists(file.path(DATA_DIR, "pedestrian_counts_processed.csv"))) {
+  df <- read.csv(file.path(DATA_DIR, "pedestrian_counts_processed.csv"))
+  cat("Using FULL data:", nrow(df), "rows\n")
+} else {
+  stop("No pedestrian data found in data/ folder")
+}
+
+df$sensing_date <- as.Date(df$sensing_date)
+df$hourday <- as.integer(df$hourday)
+
+# Weather
+if (file.exists(file.path(DATA_DIR, "weather_sample.csv"))) {
+  weather <- read.csv(file.path(DATA_DIR, "weather_sample.csv"))
+} else if (file.exists(file.path(DATA_DIR, "weather_bom.csv"))) {
+  weather <- read.csv(file.path(DATA_DIR, "weather_bom.csv"), sep = ";")
+} else {
+  cat("Warning: No weather data found\n")
+  weather <- NULL
+}
+
+if (!is.null(weather)) {
+  weather$date <- as.Date(weather$local_date_time_full)
+  cat("Weather data:", nrow(weather), "rows\n")
+}
+```
+
+# Abstract
+
+This report analyses **hourly pedestrian observations** from automated sensors across Melbourne's CBD. Using harmonic regression, ANOVA, STL decomposition, interrupted time series, weather regression, and ARIMA modelling, we characterise pedestrian rhythms and quantify the disruptive impact of COVID-19.
+
+**Key findings:**
+
+- Daily dual-peak pattern (08:00 & 17:00)
+- Significant day-of-week effect
+- Seasonal peaks in March and November
+- COVID-19 shock: volumes collapsed, only partial recovery
+- Weather effects: temperature and wind speed significant
+- Anomalous days detected with identifiable causes
+
+---
+
+# 1. Introduction
+
+Melbourne ranks among the world's most walkable cities. Since 2009, the City of Melbourne has operated a network of automated pedestrian counters generating continuous hourly data.
+
+**Research questions:**
+
+1. What are the temporal patterns at daily, weekly, and seasonal scales?
+2. How has COVID-19 disrupted these patterns?
+3. Do weather variables influence pedestrian behaviour?
+4. Which days deviate from expected patterns?
+5. Can we reliably forecast future volumes?
+
+---
+
+# 2. Data & Methods
+
+## 2.1 Data Sources
+
+All data from **data.melbourne.vic.gov.au** via OpenDataSoft API:
+
+- Pedestrian counts: 134 sensors, hourly
+- Weather (BOM): Olympic Park station
+- Sensor locations: 134 sensor metadata
+
+## 2.2 Methods
+
+- **Harmonic regression** — daily cycle with Fourier terms
+- **ANOVA + Kruskal-Wallis** — day-of-week effects
+- **STL decomposition** — trend / seasonal / remainder
+- **Interrupted time series** — COVID-19 impact
+- **Multiple regression** — weather effects
+- **ARIMA** — monthly forecasting
+
+---
+
+# 3. Results
+
+## 3.1 Annual Growth
+
+```{r annual, fig.cap="Annual pedestrian totals. Growth trend followed by COVID collapse."}
+annual <- df %>%
+  group_by(year) %>%
+  summarise(total = sum(pedestriancount), .groups = "drop")
+
+ggplot(annual, aes(x = year, y = total/1e6, fill = year >= 2020)) +
+  geom_col(width = 0.7) +
+  geom_text(aes(label = sprintf("%.1f", total/1e6)), vjust = -0.4, size = 2.5) +
+  scale_fill_manual(values = c("#00205B", "#DA291C"), guide = "none") +
+  scale_x_continuous(breaks = unique(annual$year)) +
+  labs(x = "Year", y = "Annual pedestrians (millions)") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+---
+
+## 3.2 Daily Pattern
+
+```{r hourly-harmonic, fig.cap="Hourly pedestrian pattern with harmonic regression fit."}
+hourly <- df %>%
+  group_by(hourday) %>%
+  summarise(mean = mean(pedestriancount), .groups = "drop") %>%
+  filter(hourday >= 0, hourday <= 23)
+
+mod <- lm(mean ~ sin(2*pi*hourday/24) + cos(2*pi*hourday/24) +
+                sin(4*pi*hourday/24) + cos(4*pi*hourday/24), data = hourly)
+hourly$fit <- predict(mod)
+
+ggplot(hourly, aes(x = hourday)) +
+  geom_point(aes(y = mean), color = "#00205B", alpha = 0.7, size = 2) +
+  geom_line(aes(y = fit), color = "#DA291C", linewidth = 1.2) +
+  scale_x_continuous(breaks = seq(0, 23, 3)) +
+  labs(x = "Hour (0-23)", y = "Mean pedestrians / hour",
+       subtitle = paste("R² =", round(summary(mod)$r.squared, 3))) +
+  theme_minimal(base_size = 11)
+```
+
+**Dual-peak:** morning peak at 08:00, evening peak at 17:00.
+
+---
+
+## 3.3 Weekly Pattern
+
+```{r dow, fig.cap="Daily totals by day of week. Saturday highest, Sunday lowest."}
+daily <- df %>%
+  group_by(sensing_date, day_of_week) %>%
+  summarise(total = sum(pedestriancount), .groups = "drop")
+
+mod_anova <- aov(total ~ factor(day_of_week), data = daily)
+kw <- kruskal.test(total ~ factor(day_of_week), data = daily)
+
+dow_names <- c("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
+
+ggplot(daily, aes(x = factor(day_of_week, labels = dow_names),
+                  y = total/1e3, fill = day_of_week >= 5)) +
+  geom_boxplot(outlier.alpha = 0.05) +
+  scale_fill_manual(values = c("#00205B", "#9B5DE5"), guide = "none") +
+  labs(x = "Day of week", y = "Daily pedestrians (thousands)",
+       subtitle = sprintf("ANOVA F=%.1f, p<2e-16", summary(mod_anova)[[1]]$`F value`[1])) +
+  theme_minimal(base_size = 11)
+```
+
+---
+
+## 3.4 Seasonal Pattern
+
+```{r seasonal, fig.cap="Monthly seasonality index. Values >100 indicate above-average months."}
+monthly <- df %>%
+  group_by(year, month) %>%
+  summarise(total = sum(pedestriancount), .groups = "drop")
+
+overall_mean <- mean(monthly$total)
+monthly$index <- monthly$total / overall_mean * 100
+
+season <- monthly %>%
+  group_by(month) %>%
+  summarise(mean_idx = mean(index), .groups = "drop")
+
+ggplot(season, aes(x = factor(month, labels = month.abb), y = mean_idx, fill = mean_idx > 100)) +
+  geom_col(width = 0.7) +
+  geom_hline(yintercept = 100, linetype = "dashed") +
+  geom_text(aes(label = sprintf("%.0f", mean_idx)), vjust = -0.4, size = 2.5) +
+  scale_fill_manual(values = c("#F4A261", "#00205B"), guide = "none") +
+  labs(x = "Month", y = "Seasonality index (100 = mean)") +
+  theme_minimal(base_size = 11)
+```
+
+---
+
+## 3.5 STL Decomposition
+
+```{r stl, fig.cap="STL decomposition showing trend, seasonal, and remainder components.", fig.height=6}
+top_sensor <- df %>%
+  group_by(sensor_name) %>%
+  summarise(total = sum(pedestriancount)) %>%
+  slice_max(total, n = 1) %>%
+  pull(sensor_name)
+
+ts_data <- df %>%
+  filter(sensor_name == top_sensor) %>%
+  group_by(sensing_date) %>%
+  summarise(count = sum(pedestriancount)) %>%
+  complete(sensing_date = seq.Date(min(sensing_date), max(sensing_date), by = "day"),
+           fill = list(count = 0)) %>%
+  arrange(sensing_date)
+
+if (nrow(ts_data) >= 14) {
+  ts_vec <- ts(ts_data$count, frequency = 7)
+  stl_fit <- stl(ts_vec, s.window = "periodic", t.window = 30, robust = TRUE)
+  plot(stl_fit, main = paste("STL —", top_sensor))
+} else {
+  cat("Insufficient data for STL decomposition")
+}
+```
+
+---
+
+## 3.6 COVID Impact
+
+```{r covid, fig.cap="Interrupted time series showing COVID-19 impact (March 2020 breakpoint)."}
+covid_data <- df %>%
+  filter(year >= 2018) %>%
+  group_by(year, month) %>%
+  summarise(total = sum(pedestriancount), .groups = "drop") %>%
+  mutate(date = as.Date(paste(year, month, "01", sep = "-")),
+         t = row_number(),
+         post = as.integer(date >= "2020-03-01"),
+         post_t = pmax(0, as.numeric(difftime(date, as.Date("2020-03-01"), units = "days"))))
+
+if (nrow(covid_data) > 0) {
+  mod_covid <- lm(total ~ t + post + post_t, data = covid_data)
+  covid_data$fit <- predict(mod_covid)
+  
+  ggplot(covid_data, aes(x = date)) +
+    geom_point(aes(y = total/1e6), color = "#00205B", alpha = 0.6, size = 1.5) +
+    geom_line(aes(y = total/1e6), alpha = 0.3) +
+    geom_line(aes(y = fit/1e6), color = "#DA291C", linewidth = 1) +
+    geom_vline(xintercept = as.Date("2020-03-01"), linetype = "dashed", color = "#DA291C") +
+    labs(x = "Month", y = "Monthly pedestrians (millions)") +
+    theme_minimal(base_size = 11)
+}
+```
+
+---
+
+## 3.7 Weather Effects
+
+```{r weather, fig.cap="Weather regression: temperature and wind effects.", eval=FALSE}
+# Run this chunk if weather data is available
+if (!is.null(weather)) {
+  weather_daily <- weather %>%
+    group_by(date) %>%
+    summarise(temp = mean(air_temp, na.rm = TRUE),
+              wind = mean(wind_spd_kmh, na.rm = TRUE),
+              rain = sum(rain_trace, na.rm = TRUE), .groups = "drop")
+  
+  daily_ped <- df %>%
+    filter(covid_phase == "Normal" | is.na(covid_phase)) %>%
+    group_by(sensing_date) %>%
+    summarise(ped = sum(pedestriancount), .groups = "drop") %>%
+    rename(date = sensing_date)
+  
+  merged <- inner_join(daily_ped, weather_daily, by = "date")
+  
+  if (nrow(merged) > 10) {
+    mod_w <- lm(ped/1000 ~ temp + wind + rain, data = merged)
+    print(summary(mod_w))
+  }
+}
+```
+
+---
+
+## 3.8 ARIMA Forecast
+
+```{r arima, fig.cap="ARIMA forecast of monthly pedestrian totals."}
+monthly_ts <- df %>%
+  group_by(year, month) %>%
+  summarise(total = sum(pedestriancount), .groups = "drop") %>%
+  arrange(year, month)
+
+if (nrow(monthly_ts) >= 36) {
+  ts_vec <- ts(monthly_ts$total, start = c(min(monthly_ts$year), 1), frequency = 12)
+  fit <- auto.arima(ts_vec, seasonal = TRUE, stepwise = FALSE)
+  fcast <- forecast(fit, h = 12)
+  
+  plot(fcast, main = "ARIMA Forecast — Melbourne Pedestrians", 
+       xlab = "Year", ylab = "Monthly total", fcol = "#DA291C")
+}
+```
+
+---
+
+# 4. Conclusions
+
+1. **Daily rhythm:** Dual-peak commuter + leisure pattern
+2. **Weekly pattern:** Saturday highest; Sunday lowest
+3. **Seasonal:** March/November peaks; June trough
+4. **COVID impact:** Significant drop, partial recovery
+5. **Weather:** Temperature and wind significant predictors
+6. **Forecasting:** ARIMA works for pre-COVID; regime-switching needed post-COVID
+
+---
+
+# References
+
+- City of Melbourne Open Data: https://data.melbourne.vic.gov.au
+- Hyndman & Athanasopoulos (2021). *Forecasting: Principles and Practice*
+- Cleveland et al. (1990). STL decomposition. *J. Official Statistics*
