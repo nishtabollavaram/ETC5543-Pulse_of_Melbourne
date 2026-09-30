@@ -24,6 +24,7 @@ library(here)
 library(ggrepel)
 library(plotly)
 library(leaflet)
+library(slider)
 ```
 
 ```{r}
@@ -710,8 +711,19 @@ ggplotly(
 )
 ```
 ```{r}
+top_locations <- recent_strength |>
+  slice_max(
+    typical_daily_count,
+    n = 10
+  ) |>
+  mutate(
+    sensor_description = fct_reorder(
+      sensor_description,
+      typical_daily_count
+    )
+  )
 
-top_10_locations |>
+top_locations |>
   mutate(
     sensor_description = fct_reorder(
       sensor_description,
@@ -1124,10 +1136,771 @@ flinders_sensitivity <- bind_rows(
 flinders_sensitivity
 ```
 
+- Which dates show unusually high pedestrian activity in Melbourne, and can these peaks be associated with major city events?
+
+```{r}
+sensor_daily_events <- pedestrian_full |>
+  filter(
+    !is.na(pedestrian_count)
+  ) |>
+  group_by(
+    location_id,
+    sensing_date
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    
+    hours_observed = n_distinct(hourday),
+    
+    .groups = "drop"
+  ) |>
+  filter(
+    hours_observed >= 20
+  ) |>
+  mutate(
+    day_of_week = wday(
+      sensing_date,
+      week_start = 1
+    ),
+    
+    day_name = wday(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE,
+      week_start = 1
+    )
+  )
+```
+
+```{r}
+busiest_observed_dates <- sensor_daily_events |>
+  group_by(sensing_date) |>
+  summarise(
+    median_daily_count = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    
+    sensors_reporting = n_distinct(location_id),
+    
+    .groups = "drop"
+  ) |>
+  filter(
+    sensors_reporting >= 10
+  ) |>
+  arrange(
+    desc(median_daily_count)
+  )
 
 
+busiest_observed_dates |>
+  slice_head(n = 20)
+```
+
+```{r}
+top_busiest_dates <- busiest_observed_dates |>
+  slice_head(n = 20) |>
+  mutate(
+    date_label = as.character(sensing_date),
+    date_label = fct_reorder(
+      date_label,
+      median_daily_count
+    )
+  )
+
+top_busiest_dates |>
+  ggplot(
+    aes(
+      x = date_label,
+      y = median_daily_count
+    )
+  ) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Melbourne's busiest observed pedestrian days",
+    subtitle = "Top dates ranked by median daily activity across reporting sensors",
+    x = NULL,
+    y = "Median daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+```{r}
+sensor_event_index <- sensor_daily_events |>
+  arrange(
+    location_id,
+    day_of_week,
+    sensing_date
+  ) |>
+  group_by(
+    location_id,
+    day_of_week
+  ) |>
+  mutate(
+    expected_count = slide_dbl(
+      daily_count,
+      ~ median(
+        .x[-5],
+        na.rm = TRUE
+      ),
+      .before = 4,
+      .after = 4,
+      .complete = TRUE
+    )
+  ) |>
+  ungroup() |>
+  mutate(
+    uplift_percent =
+      100 *
+      (daily_count - expected_count) /
+      expected_count
+  ) |>
+  filter(
+    is.finite(uplift_percent)
+  )
+```
+
+```{r}
+event_day_summary <- sensor_event_index |>
+  group_by(sensing_date) |>
+  summarise(
+    median_uplift = median(
+      uplift_percent,
+      na.rm = TRUE
+    ),
+    
+    sensors_reporting = n_distinct(location_id),
+    
+    sensors_above_20 = sum(
+      uplift_percent >= 20,
+      na.rm = TRUE
+    ),
+    
+    proportion_above_20 = mean(
+      uplift_percent >= 20,
+      na.rm = TRUE
+    ),
+    
+    median_daily_count = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    
+    .groups = "drop"
+  )
+```
+
+```{r}
+event_day_summary_non_covid <- event_day_summary |>
+  filter(
+    year(sensing_date) <= 2019 |
+      year(sensing_date) >= 2024
+  )
+
+unusually_busy_dates_non_covid <- event_day_summary_non_covid |>
+  filter(
+    sensors_reporting >= 10
+  ) |>
+  arrange(
+    desc(median_uplift)
+  )
+
+unusually_busy_dates_non_covid |>
+  slice_head(n = 30)
+```
+
+```{r}
+strong_event_candidates_non_covid <- event_day_summary_non_covid |>
+  filter(
+    sensors_reporting >= 10,
+    median_uplift >= 20,
+    proportion_above_20 >= 0.30
+  ) |>
+  arrange(desc(median_uplift))
+
+strong_event_candidates_non_covid |>
+  slice_head(n = 30)
+```
+
+```{r}
+event_candidates_episode <- strong_event_candidates_non_covid |>
+  arrange(sensing_date) |>
+  mutate(
+    gap_days = as.numeric(
+      sensing_date - lag(sensing_date)
+    ),
+    new_episode = is.na(gap_days) | gap_days > 1,
+    episode_id = cumsum(new_episode)
+  )
+```
+
+```{r}
+event_episode_candidates <- event_candidates_episode |>
+  group_by(episode_id) |>
+  summarise(
+    start_date = min(sensing_date),
+    end_date = max(sensing_date),
+    flagged_days = n(),
+    
+    peak_date = sensing_date[
+      which.max(median_uplift)
+    ],
+    
+    peak_uplift = max(
+      median_uplift,
+      na.rm = TRUE
+    ),
+    
+    max_proportion_above_20 = max(
+      proportion_above_20,
+      na.rm = TRUE
+    ),
+    
+    .groups = "drop"
+  ) |>
+  arrange(desc(peak_uplift))
+
+event_episode_candidates |>
+  slice_head(n = 20)
+```
+
+```{r}
+# Downloading the event permits dataset from COM
+event_url <- paste0(
+  "https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/",
+  "event-permits-2014-2018-including-film-shoots-photo-shoots-weddings-christmas-pa/",
+  "exports/csv"
+)
+
+event_path <- "Data_pedestrians/event_permits_2014_2018.csv"
+
+curl::curl_download(
+  event_url,
+  event_path
+)
+
+readr::read_lines(
+  event_path,
+  n_max = 3
+)
+```
+
+```{r}
+event_permits <- readr::read_delim(
+  event_path,
+  delim = ";",
+  show_col_types = FALSE
+) |>
+  clean_names()
+
+event_permits |>
+  glimpse()
+```
+```{r}
+event_permits |>
+  count(
+    category_1,
+    sort = TRUE
+  )
+
+event_permits |>
+  count(
+    category_2,
+    sort = TRUE
+  )
+```
+
+```{r}
+# Cleaning the inconsistency in the events dataset
+event_permits_relevant <- event_permits |>
+  mutate(
+    category_1_clean = category_1 |>
+      str_to_lower() |>
+      str_squish() |>
+      str_replace_all(
+        "non\\s*-?\\s*ticketed",
+        "non-ticketed"
+      ) |>
+      str_replace_all(
+        "run\\s*/?\\s*walk",
+        "run/walk"
+      ),
+
+    event_type = case_when(
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "non-ticketed"
+        ) ~
+        "Non-ticketed public event",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "ticketed"
+        ) ~
+        "Ticketed public event",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "run/walk"
+        ) ~
+        "Run/Walk",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "music"
+        ) ~
+        "Music event",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "cycling"
+        ) ~
+        "Cycling event",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "parade"
+        ) ~
+        "Parade",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "memorial"
+        ) ~
+        "Memorial",
+
+      category_1_clean == "public event" ~
+        "Other public event",
+
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(
+    !is.na(event_type)
+  )
+```
+
+```{r}
+event_permits_relevant |>
+  count(
+    event_type,
+    sort = TRUE
+  )
+```
+```{r}
+event_permits_relevant |>
+  glimpse()
+```
+```{r}
+# Checking for missing dates and unusally long permits
+
+event_permits_qc <- event_permits_relevant |>
+  mutate(
+    duration_days =
+      interval(event_start, event_end) / days(1) + 1
+  )
+
+event_permits_qc |>
+  summarise(
+    events = n(),
+    missing_title = sum(is.na(title)),
+    missing_start = sum(is.na(event_start)),
+    missing_end = sum(is.na(event_end)),
+    invalid_date_range = sum(
+      event_end < event_start,
+      na.rm = TRUE
+    ),
+    events_over_7_days = sum(
+      duration_days > 7,
+      na.rm = TRUE
+    ),
+    events_over_30_days = sum(
+      duration_days > 30,
+      na.rm = TRUE
+    )
+  )
+
+event_permits_qc |>
+  arrange(desc(duration_days)) |>
+  select(
+    title,
+    event_start,
+    event_end,
+    duration_days,
+    event_type,
+    location
+  ) |>
+  slice_head(n = 20)
+```
+
+```{r}
+event_permits_qc <- event_permits_relevant |>
+  mutate(
+    duration_days =
+      as.numeric(event_end - event_start) + 1,
+
+    permit_match_class = case_when(
+      is.na(event_end) ~
+        "Missing end date",
+
+      duration_days <= 7 ~
+        "Suitable for automatic matching",
+
+      duration_days <= 30 ~
+        "Extended permit - inspect manually",
+
+      duration_days > 30 ~
+        "Long permit window - do not auto-match"
+    )
+  )
+
+event_permits_qc |>
+  count(
+    permit_match_class,
+    sort = TRUE
+  )
+```
+```{r}
+event_permits_auto <- event_permits_qc |>
+  filter(
+    permit_match_class ==
+      "Suitable for automatic matching"
+  )
+
+event_permits_extended <- event_permits_qc |>
+  filter(
+    permit_match_class !=
+      "Suitable for automatic matching"
+  )
+```
+
+```{r}
+event_episodes_2014_2018 <-
+  event_episode_candidates |>
+  filter(
+    end_date >= ymd("2014-01-01"),
+    start_date <= ymd("2018-12-31")
+  )
 
 
+event_episode_matches <-
+  event_episodes_2014_2018 |>
+  inner_join(
+    event_permits_auto,
+    by = join_by(
+      start_date <= event_end,
+      end_date >= event_start
+    )
+  ) |>
+  mutate(
+    peak_date_inside_event =
+      peak_date >= event_start &
+      peak_date <= event_end
+  ) |>
+  arrange(
+    desc(peak_uplift),
+    desc(peak_date_inside_event)
+  )
+```
+
+```{r}
+event_episode_matches_checked <- event_episode_matches |>
+  mutate(
+    date_match_quality = case_when(
+      duration_days == 1 &
+        peak_date == event_start ~
+        "Exact one-day permit match",
+
+      duration_days > 1 &
+        peak_date_inside_event ~
+        "Within short permit window",
+
+      TRUE ~
+        "Weak date match"
+    )
+  )
 
 
+event_matches_temporally_plausible <- event_episode_matches_checked |>
+  filter(peak_date_inside_event)
+
+event_matches_temporally_plausible
+```
+
+```{r}
+
+peak_event_summary <- event_matches_temporally_plausible |>
+  group_by(
+    episode_id,
+    peak_date,
+    peak_uplift,
+    max_proportion_above_20
+  ) |>
+  summarise(
+    matching_events = n_distinct(title),
+
+    exact_one_day_matches = sum(
+      date_match_quality == "Exact one-day permit match"
+    ),
+
+    candidate_events = str_c(
+      unique(title),
+      collapse = " | "
+    ),
+
+    .groups = "drop"
+  ) |>
+  arrange(desc(peak_uplift))
+
+peak_event_summary
+
+
+```
+
+
+```{r}
+event_case_candidates <- event_matches_temporally_plausible |>
+  filter(
+    peak_uplift >= 20,
+    max_proportion_above_20 >= 0.50
+  ) |>
+  select(
+    peak_date,
+    peak_uplift,
+    max_proportion_above_20,
+    title,
+    event_type,
+    event_start,
+    event_end,
+    duration_days,
+    location,
+    date_match_quality
+  ) |>
+  arrange(
+    desc(peak_uplift)
+  )
+
+event_case_candidates
+```
+
+
+```{r}
+event_2014_spatial <- sensor_event_index |>
+  filter(
+    sensing_date == ymd("2014-02-22")
+  ) |>
+  left_join(
+    location_metadata |>
+      select(
+        location_id,
+        sensor_description,
+        latitude,
+        longitude
+      ),
+    by = "location_id"
+  ) |>
+  mutate(
+    sensor_label = coalesce(
+      sensor_description,
+      str_c("Historical sensor ID ", location_id)
+    )
+  ) |>
+  arrange(desc(uplift_percent))
+```
+
+```{r}
+event_2014_spatial |>
+  mutate(
+    sensor_label = fct_reorder(
+      sensor_label,
+      uplift_percent
+    )
+  ) |>
+  ggplot(
+    aes(
+      x = sensor_label,
+      y = uplift_percent
+    )
+  ) +
+  geom_col() +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  coord_flip() +
+  labs(
+    title = "The 22 February 2014 pedestrian surge spread across Melbourne",
+    subtitle = "Sensor-level activity relative to comparable Saturdays",
+    x = NULL,
+    y = "Pedestrian uplift (%)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+event_2014_spatial |>
+  summarise(
+    sensors = n(),
+    sensors_above_normal =
+      sum(uplift_percent > 0, na.rm = TRUE),
+
+    proportion_above_normal =
+      mean(uplift_percent > 0, na.rm = TRUE),
+
+    sensors_above_20 =
+      sum(uplift_percent >= 20, na.rm = TRUE),
+
+    proportion_above_20 =
+      mean(uplift_percent >= 20, na.rm = TRUE),
+
+    median_uplift =
+      median(uplift_percent, na.rm = TRUE),
+
+    maximum_uplift =
+      max(uplift_percent, na.rm = TRUE)
+  )
+```
+
+```{r}
+baseline_2014_hourly <- pedestrian_full |>
+  filter(
+    sensing_date >= ymd("2014-01-25"),
+    sensing_date <= ymd("2014-03-22"),
+    sensing_date != ymd("2014-02-22"),
+    day_name == "Saturday"
+  ) |>
+  group_by(
+    location_id,
+    hourday
+  ) |>
+  summarise(
+    expected_count = median(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+```
+
+```{r}
+event_2014_hourly <- pedestrian_full |>
+  filter(
+    sensing_date == ymd("2014-02-22")
+  ) |>
+  select(
+    location_id,
+    hourday,
+    pedestrian_count
+  ) |>
+  left_join(
+    baseline_2014_hourly,
+    by = c(
+      "location_id",
+      "hourday"
+    )
+  ) |>
+  filter(
+    expected_count > 0
+  ) |>
+  mutate(
+    hourly_uplift =
+      100 * (
+        pedestrian_count - expected_count
+      ) / expected_count
+  )
+```
+
+```{r}
+hourly_city_uplift <- event_2014_hourly |>
+  group_by(hourday) |>
+  summarise(
+    median_uplift =
+      median(hourly_uplift, na.rm = TRUE),
+
+    q25 =
+      quantile(
+        hourly_uplift,
+        0.25,
+        na.rm = TRUE
+      ),
+
+    q75 =
+      quantile(
+        hourly_uplift,
+        0.75,
+        na.rm = TRUE
+      ),
+
+    sensors =
+      n_distinct(location_id),
+
+    .groups = "drop"
+  )
+```
+
+```{r}
+hourly_city_uplift |>
+  ggplot(
+    aes(
+      x = hourday,
+      y = median_uplift
+    )
+  ) +
+  geom_ribbon(
+    aes(
+      ymin = q25,
+      ymax = q75
+    ),
+    alpha = 0.2
+  ) +
+  geom_line(
+    linewidth = 1
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  scale_x_continuous(
+    breaks = 0:23
+  ) +
+  labs(
+    title = "When did Melbourne's pedestrian surge occur on 22 February 2014?",
+    subtitle = "Median sensor uplift relative to nearby Saturdays; band shows the middle 50% of sensors",
+    x = "Hour of day",
+    y = "Median pedestrian uplift (%)"
+  ) +
+  theme_minimal()
+```
 
