@@ -1331,3 +1331,210 @@ pedestrian_full_updated %>%
 pedestrian_full <- pedestrian_full_updated
 ```
 
+
+## Daily and Weekly Pedestrian Rhythm
+
+### Hourly Pedestrian Activity Over Time
+
+
+```{r}
+hourly_by_sensor_year <- pedestrian_full %>%
+  filter(
+    !is.na(hourday),
+    hourday >= 0,
+    hourday <= 23
+  ) %>%
+  group_by(year, location_id, hourday) %>%
+  summarise(
+    sensor_hour_avg = mean(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+hourly_by_year <- hourly_by_sensor_year %>%
+  group_by(year, hourday) %>%
+  summarise(
+    avg_pedestrians = mean(sensor_hour_avg, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+hourly_index <- hourly_by_year %>%
+  group_by(year) %>%
+  mutate(
+    yearly_mean = mean(avg_pedestrians, na.rm = TRUE),
+    activity_index = avg_pedestrians / yearly_mean * 100
+  ) %>%
+  ungroup()
+
+hourly_summary <- hourly_index %>%
+  group_by(hourday) %>%
+  summarise(
+    median_index = median(activity_index, na.rm = TRUE),
+    q25 = quantile(activity_index, 0.25, na.rm = TRUE),
+    q75 = quantile(activity_index, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+
+### PLOT 1 — Typical Daily Pedestrian Rhythm
+
+```{r}
+ggplot(
+  hourly_summary,
+  aes(
+    x = hourday,
+    y = median_index
+  )
+) +
+  geom_ribbon(
+    aes(
+      ymin = q25,
+      ymax = q75
+    ),
+    alpha = 0.2
+  ) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  geom_hline(
+    yintercept = 100,
+    linetype = "dashed"
+  ) +
+  scale_x_continuous(breaks = 0:23) +
+  labs(
+    title = "Typical Daily Pedestrian Rhythm Across Years",
+    subtitle = "Median hourly activity across years; shaded area shows the middle 50%",
+    x = "Hour of day",
+    y = "Activity index (100 = yearly average)"
+  ) +
+  theme_minimal()
+```
+
+### PLOT 2 — Daily Rhythm by Year
+
+```{r}
+ggplot(
+  hourly_index,
+  aes(
+    x = hourday,
+    y = factor(year, levels = 2009:2026),
+    fill = activity_index
+  )
+) +
+  geom_tile() +
+  scale_x_continuous(breaks = 0:23) +
+  scale_y_discrete(drop = FALSE) +
+  labs(
+    title = "Melbourne's Daily Pedestrian Rhythm Across Years",
+    subtitle = "Activity relative to each year's average (100 = yearly average)",
+    x = "Hour of day",
+    y = "Year",
+    fill = "Activity\nindex"
+  ) +
+  theme_minimal()
+```
+
+## Weekly Rhythm Across the Years, 2009–2026
+
+```{r}
+
+pedestrian_full <- pedestrian_full %>%
+  mutate(
+    day_name = lubridate::wday(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE,
+      week_start = 1
+    )
+  )
+```
+
+
+### Calculating Weekly Patterns
+
+```{r}
+weekly_by_sensor_year <- pedestrian_full %>%
+  group_by(year, location_id, day_name) %>%
+  summarise(
+    sensor_day_avg = mean(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+weekly_by_year <- weekly_by_sensor_year %>%
+  group_by(year, day_name) %>%
+  summarise(
+    avg_pedestrians = mean(sensor_day_avg, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+weekly_index <- weekly_by_year %>%
+  group_by(year) %>%
+  mutate(
+    yearly_mean = mean(avg_pedestrians, na.rm = TRUE),
+    activity_index = avg_pedestrians / yearly_mean * 100
+  ) %>%
+  ungroup()
+
+weekly_summary <- weekly_index %>%
+  group_by(day_name) %>%
+  summarise(
+    median_index = median(activity_index, na.rm = TRUE),
+    q25 = quantile(activity_index, 0.25, na.rm = TRUE),
+    q75 = quantile(activity_index, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+### PLOT 3 — Typical Weekly Pedestrian Rhythm
+
+```{r}
+ggplot(
+  weekly_summary,
+  aes(x = day_name, y = median_index, group = 1)
+) +
+  geom_ribbon(
+    aes(ymin = q25, ymax = q75),
+    alpha = 0.2
+  ) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  geom_hline(
+    yintercept = 100,
+    linetype = "dashed"
+  ) +
+  scale_y_continuous(
+    limits = c(0, 125),
+    breaks = seq(0, 120, 20)
+  ) +
+  labs(
+    title = "Typical Weekly Pedestrian Rhythm Across Years",
+    subtitle = "Median weekly pattern across years",
+    x = "Day of week",
+    y = "Activity index (100 = yearly average)"
+  ) +
+  theme_minimal()
+```
+
+
+### PLOT 4 — Weekly Rhythm by Year
+
+```{r}
+ggplot(
+  weekly_index,
+  aes(
+    x = day_name,
+    y = factor(year, levels = 2009:2026),
+    fill = activity_index
+  )
+) +
+  geom_tile() +
+  scale_y_discrete(drop = FALSE) +
+  labs(
+    title = "Melbourne's Weekly Pedestrian Rhythm Across Years",
+    subtitle = "Activity relative to each year's average (100 = yearly average)",
+    x = "Day of week",
+    y = "Year",
+    fill = "Activity\nindex"
+  ) +
+  theme_minimal()
+```
+
