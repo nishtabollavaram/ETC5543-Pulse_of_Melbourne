@@ -625,3 +625,709 @@ june_july_changes <- monthly_changes %>%
 june_july_changes
 
 ```
+
+```{r}
+sensor_change_2017 <- pedestrian_full %>%
+  filter(
+    location_id %in% common_sensor_ids,
+    sensing_date >= as.Date("2017-06-01"),
+    sensing_date <= as.Date("2017-07-31")
+  ) %>%
+  mutate(
+    month_date = floor_date(sensing_date, "month")
+  ) %>%
+  group_by(location_id, month_date) %>%
+  summarise(
+    avg_activity = mean(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = month_date,
+    values_from = avg_activity
+  ) %>%
+  mutate(
+    pct_change =
+      (`2017-07-01` - `2017-06-01`) /
+      `2017-06-01` * 100
+  ) %>%
+  arrange(pct_change)
+
+sensor_change_2017
+
+```
+
+
+
+## EDA of City of Melbourne Snapshot Data
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(lubridate)
+```
+
+### Locate Snapshot Files
+
+```{r}
+snapshot_dir <- here::here(
+  "Data_pedestrians",
+  "raw",
+  "data_pedestrian"
+)
+
+snapshot_files <- list.files(
+  snapshot_dir,
+  pattern = "\\.csv$",
+  full.names = TRUE
+)
+
+snapshot_files
+```
+
+### Inspect Snapshot File Structure
+
+```{r}
+snapshot_schema <- purrr::map_dfr(
+  snapshot_files,
+  function(f) {
+    
+    x <- data.table::fread(
+      file = f,
+      nrows = 5
+    )
+    
+    tibble::tibble(
+      file = basename(f),
+      n_columns = ncol(x),
+      columns = paste(names(x), collapse = " | ")
+    )
+  }
+)
+
+snapshot_schema
+```
+
+### Check Snapshot Data Coverage
+
+```{r}
+snapshot_coverage <- purrr::map_dfr(
+  snapshot_files,
+  function(f) {
+    
+    x <- data.table::fread(
+      file = f,
+      select = c(
+        "Location_ID",
+        "Sensing_Date",
+        "HourDay",
+        "PedestrianCount"
+      )
+    )
+    
+    data.frame(
+      file = basename(f),
+      first_date = min(as.Date(x$Sensing_Date)),
+      last_date = max(as.Date(x$Sensing_Date)),
+      days = data.table::uniqueN(x$Sensing_Date),
+      sensors = data.table::uniqueN(x$Location_ID),
+      observations = nrow(x),
+      hours = data.table::uniqueN(x$HourDay)
+    )
+  }
+)
+
+snapshot_coverage
+```
+
+
+### Check Daily Coverage
+
+
+```{r}
+snapshot_daily_coverage <- purrr::map_dfr(
+  snapshot_files,
+  function(f) {
+    
+    x <- data.table::fread(
+      file = f,
+      select = c("Sensing_Date")
+    )
+    
+    dates <- as.Date(x$Sensing_Date)
+    
+    data.frame(
+      file = basename(f),
+      days_observed = data.table::uniqueN(dates),
+      expected_days = ifelse(
+        lubridate::leap_year(min(dates)),
+        366,
+        365
+      ),
+      missing_days = ifelse(
+        lubridate::leap_year(min(dates)),
+        366,
+        365
+      ) - data.table::uniqueN(dates)
+    )
+  }
+)
+
+snapshot_daily_coverage
+```
+
+
+### Check Duplicate Records
+
+```{r}
+snapshot_duplicates <- purrr::map_dfr(
+  snapshot_files,
+  function(f) {
+    
+    x <- data.table::fread(
+      file = f,
+      select = c(
+        "Location_ID",
+        "Sensing_Date",
+        "HourDay"
+      )
+    )
+    
+    dup <- x[
+      ,
+      .N,
+      by = .(Location_ID, Sensing_Date, HourDay)
+    ][N > 1]
+    
+    data.frame(
+      file = basename(f),
+      duplicate_groups = nrow(dup),
+      duplicated_rows = sum(dup$N - 1)
+    )
+  }
+)
+
+snapshot_duplicates
+```
+
+
+## Validation of Snapshot Data
+
+### Validate the 2022 Snapshot
+
+### Load 2022 Snapshot
+
+```{r}
+snapshot_2022 <- data.table::fread(
+  file.path(snapshot_dir, "2022_Pedestrian_Data.csv"),
+  select = c(
+    "Location_ID",
+    "Sensing_Date",
+    "HourDay",
+    "PedestrianCount"
+  )
+)
+
+historical_2022 <- pedestrian_full %>%
+  filter(year == 2022) %>%
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count
+  )
+```
+
+
+### Compare Snapshot with Existing Data
+
+```{r}
+comparison_2022 <- snapshot_2022 %>%
+  as_tibble() %>%
+  mutate(
+    Sensing_Date = as.Date(Sensing_Date)
+  ) %>%
+  inner_join(
+    historical_2022,
+    by = c(
+      "Location_ID" = "location_id",
+      "Sensing_Date" = "sensing_date",
+      "HourDay" = "hourday"
+    )
+  ) %>%
+  mutate(
+    count_difference = PedestrianCount - pedestrian_count
+  )
+
+summary(comparison_2022$count_difference)
+```
+
+
+### Summarise 2022 Differences
+
+
+```{r}
+comparison_2022 %>%
+  summarise(
+    matched_rows = n(),
+    different_rows = sum(count_difference != 0, na.rm = TRUE),
+    max_difference = max(abs(count_difference), na.rm = TRUE)
+  )
+```
+
+
+### Examine Different Records
+
+```{r}
+comparison_2022 %>%
+  filter(count_difference != 0) %>%
+  summarise(
+    different_rows = n(),
+    mean_difference = mean(count_difference),
+    median_difference = median(count_difference),
+    mean_absolute_difference = mean(abs(count_difference)),
+    median_absolute_difference = median(abs(count_difference)),
+    max_absolute_difference = max(abs(count_difference))
+  )
+```
+
+
+### Examine Differences by Month
+
+```{r}
+comparison_2022 %>%
+  filter(count_difference != 0) %>%
+  mutate(
+    month = lubridate::floor_date(Sensing_Date, "month")
+  ) %>%
+  count(month, sort = TRUE)
+```
+
+
+### Examine Differences by Sensor
+
+
+```{r}
+comparison_2022 %>%
+  filter(count_difference != 0) %>%
+  count(Location_ID, sort = TRUE)
+```
+
+
+### Inspect Largest Differences
+
+```{r}
+comparison_2022 %>%
+  filter(count_difference != 0) %>%
+  arrange(desc(abs(count_difference))) %>%
+  select(
+    Location_ID,
+    Sensing_Date,
+    HourDay,
+    PedestrianCount,
+    pedestrian_count,
+    count_difference
+  ) %>%
+  head(20)
+```
+
+
+### Investigate Location 6
+
+
+```{r}
+comparison_2022 %>%
+  filter(Location_ID == 6, count_difference != 0) %>%
+  summarise(
+    n = n(),
+    mean_difference = mean(count_difference),
+    median_difference = median(count_difference),
+    min_difference = min(count_difference),
+    max_difference = max(count_difference)
+  )
+```
+
+
+### Location 6 Differences by Month
+
+```{r}
+comparison_2022 %>%
+  filter(Location_ID == 6, count_difference != 0) %>%
+  mutate(
+    month = lubridate::floor_date(Sensing_Date, "month")
+  ) %>%
+  group_by(month) %>%
+  summarise(
+    different_records = n(),
+    mean_difference = mean(count_difference),
+    median_difference = median(count_difference),
+    .groups = "drop"
+  )
+```
+
+### Direction of Differences
+
+```{r}
+comparison_2022 %>%
+  filter(Location_ID == 6, count_difference != 0) %>%
+  count(
+    direction = case_when(
+      count_difference > 0 ~ "Snapshot higher",
+      count_difference < 0 ~ "Snapshot lower",
+      TRUE ~ "Same"
+    )
+  )
+```
+
+
+### Validate Direction Totals
+
+
+```{r}
+comparison_2022 %>%
+  filter(Location_ID == 6, count_difference != 0) %>%
+  arrange(desc(abs(count_difference))) %>%
+  select(
+    Location_ID,
+    Sensing_Date,
+    HourDay,
+    PedestrianCount,
+    pedestrian_count,
+    count_difference
+  ) %>%
+  head(20)
+```
+
+```{r}
+snapshot_2022_full <- data.table::fread(
+  file.path(snapshot_dir, "2022_Pedestrian_Data.csv")
+)
+
+snapshot_2022_full %>%
+  mutate(
+    direction_total = Direction_1 + Direction_2,
+    difference = PedestrianCount - direction_total
+  ) %>%
+  summarise(
+    rows = n(),
+    exact_match = sum(difference == 0, na.rm = TRUE),
+    different = sum(difference != 0, na.rm = TRUE),
+    max_difference = max(abs(difference), na.rm = TRUE)
+  )
+```
+
+```{r}
+snapshot_2022_full %>%
+  filter(Location_ID == 6) %>%
+  summarise(
+    mean_pedestrian_count = mean(PedestrianCount, na.rm = TRUE),
+    mean_direction_total = mean(Direction_1 + Direction_2, na.rm = TRUE),
+    mean_difference = mean(
+      PedestrianCount - (Direction_1 + Direction_2),
+      na.rm = TRUE
+    )
+  )
+```
+
+## Validate the 2024 Snapshot
+### Load 2024 Snapshot
+
+```{r}
+snapshot_2024 <- data.table::fread(
+  file.path(snapshot_dir, "2024_Pedestrian_Data.csv"),
+  select = c(
+    "Location_ID",
+    "Sensing_Date",
+    "HourDay",
+    "PedestrianCount"
+  )
+)
+```
+
+### Compare with Existing 2024 Data
+
+```{r}
+comparison_2024 <- snapshot_2024 %>%
+  as_tibble() %>%
+  mutate(
+    Sensing_Date = as.Date(Sensing_Date)
+  ) %>%
+  inner_join(
+    pedestrian_full %>%
+      filter(lubridate::year(sensing_date) == 2024) %>%
+      select(
+        location_id,
+        sensing_date,
+        hourday,
+        pedestrian_count
+      ),
+    by = c(
+      "Location_ID" = "location_id",
+      "Sensing_Date" = "sensing_date",
+      "HourDay" = "hourday"
+    )
+  ) %>%
+  mutate(
+    difference = PedestrianCount - pedestrian_count
+  )
+
+comparison_2024 %>%
+  summarise(
+    matched_rows = n(),
+    different_rows = sum(difference != 0, na.rm = TRUE),
+    mean_difference = mean(difference, na.rm = TRUE),
+    max_absolute_difference = max(abs(difference), na.rm = TRUE)
+  )
+```
+
+## Validate the 2025 Snapshot
+
+### Load 2025 Snapshot
+
+```{r}
+
+snapshot_2025 <- data.table::fread(
+  file.path(snapshot_dir, "2025_Pedestrian_Data.csv"),
+  select = c(
+    "Location_ID",
+    "Sensing_Date",
+    "HourDay",
+    "PedestrianCount"
+  )
+)
+```
+
+
+```{r}
+comparison_2025 <- snapshot_2025 %>%
+  as_tibble() %>%
+  mutate(
+    Sensing_Date = as.Date(Sensing_Date)
+  ) %>%
+  inner_join(
+    pedestrian_full %>%
+      filter(lubridate::year(sensing_date) == 2025) %>%
+      select(
+        location_id,
+        sensing_date,
+        hourday,
+        pedestrian_count
+      ),
+    by = c(
+      "Location_ID" = "location_id",
+      "Sensing_Date" = "sensing_date",
+      "HourDay" = "hourday"
+    )
+  ) %>%
+  mutate(
+    difference = PedestrianCount - pedestrian_count
+  )
+
+
+comparison_2025 %>%
+  summarise(
+    matched_rows = n(),
+    different_rows = sum(difference != 0, na.rm = TRUE),
+    mean_difference = mean(difference, na.rm = TRUE),
+    max_absolute_difference = max(abs(difference), na.rm = TRUE)
+  )
+```
+
+
+## Standardisation and Integration
+
+### Standardise Snapshot Data
+
+```{r}
+snapshot_standardised <- purrr::map_dfr(
+  snapshot_files,
+  function(f) {
+    
+    
+    x <- data.table::fread(file = f) %>%
+      as_tibble()
+    
+    x %>%
+      transmute(
+        location_id = as.numeric(Location_ID),
+        sensing_date = as.Date(Sensing_Date),
+        hourday = as.numeric(HourDay),
+        pedestrian_count = as.numeric(PedestrianCount),
+        hour_repaired = FALSE,
+        source = paste0("city_snapshot_", substr(basename(f), 1, 4))
+      )
+  }
+) %>%
+  mutate(
+    year = lubridate::year(sensing_date),
+    month = lubridate::month(sensing_date),
+    month_name = lubridate::month(sensing_date, label = TRUE),
+    day_name = lubridate::wday(sensing_date, label = TRUE),
+    day_of_week = lubridate::wday(sensing_date, week_start = 1),
+    is_weekend = day_of_week >= 6,
+    season = case_when(
+      month %in% c(12, 1, 2) ~ "Summer",
+      month %in% c(3, 4, 5) ~ "Autumn",
+      month %in% c(6, 7, 8) ~ "Winter",
+      month %in% c(9, 10, 11) ~ "Spring"
+    )
+  )
+```
+
+
+### Check Standardised Snapshot Data
+
+
+```{r}
+snapshot_standardised %>%
+  count(year)
+```
+
+```{r}
+snapshot_standardised %>%
+  summarise(
+    rows = n(),
+    first_date = min(sensing_date),
+    last_date = max(sensing_date),
+    sensors = n_distinct(location_id),
+    duplicate_groups = n() -
+      n_distinct(location_id, sensing_date, hourday)
+  )
+```
+
+## Replace Existing Data
+
+### Replace 2022–2025 with Validated Snapshots
+
+```{r}
+
+
+## Rebuild final pedestrian dataset
+
+### Keep historical data before 2022
+
+historical_data <- pedestrian_full %>%
+  filter(!year %in% c(2022, 2023, 2024, 2025)) %>%
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count,
+    source,
+    any_of("hour_repaired")
+  )
+
+# If the historical dataset does not contain hour_repaired,
+# create it as FALSE.
+if (!"hour_repaired" %in% names(historical_data)) {
+  historical_data$hour_repaired <- FALSE
+}
+
+
+### Prepare validated 2022–2025 snapshots
+
+snapshot_data <- snapshot_standardised %>%
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count,
+    source
+  ) %>%
+  mutate(
+    hour_repaired = FALSE
+  )
+
+
+### Combine historical and validated data
+
+pedestrian_full_updated <- bind_rows(
+  historical_data,
+  snapshot_data
+) %>%
+  mutate(
+    year = lubridate::year(sensing_date),
+
+    month = lubridate::month(sensing_date),
+
+    month_name = lubridate::month(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE
+    ),
+
+    day_name = lubridate::wday(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE
+    ),
+
+    day_of_week = lubridate::wday(
+      sensing_date,
+      week_start = 1
+    ),
+
+    is_weekend = day_of_week >= 6,
+
+    season = case_when(
+      month %in% c(12, 1, 2) ~ "Summer",
+      month %in% c(3, 4, 5) ~ "Autumn",
+      month %in% c(6, 7, 8) ~ "Winter",
+      month %in% c(9, 10, 11) ~ "Spring"
+    )
+  ) %>%
+  arrange(
+    sensing_date,
+    hourday,
+    location_id
+)
+
+
+### Final object
+
+pedestrian_full <- pedestrian_full_updated
+```
+
+### Recreate Derived Variables
+
+```{r}
+pedestrian_full_updated %>%
+  group_by(year) %>%
+  summarise(
+    first_date = min(sensing_date),
+    last_date = max(sensing_date),
+    observations = n(),
+    sensors = n_distinct(location_id),
+    .groups = "drop"
+  )
+```
+
+## Final Validation
+
+### Check Yearly Coverage
+
+```{r}
+final_check <- pedestrian_full_updated %>%
+  summarise(
+    total_rows = n(),
+    unique_sensor_hour_records =
+      n_distinct(location_id, sensing_date, hourday),
+    duplicate_rows =
+      n() - n_distinct(location_id, sensing_date, hourday),
+    missing_counts =
+      sum(is.na(pedestrian_count)),
+    first_date = min(sensing_date),
+    last_date = max(sensing_date)
+  )
+
+final_check
+```
+
+```{r}
+pedestrian_full_updated %>%
+  count(year)
+```
+
+```{r}
+pedestrian_full <- pedestrian_full_updated
+```
+
