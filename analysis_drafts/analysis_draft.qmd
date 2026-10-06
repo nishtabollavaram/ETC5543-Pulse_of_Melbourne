@@ -280,7 +280,6 @@ year_coverage |>
   geom_point() +
   labs(
     title = "Melbourne's pedestrian monitoring network change over time",
-    subtitle = "2023 is left as a genuine data gap",
     x = "Year",
     y = "Number of sensor locations",
     linetype = NULL
@@ -948,6 +947,60 @@ ggplotly(
 )
 ```
 
+- Map
+```{r}
+
+location_recovery_final |>
+  mutate(
+    hover_text = paste0(
+      "<b>", sensor_description, "</b>",
+      "<br>Location ID: ", location_id,
+      "<br>Change from pre-COVID: ",
+      round(change_percent, 1), "%"
+    )
+  ) |>
+  plot_ly(
+    type = "scattermapbox",
+    mode = "markers",
+    lat = ~latitude,
+    lon = ~longitude,
+    text = ~hover_text,
+    hoverinfo = "text",
+    marker = list(
+      size = 14,
+      color = ~change_percent,
+      colorscale = "RdBu",
+      cmin = -75,
+      cmax = 75,
+      showscale = TRUE,
+      opacity = 0.85,
+      colorbar = list(
+        title = "Change (%)"
+      )
+    )
+  ) |>
+  layout(
+    title = "Where has Melbourne's pedestrian activity changed?",
+    mapbox = list(
+      style = "open-street-map",
+      center = list(
+        lat = -37.8136,
+        lon = 144.9631
+      ),
+      zoom = 12.5
+    ),
+    margin = list(
+      l = 0,
+      r = 0,
+      b = 0,
+      t = 55
+    )
+  )
+```
+
+
+
+
 - How did each location change after the covid?
 
 - Does the extreme −72.6% change at Flinders Underpass represent a reliable behavioural shift, or is long-term comparability at this sensor uncertain?
@@ -1161,18 +1214,18 @@ sensor_daily_events <- pedestrian_full |>
     hours_observed >= 20
   ) |>
   mutate(
-    day_of_week = wday(
-      sensing_date,
-      week_start = 1
-    ),
-    
-    day_name = wday(
-      sensing_date,
-      label = TRUE,
-      abbr = FALSE,
-      week_start = 1
-    )
+  day_of_week = lubridate::wday(
+    sensing_date,
+    week_start = 1
+  ),
+
+  day_name = lubridate::wday(
+    sensing_date,
+    label = TRUE,
+    abbr = FALSE,
+    week_start = 1
   )
+)
 ```
 
 ```{r}
@@ -1375,7 +1428,11 @@ event_url <- paste0(
   "exports/csv"
 )
 
-event_path <- "Data_pedestrians/event_permits_2014_2018.csv"
+
+event_path <- here::here(
+  "Data_pedestrians",
+  "event_permits_2014_2018.csv"
+)
 
 curl::curl_download(
   event_url,
@@ -1717,96 +1774,215 @@ event_case_candidates
 
 
 ```{r}
-event_2014_spatial <- sensor_event_index |>
-  filter(
-    sensing_date == ymd("2014-02-22")
+event_date_overview <- event_case_candidates |>
+  group_by(
+    peak_date,
+    peak_uplift,
+    max_proportion_above_20
   ) |>
-  left_join(
-    location_metadata |>
-      select(
-        location_id,
-        sensor_description,
-        latitude,
-        longitude
-      ),
-    by = "location_id"
+  summarise(
+    number_of_events = n_distinct(title),
+
+    matched_events = stringr::str_c(
+      unique(title),
+      collapse = "; "
+    ),
+
+    event_types = stringr::str_c(
+      unique(event_type),
+      collapse = "; "
+    ),
+
+    .groups = "drop"
   ) |>
-  mutate(
-    sensor_label = coalesce(
-      sensor_description,
-      str_c("Historical sensor ID ", location_id)
-    )
-  ) |>
-  arrange(desc(uplift_percent))
+  arrange(desc(peak_uplift))
+
+event_date_overview
 ```
 
 ```{r}
-event_2014_spatial |>
+event_date_overview <- event_date_overview |>
   mutate(
-    sensor_label = fct_reorder(
-      sensor_label,
-      uplift_percent
+    date_label = format(
+      peak_date,
+      "%d %b %Y"
+    ),
+
+    event_label = stringr::str_c(
+      date_label,
+      " — ",
+      matched_events
+    ),
+
+    event_label = stringr::str_wrap(
+      event_label,
+      width = 55
+    )
+  )
+```
+
+
+
+```{r}
+event_date_overview |>
+  mutate(
+    date_label = format(
+      peak_date,
+      "%d %b %Y"
+    ),
+    date_label = forcats::fct_reorder(
+      date_label,
+      peak_uplift
     )
   ) |>
   ggplot(
     aes(
-      x = sensor_label,
-      y = uplift_percent
+      x = peak_uplift,
+      y = date_label
     )
   ) +
-  geom_col() +
-  geom_hline(
-    yintercept = 0,
-    linetype = "dashed"
+  geom_segment(
+    aes(
+      x = 0,
+      xend = peak_uplift,
+      yend = date_label
+    ),
+    linewidth = 0.6
   ) +
-  coord_flip() +
+  geom_point(
+    aes(
+      size = max_proportion_above_20
+    )
+  ) +
+  scale_size_continuous(
+    labels = scales::percent,
+    range = c(3, 7)
+  ) +
   labs(
-    title = "The 22 February 2014 pedestrian surge spread across Melbourne",
-    subtitle = "Sensor-level activity relative to comparable Saturdays",
-    x = NULL,
-    y = "Pedestrian uplift (%)"
+    title = "Major pedestrian surges coincided with permitted Melbourne events",
+    subtitle = "Uplift relative to comparable days",
+    x = "Median pedestrian uplift (%)",
+    y = NULL,
+    size = "Sensors with\n>20% uplift"
   ) +
   theme_minimal()
 ```
 
 ```{r}
-event_2014_spatial |>
-  summarise(
-    sensors = n(),
-    sensors_above_normal =
-      sum(uplift_percent > 0, na.rm = TRUE),
+event_plot_data <- event_date_overview |>
+  mutate(
+    date_label = format(
+      peak_date,
+      "%d %b %Y"
+    ),
 
-    proportion_above_normal =
-      mean(uplift_percent > 0, na.rm = TRUE),
+    hover_text = stringr::str_c(
+      "<b>Date:</b> ", date_label,
+      "<br><b>Pedestrian uplift:</b> ",
+      round(peak_uplift, 1), "%",
+      "<br><b>Sensors >20% above expected:</b> ",
+      scales::percent(
+        max_proportion_above_20,
+        accuracy = 1
+      ),
+      "<br><b>Matched events:</b> ",
+      matched_events
+    )
+  )
 
-    sensors_above_20 =
-      sum(uplift_percent >= 20, na.rm = TRUE),
+event_plot <- event_plot_data |>
+  ggplot(
+    aes(
+      x = peak_uplift,
+      y = forcats::fct_reorder(
+        date_label,
+        peak_uplift
+      ),
+      text = hover_text
+    )
+  ) +
+  geom_segment(
+    aes(
+      x = 0,
+      xend = peak_uplift,
+      yend = forcats::fct_reorder(
+        date_label,
+        peak_uplift
+      )
+    ),
+    linewidth = 0.6
+  ) +
+  geom_point(
+    aes(
+      size = max_proportion_above_20
+    )
+  ) +
+  scale_size_continuous(
+    labels = scales::percent,
+    range = c(3, 7)
+  ) +
+  labs(
+    title = "Major pedestrian surges coincided with permitted Melbourne events",
+    subtitle = "Hover to see the matched events for each date",
+    x = "Median pedestrian uplift (%)",
+    y = NULL,
+    size = "Sensors with\n>20% uplift"
+  ) +
+  theme_minimal()
 
-    proportion_above_20 =
-      mean(uplift_percent >= 20, na.rm = TRUE),
+plotly::ggplotly(
+  event_plot,
+  tooltip = "text"
+)
+```
 
-    median_uplift =
-      median(uplift_percent, na.rm = TRUE),
-
-    maximum_uplift =
-      max(uplift_percent, na.rm = TRUE)
+- How Melbourne looked previously vs now using only the common sensors in all the years(2017-2025)
+```{r}
+common_sensors <- pedestrian_full |>
+  filter(
+    year %in% c(2017:2019, 2023:2025)
+  ) |>
+  mutate(
+    period = case_when(
+      year %in% 2017:2019 ~ "Previous",
+      year %in% 2023:2025 ~ "Now"
+    )
+  ) |>
+  distinct(
+    location_id,
+    period
+  ) |>
+  count(
+    location_id,
+    name = "periods_present"
+  ) |>
+  filter(
+    periods_present == 2
   )
 ```
 
 ```{r}
-baseline_2014_hourly <- pedestrian_full |>
+period_daily <- pedestrian_full |>
   filter(
-    sensing_date >= ymd("2014-01-25"),
-    sensing_date <= ymd("2014-03-22"),
-    sensing_date != ymd("2014-02-22"),
-    day_name == "Saturday"
+    year %in% c(2017:2019, 2023:2025)
+  ) |>
+  semi_join(
+    common_sensors,
+    by = "location_id"
+  ) |>
+  mutate(
+    period = case_when(
+      year %in% 2017:2019 ~ "Previous: 2017–2019",
+      year %in% 2023:2025 ~ "Now: 2023–2025"
+    )
   ) |>
   group_by(
     location_id,
-    hourday
+    sensing_date,
+    period
   ) |>
   summarise(
-    expected_count = median(
+    daily_count = sum(
       pedestrian_count,
       na.rm = TRUE
     ),
@@ -1815,92 +1991,283 @@ baseline_2014_hourly <- pedestrian_full |>
 ```
 
 ```{r}
-event_2014_hourly <- pedestrian_full |>
-  filter(
-    sensing_date == ymd("2014-02-22")
-  ) |>
-  select(
-    location_id,
-    hourday,
-    pedestrian_count
-  ) |>
-  left_join(
-    baseline_2014_hourly,
-    by = c(
-      "location_id",
-      "hourday"
-    )
-  ) |>
-  filter(
-    expected_count > 0
-  ) |>
-  mutate(
-    hourly_uplift =
-      100 * (
-        pedestrian_count - expected_count
-      ) / expected_count
+period_summary <- period_daily |>
+  group_by(period) |>
+  summarise(
+    typical_daily_activity = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
   )
+
+period_summary
+```
+```{r}
+period_summary |>
+  ggplot(
+    aes(
+      x = period,
+      y = typical_daily_activity
+    )
+  ) +
+  geom_col() +
+  labs(
+    title = "How has Melbourne's pedestrian activity changed?",
+    subtitle = "Typical daily activity at sensor locations observed in both periods",
+    x = NULL,
+    y = "Median daily pedestrian count"
+  ) +
+  theme_minimal()
 ```
 
 ```{r}
-hourly_city_uplift <- event_2014_hourly |>
-  group_by(hourday) |>
+hourly_period <- pedestrian_full |>
+  filter(
+    year %in% c(2017:2019, 2023:2025)
+  ) |>
+  semi_join(
+    common_sensors,
+    by = "location_id"
+  ) |>
+  mutate(
+    period = case_when(
+      year %in% 2017:2019 ~ "Previous: 2017–2019",
+      year %in% 2023:2025 ~ "Now: 2023–2025"
+    )
+  ) |>
+  group_by(
+    period,
+    hourday
+  ) |>
   summarise(
-    median_uplift =
-      median(hourly_uplift, na.rm = TRUE),
-
-    q25 =
-      quantile(
-        hourly_uplift,
-        0.25,
-        na.rm = TRUE
-      ),
-
-    q75 =
-      quantile(
-        hourly_uplift,
-        0.75,
-        na.rm = TRUE
-      ),
-
-    sensors =
-      n_distinct(location_id),
-
+    typical_count = median(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   )
 ```
 
 ```{r}
-hourly_city_uplift |>
+hourly_period |>
   ggplot(
     aes(
       x = hourday,
-      y = median_uplift
+      y = typical_count,
+      linetype = period
     )
-  ) +
-  geom_ribbon(
-    aes(
-      ymin = q25,
-      ymax = q75
-    ),
-    alpha = 0.2
   ) +
   geom_line(
     linewidth = 1
-  ) +
-  geom_hline(
-    yintercept = 0,
-    linetype = "dashed"
   ) +
   scale_x_continuous(
     breaks = 0:23
   ) +
   labs(
-    title = "When did Melbourne's pedestrian surge occur on 22 February 2014?",
-    subtitle = "Median sensor uplift relative to nearby Saturdays; band shows the middle 50% of sensors",
+    title = "Has Melbourne's daily pedestrian rhythm changed?",
+    subtitle = "Comparison of common sensor locations before and after COVID",
     x = "Hour of day",
-    y = "Median pedestrian uplift (%)"
+    y = "Median pedestrian count",
+    linetype = NULL
   ) +
   theme_minimal()
+```
+```{r}
+sensor_coverage_check <- pedestrian_full |>
+  filter(year %in% c(2017:2019, 2023:2025)) |>
+  group_by(location_id, year) |>
+  summarise(
+    days_observed = n_distinct(sensing_date),
+    .groups = "drop"
+  )
+
+sensor_coverage_check |>
+  arrange(location_id, year)
+```
+
+```{r}
+sensor_coverage_check |>
+  group_by(year) |>
+  summarise(
+    sensors = n_distinct(location_id),
+    median_days = median(days_observed),
+    min_days = min(days_observed),
+    max_days = max(days_observed),
+    .groups = "drop"
+  )
+```
+
+```{r}
+consistent_sensors <- sensor_coverage_check |>
+  filter(days_observed >= 300) |>
+  group_by(location_id) |>
+  summarise(
+    years_covered = n_distinct(year),
+    minimum_days = min(days_observed),
+    .groups = "drop"
+  ) |>
+  filter(years_covered == 6)
+
+consistent_sensors
+```
+
+```{r}
+consistent_sensors |>
+  summarise(
+    number_of_consistent_sensors = n()
+  )
+
+```
+
+```{r}
+pedestrian_consistent <- pedestrian_full |>
+  semi_join(
+    consistent_sensors,
+    by = "location_id"
+  ) |>
+  filter(
+    year %in% c(2017:2019, 2023:2025)
+  )
+
+
+
+pedestrian_consistent |>
+  group_by(year) |>
+  summarise(
+    sensors = n_distinct(location_id),
+    days = n_distinct(sensing_date),
+    .groups = "drop"
+  )
+```
+
+```{r}
+period_daily_consistent <- pedestrian_consistent |>
+  mutate(
+    period = case_when(
+      year %in% 2017:2019 ~ "Previous: 2017–2019",
+      year %in% 2023:2025 ~ "Now: 2023–2025"
+    )
+  ) |>
+  group_by(
+    location_id,
+    sensing_date,
+    period
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+```
+
+```{r}
+period_summary_consistent <- period_daily_consistent |>
+  group_by(period) |>
+  summarise(
+    typical_daily_activity = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  mutate(
+    period = factor(
+      period,
+      levels = c(
+        "Previous: 2017–2019",
+        "Now: 2023–2025"
+      )
+    )
+  )
+
+period_summary_consistent
+```
+
+```{r}
+period_summary_consistent |>
+  ggplot(
+    aes(
+      x = period,
+      y = typical_daily_activity
+    )
+  ) +
+  geom_col(
+    width = 0.65
+  ) +
+  labs(
+    title = "Has Melbourne's pedestrian activity changed?",
+    subtitle = "Typical daily activity across 27 consistently measured locations",
+    x = NULL,
+    y = "Median daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+hourly_period_consistent <- pedestrian_consistent |>
+  mutate(
+    period = case_when(
+      year %in% 2017:2019 ~ "Previous: 2017–2019",
+      year %in% 2023:2025 ~ "Now: 2023–2025"
+    )
+  ) |>
+  group_by(
+    period,
+    hourday
+  ) |>
+  summarise(
+    typical_count = median(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+```
+
+```{r}
+hourly_period_consistent |>
+  ggplot(
+    aes(
+      x = hourday,
+      y = typical_count,
+      linetype = period
+    )
+  ) +
+  geom_line(
+    linewidth = 1
+  ) +
+  scale_x_continuous(
+    breaks = 0:23
+  ) +
+  labs(
+    title = "Has Melbourne's daily pedestrian rhythm changed?",
+    subtitle = "Comparison across 27 consistently measured locations",
+    x = "Hour of day",
+    y = "Median hourly pedestrian count",
+    linetype = NULL
+  ) +
+  theme_minimal()
+```
+
+```{r}
+period_change <- period_summary_consistent |>
+  pivot_wider(
+    names_from = period,
+    values_from = typical_daily_activity
+  ) |>
+  summarise(
+    percent_change =
+      100 *
+      (
+        `Now: 2023–2025` -
+        `Previous: 2017–2019`
+      ) /
+      `Previous: 2017–2019`
+  )
+
+period_change
 ```
 
