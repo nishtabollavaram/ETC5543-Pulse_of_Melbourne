@@ -1335,10 +1335,6 @@ pedestrian_full <- pedestrian_full_updated
 
 
 ```{r}
-library(plotly)
-```
-
-```{r}
 hourly_by_sensor_year <- pedestrian_full %>%
   filter(
     !is.na(hourday),
@@ -1376,69 +1372,62 @@ hourly_summary <- hourly_index %>%
   )
 ```
 
-```{r}
-hourly_summary <- hourly_index %>%
-  group_by(hourday) %>%
-  summarise(
-    median_index = median(activity_index, na.rm = TRUE),
-    q25 = quantile(activity_index, 0.25, na.rm = TRUE),
-    q75 = quantile(activity_index, 0.75, na.rm = TRUE),
-    .groups = "drop"
-  )
-```
-
-
-```{r}
-daily_interactive_data <- hourly_index %>%
-  mutate(
-    year_label = case_when(
-      year == 2009 ~ "2009 (partial)",
-      year == 2026 ~ "2026 (partial)",
-      TRUE ~ as.character(year)
-    )
-  )
-```
 
 ### PLOT 1 — Typical Daily Pedestrian Rhythm
 
 ```{r}
-
-daily_interactive <- plot_ly(
-  daily_interactive_data,
-  x = ~hourday,
-  y = ~activity_index,
-  color = ~year_label,
-  type = "scatter",
-  mode = "lines",
-  text = ~paste0(
-    "Year: ", year_label,
-    "<br>Hour: ", hourday, ":00",
-    "<br>Activity index: ", round(activity_index, 1)
-  ),
-  hoverinfo = "text"
-) %>%
-  layout(
-    title = "Daily Pedestrian Rhythm by Year",
-    xaxis = list(
-      title = "Hour of day",
-      tickmode = "linear",
-      tick0 = 0,
-      dtick = 1
-    ),
-    yaxis = list(
-      title = "Activity index (100 = yearly average)"
-    ),
-    hovermode = "closest",
-    legend = list(
-      title = list(text = "Year"),
-      orientation = "v",
-      x = 1.02,
-      y = 1
-    ),
-    margin = list(r = 150)
+ggplot(
+  hourly_summary,
+  aes(
+    x = hourday,
+    y = median_index
   )
+) +
+  geom_ribbon(
+    aes(
+      ymin = q25,
+      ymax = q75
+    ),
+    alpha = 0.2
+  ) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  geom_hline(
+    yintercept = 100,
+    linetype = "dashed"
+  ) +
+  scale_x_continuous(breaks = 0:23) +
+  labs(
+    title = "Typical Daily Pedestrian Rhythm Across Years",
+    subtitle = "Median hourly activity across years; shaded area shows the middle 50%",
+    x = "Hour of day",
+    y = "Activity index (100 = yearly average)"
+  ) +
+  theme_minimal()
+```
 
-daily_interactive
+### PLOT 2 — Daily Rhythm by Year
+
+```{r}
+ggplot(
+  hourly_index,
+  aes(
+    x = hourday,
+    y = factor(year, levels = 2009:2026),
+    fill = activity_index
+  )
+) +
+  geom_tile() +
+  scale_x_continuous(breaks = 0:23) +
+  scale_y_discrete(drop = FALSE) +
+  labs(
+    title = "Melbourne's Daily Pedestrian Rhythm Across Years",
+    subtitle = "Activity relative to each year's average (100 = yearly average)",
+    x = "Hour of day",
+    y = "Year",
+    fill = "Activity\nindex"
+  ) +
+  theme_minimal()
 ```
 
 ## Weekly Rhythm Across the Years, 2009–2026
@@ -1492,280 +1481,56 @@ weekly_summary <- weekly_index %>%
   )
 ```
 
+### PLOT 3 — Typical Weekly Pedestrian Rhythm
 
 ```{r}
-weekly_interactive_data <- weekly_index %>%
-  mutate(
-    year_label = case_when(
-      year == 2009 ~ "2009 (partial)",
-      year == 2026 ~ "2026 (partial)",
-      TRUE ~ as.character(year)
-    )
-  )
-```
-
-
-### PLOT 2 — Typical Weekly Pedestrian Rhythm
-
-```{r}
-weekly_interactive <- plot_ly(
-  weekly_interactive_data,
-  x = ~day_name,
-  y = ~activity_index,
-  color = ~year_label,
-  type = "scatter",
-  mode = "lines+markers",
-  text = ~paste0(
-    "Year: ", year_label,
-    "<br>Day: ", day_name,
-    "<br>Activity index: ", round(activity_index, 1)
-  ),
-  hoverinfo = "text"
-) %>%
-  layout(
-    title = "Weekly Pedestrian Rhythm by Year",
-    xaxis = list(
-      title = "Day of week"
-    ),
-    yaxis = list(
-      title = "Activity index (100 = yearly average)"
-    ),
-    hovermode = "closest",
-    legend = list(
-      title = list(text = "Year"),
-      orientation = "v",
-      x = 1.02,
-      y = 1
-    ),
-    margin = list(r = 150)
-  )
-
-weekly_interactive
-```
-
-### Significant Decreases in Pedestrian Activity
-
-```{r}
-sensor_daily_decrease <- pedestrian_full %>%
-  filter(!is.na(pedestrian_count)) %>%
-  group_by(
-    location_id,
-    sensing_date
-  ) %>%
-  summarise(
-    daily_count = sum(
-      pedestrian_count,
-      na.rm = TRUE
-    ),
-    hours_observed = n_distinct(hourday),
-    .groups = "drop"
-  ) %>%
-  filter(
-    hours_observed >= 20
-  ) %>%
-  mutate(
-    day_of_week = lubridate::wday(
-      sensing_date,
-      week_start = 1
-    )
-  )
-```
-
-### Calculate expected activity
-
-```{r}
-sensor_decrease_index <- sensor_daily_decrease %>%
-  arrange(
-    location_id,
-    day_of_week,
-    sensing_date
-  ) %>%
-  group_by(
-    location_id,
-    day_of_week
-  ) %>%
-  mutate(
-    expected_count = slider::slide_dbl(
-      daily_count,
-      ~ median(
-        .x[-5],
-        na.rm = TRUE
-      ),
-      .before = 4,
-      .after = 4,
-      .complete = TRUE
-    )
-  ) %>%
-  ungroup()
-```
-
-### Calculate percentage decrease
-
-```{r}
-sensor_decrease_index <- sensor_decrease_index %>%
-  mutate(
-    decrease_percent =
-      100 *
-      (expected_count - daily_count) /
-      expected_count
-  ) %>%
-  filter(
-    is.finite(decrease_percent),
-    expected_count > 0
-  )
-```
-
-### Identify significant decrease days across Melbourne
-
-```{r}
-decrease_day_summary <- sensor_decrease_index %>%
-  group_by(sensing_date) %>%
-  summarise(
-    median_decrease = median(
-      decrease_percent,
-      na.rm = TRUE
-    ),
-    
-    sensors_reporting = n_distinct(location_id),
-    
-    sensors_below_20 = sum(
-      decrease_percent >= 20,
-      na.rm = TRUE
-    ),
-    
-    proportion_below_20 = mean(
-      decrease_percent >= 20,
-      na.rm = TRUE
-    ),
-    
-    median_daily_count = median(
-      daily_count,
-      na.rm = TRUE
-    ),
-    
-    .groups = "drop"
-  )
-```
-
-### Find the strongest decreases
-  
-```{r}
-strong_decrease_dates <- decrease_day_summary %>%
-  filter(
-    sensors_reporting >= 10,
-    median_decrease >= 20,
-    proportion_below_20 >= 0.30
-  ) %>%
-  arrange(
-    desc(median_decrease)
-  )
-
-strong_decrease_dates %>%
-  slice_head(n = 30)
-```
-
-### Find the biggest decreases
-
-```{r}
-biggest_decrease_dates <- decrease_day_summary %>%
-  filter(
-    sensors_reporting >= 10
-  ) %>%
-  arrange(
-    desc(median_decrease)
-  )
-
-biggest_decrease_dates %>%
-  slice_head(n = 20)
-```
-
-
-
-### Group consecutive decrease days
-
-```{r}
-decrease_candidates_episode <- strong_decrease_dates %>%
-  arrange(sensing_date) %>%
-  mutate(
-    gap_days = as.numeric(
-      sensing_date - lag(sensing_date)
-    ),
-    
-    new_episode =
-      is.na(gap_days) | gap_days > 1,
-    
-    episode_id = cumsum(new_episode)
-  )
-```
-
-
-
-```{r}
-decrease_episode_candidates <- decrease_candidates_episode %>%
-  group_by(episode_id) %>%
-  summarise(
-    start_date = min(sensing_date),
-    end_date = max(sensing_date),
-    flagged_days = n(),
-    
-    peak_date = sensing_date[
-      which.max(median_decrease)
-    ],
-    
-    peak_decrease = max(
-      median_decrease,
-      na.rm = TRUE
-    ),
-    
-    max_proportion_below_20 = max(
-      proportion_below_20,
-      na.rm = TRUE
-    ),
-    
-    .groups = "drop"
-  ) %>%
-  arrange(
-    desc(peak_decrease)
-  )
-
-decrease_episode_candidates
-```
-
-### Top 20 Significant Pedestrian Decreases
-
-```{r}
-
-
-top_decrease_dates <- decrease_day_summary %>%
-  filter(
-    sensors_reporting >= 10
-  ) %>%
-  arrange(
-    desc(median_decrease)
-  ) %>%
-  slice_head(n = 20) %>%
-  mutate(
-    date_label = as.character(sensing_date),
-    date_label = forcats::fct_reorder(
-      date_label,
-      median_decrease
-    )
-  )
-
-top_decrease_dates %>%
-  ggplot(
-    aes(
-      x = date_label,
-      y = median_decrease
-    )
+ggplot(
+  weekly_summary,
+  aes(x = day_name, y = median_index, group = 1)
+) +
+  geom_ribbon(
+    aes(ymin = q25, ymax = q75),
+    alpha = 0.2
   ) +
-  geom_col() +
-  coord_flip() +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  geom_hline(
+    yintercept = 100,
+    linetype = "dashed"
+  ) +
+  scale_y_continuous(
+    limits = c(0, 125),
+    breaks = seq(0, 120, 20)
+  ) +
   labs(
-    title = "Melbourne's Most Significant Pedestrian Decreases",
-    subtitle = "Top dates ranked by median decrease across reporting sensors",
-    x = NULL,
-    y = "Median decrease from expected activity (%)"
+    title = "Typical Weekly Pedestrian Rhythm Across Years",
+    subtitle = "Median weekly pattern across years",
+    x = "Day of week",
+    y = "Activity index (100 = yearly average)"
+  ) +
+  theme_minimal()
+```
+
+
+### PLOT 4 — Weekly Rhythm by Year
+
+```{r}
+ggplot(
+  weekly_index,
+  aes(
+    x = day_name,
+    y = factor(year, levels = 2009:2026),
+    fill = activity_index
+  )
+) +
+  geom_tile() +
+  scale_y_discrete(drop = FALSE) +
+  labs(
+    title = "Melbourne's Weekly Pedestrian Rhythm Across Years",
+    subtitle = "Activity relative to each year's average (100 = yearly average)",
+    x = "Day of week",
+    y = "Year",
+    fill = "Activity\nindex"
   ) +
   theme_minimal()
 ```
