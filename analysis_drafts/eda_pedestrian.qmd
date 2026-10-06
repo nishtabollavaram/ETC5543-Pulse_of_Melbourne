@@ -670,6 +670,7 @@ library(lubridate)
 
 ```{r}
 snapshot_dir <- here::here(
+  "ETC5543-Pulse_of_Melbourne",
   "Data_pedestrians",
   "raw",
   "data_pedestrian"
@@ -1281,10 +1282,6 @@ pedestrian_full_updated <- bind_rows(
     location_id
 )
 
-
-### Final object
-
-pedestrian_full <- pedestrian_full_updated
 ```
 
 ### Recreate Derived Variables
