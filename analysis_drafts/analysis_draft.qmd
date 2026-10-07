@@ -1431,6 +1431,7 @@ event_url <- paste0(
 
 event_path <- here::here(
   "Data_pedestrians",
+  "raw2",
   "event_permits_2014_2018.csv"
 )
 
