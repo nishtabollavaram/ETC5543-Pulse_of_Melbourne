@@ -1786,218 +1786,44 @@ easter_sunday <- function(y) {
 ```
 
 
-```{r}
-holiday_calendar <- purrr::map_dfr(
-  2009:2026,
-  function(y) {
-
-    easter <- easter_sunday(y)
-
-    first_march <- as.Date(
-      paste0(y, "-03-01")
-    )
-
-    first_june <- as.Date(
-      paste0(y, "-06-01")
-    )
-
-    first_november <- as.Date(
-      paste0(y, "-11-01")
-    )
-
-    second_monday_march <-
-      first_march +
-      lubridate::days(
-        (8 - lubridate::wday(
-          first_march,
-          week_start = 1
-        )) %% 7 + 7
-      )
-
-    second_monday_june <-
-      first_june +
-      lubridate::days(
-        (8 - lubridate::wday(
-          first_june,
-          week_start = 1
-        )) %% 7 + 7
-      )
-
-    first_tuesday_november <-
-      first_november +
-      lubridate::days(
-        (2 - lubridate::wday(
-          first_november,
-          week_start = 1
-        )) %% 7
-      )
-
-    new_year <- as.Date(
-      paste0(y, "-01-01")
-    )
-
-    australia_day <- as.Date(
-      paste0(y, "-01-26")
-    )
-
-    anzac_day <- as.Date(
-      paste0(y, "-04-25")
-    )
-
-    christmas <- as.Date(
-      paste0(y, "-12-25")
-    )
-
-    boxing_day <- as.Date(
-      paste0(y, "-12-26")
-    )
-
-    holidays <- tibble::tibble(
-      holiday_date = c(
-        new_year,
-        australia_day,
-        second_monday_march,
-        easter - 2,
-        easter - 1,
-        easter,
-        easter + 1,
-        anzac_day,
-        second_monday_june,
-        first_tuesday_november,
-        christmas,
-        boxing_day
-      ),
-
-      holiday = c(
-        "New Year's Day",
-        "Australia Day",
-        "Labour Day",
-        "Good Friday",
-        "Easter Saturday",
-        "Easter Sunday",
-        "Easter Monday",
-        "ANZAC Day",
-        if (y <= 2022) {
-          "Queen's Birthday"
-        } else {
-          "King's Birthday"
-        },
-        "Melbourne Cup Day",
-        "Christmas Day",
-        "Boxing Day"
-      )
-    )
-
-    # Substitute holidays
-    if (lubridate::wday(
-      new_year,
-      week_start = 1
-    ) %in% c(6, 7)) {
-
-      holidays <- dplyr::bind_rows(
-        holidays,
-        tibble::tibble(
-          holiday_date =
-            new_year +
-            lubridate::days(
-              8 - lubridate::wday(
-                new_year,
-                week_start = 1
-              )
-            ),
-          holiday = "New Year's Day (substitute)"
-        )
-      )
-    }
-
-    if (lubridate::wday(
-      australia_day,
-      week_start = 1
-    ) %in% c(6, 7)) {
-
-      holidays <- dplyr::bind_rows(
-        holidays,
-        tibble::tibble(
-          holiday_date =
-            australia_day +
-            lubridate::days(
-              8 - lubridate::wday(
-                australia_day,
-                week_start = 1
-              )
-            ),
-          holiday = "Australia Day (substitute)"
-        )
-      )
-    }
-
-    if (lubridate::wday(
-      christmas,
-      week_start = 1
-    ) %in% c(6, 7)) {
-
-      holidays <- dplyr::bind_rows(
-        holidays,
-        tibble::tibble(
-          holiday_date =
-            as.Date(paste0(y, "-12-27")),
-          holiday = "Christmas Day (substitute)"
-        )
-      )
-    }
-
-    if (lubridate::wday(
-      boxing_day,
-      week_start = 1
-    ) %in% c(6, 7)) {
-
-      holidays <- dplyr::bind_rows(
-        holidays,
-        tibble::tibble(
-          holiday_date =
-            as.Date(paste0(y, "-12-28")),
-          holiday = "Boxing Day (substitute)"
-        )
-      )
-    }
-
-    holidays
-  }
-)
-```
-
+### Load Victorian Government Public Holiday Data
 
 ```{r}
-top_decreases_holidays <- top_decreases %>%
-  left_join(
-    holiday_calendar,
-    by = c(
-      "sensing_date" = "holiday_date"
-    )
+
+holiday_calendar_official <- readr::read_csv(
+  "../Data_pedestrians/raw2/important_dates_august_2026.csv",
+  show_col_types = FALSE
+) %>%
+  filter(dateType == "PUBLIC_HOLIDAY") %>%
+  transmute(
+    holiday_date = lubridate::dmy(important_date),
+    holiday = name,
+    publisher,
+    source
   ) %>%
-  mutate(
-    holiday_status = if_else(
-      is.na(holiday),
-      "Normal day",
-      "Public holiday"
-    )
-  )
-```
+  filter(
+    holiday_date >= as.Date("2019-01-01"),
+    holiday_date <= as.Date("2026-09-06")
+  ) %>%
+  distinct(holiday_date, .keep_all = TRUE) %>%
+  arrange(holiday_date)
 
-```{r}
-top_decreases_holidays %>%
-  count(
-    holiday_status
-  )
+holiday_calendar_official %>%
+  count(lubridate::year(holiday_date), name = "holidays")
 ```
 
 
+
 ```{r}
-### Public holiday representation among all significant decreases
 
 decrease_holiday_test <- decrease_non_covid %>%
+  filter(
+    lubridate::year(sensing_date) %in%
+      c(2019, 2023, 2024, 2025, 2026)
+  ) %>%
   left_join(
-    holiday_calendar,
+    holiday_calendar_official %>%
+      select(holiday_date, holiday),
     by = c("sensing_date" = "holiday_date")
   ) %>%
   mutate(
@@ -2011,59 +1837,24 @@ decrease_holiday_test <- decrease_non_covid %>%
 decrease_holiday_test %>%
   count(holiday_status) %>%
   mutate(
-    percentage = n / sum(n) * 100
+    percentage = round(n / sum(n) * 100, 1)
   )
 ```
 
+### Compare public holidays with all eligible days
 
 ```{r}
-decrease_holiday_test %>%
-  filter(
-    holiday_status == "Public holiday"
-  ) %>%
-  count(
-    holiday,
-    sort = TRUE
-  )
-```
-
-
-
-```{r}
-decrease_holiday_test %>%
-  group_by(
-    holiday_status
-  ) %>%
-  summarise(
-    n = n(),
-    median_decrease = median(
-      median_decrease,
-      na.rm = TRUE
-    ),
-    mean_decrease = mean(
-      median_decrease,
-      na.rm = TRUE
-    ),
-    .groups = "drop"
-  )
-```
-
-
-
-```{r}
-### Compare public holiday frequency with all eligible days
 
 eligible_days <- decrease_day_summary %>%
   filter(
     sensors_reporting >= 10,
-    lubridate::year(sensing_date) < 2020 |
-      lubridate::year(sensing_date) > 2022
+    lubridate::year(sensing_date) %in%
+      c(2019, 2023, 2024, 2025, 2026)
   ) %>%
-  select(sensing_date) %>%
-  distinct() %>%
+  distinct(sensing_date) %>%
   mutate(
     holiday_status = if_else(
-      sensing_date %in% holiday_calendar$holiday_date,
+      sensing_date %in% holiday_calendar_official$holiday_date,
       "Public holiday",
       "Normal day"
     )
@@ -2072,7 +1863,7 @@ eligible_days <- decrease_day_summary %>%
 baseline_holiday <- eligible_days %>%
   count(holiday_status) %>%
   mutate(
-    percentage = n / sum(n) * 100
+    percentage = round(n / sum(n) * 100, 1)
   )
 
 baseline_holiday
@@ -2080,35 +1871,14 @@ baseline_holiday
 
 
 ```{r}
-### Compare significant dips with the overall calendar
-
-significant_holiday <- decrease_holiday_test %>%
-  count(holiday_status) %>%
-  mutate(
-    percentage = n / sum(n) * 100
-  )
-
-significant_holiday
-```
-
-
-```{r}
-### Public holiday enrichment among significant decreases
+### Public holiday enrichment using official government data
 
 holiday_enrichment <- tibble::tibble(
   baseline_holiday_percentage =
-    baseline_holiday %>%
-    filter(
-      holiday_status == "Public holiday"
-    ) %>%
-    pull(percentage),
+    mean(eligible_days$holiday_status == "Public holiday") * 100,
 
   significant_dip_holiday_percentage =
-    significant_holiday %>%
-    filter(
-      holiday_status == "Public holiday"
-    ) %>%
-    pull(percentage)
+    mean(decrease_holiday_test$holiday_status == "Public holiday") * 100
 ) %>%
   mutate(
     enrichment =
@@ -2118,6 +1888,94 @@ holiday_enrichment <- tibble::tibble(
 
 holiday_enrichment
 ```
+
+
+```{r}
+### Identify Public Holidays Associated with Significant Decreases
+
+public_holiday_dips <- decrease_holiday_test %>%
+  filter(holiday_status == "Public holiday") %>%
+  select(
+    sensing_date,
+    holiday,
+    median_decrease,
+    sensors_reporting
+  ) %>%
+  arrange(median_decrease)
+
+knitr::kable(
+  public_holiday_dips,
+  digits = 1,
+  caption = "Significant Pedestrian Decreases on Victorian Public Holidays"
+)
+```
+
+
+```{r}
+### Interactive Significant Pedestrian Decreases Across Years
+
+holiday_timeline_data <- decrease_holiday_test %>%
+  mutate(
+    holiday_name = if_else(
+      is.na(holiday),
+      "Not a public holiday",
+      holiday
+    ),
+
+    hover_text = paste0(
+      "Date: ", format(sensing_date, "%d %B %Y"),
+      "<br>Holiday: ", holiday_name,
+      "<br>Median decrease: ", round(median_decrease, 1), "%",
+      "<br>Sensors reporting: ", sensors_reporting
+    )
+  ) %>%
+  arrange(sensing_date)
+
+holiday_timeline <- plotly::plot_ly(
+  holiday_timeline_data,
+  x = ~sensing_date,
+  y = ~median_decrease,
+  color = ~holiday_status,
+  colors = c(
+    "Normal day" = "#64748B",
+    "Public holiday" = "#E87932"
+  ),
+  type = "scatter",
+  mode = "markers",
+  marker = list(
+    size = 11,
+    opacity = 0.85
+  ),
+  text = ~hover_text,
+  hoverinfo = "text"
+) %>%
+  layout(
+    title = "Significant Pedestrian Decreases and Public Holidays",
+    xaxis = list(
+      title = "Date"
+    ),
+    yaxis = list(
+      title = "Median change from expected activity (%)"
+    ),
+    hovermode = "closest",
+    legend = list(
+      title = list(text = "Day type")
+    )
+  )
+
+holiday_timeline
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
