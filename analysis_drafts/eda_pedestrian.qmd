@@ -670,7 +670,6 @@ library(lubridate)
 
 ```{r}
 snapshot_dir <- here::here(
-  "ETC5543-Pulse_of_Melbourne",
   "Data_pedestrians",
   "raw",
   "data_pedestrian"
@@ -1333,6 +1332,9 @@ pedestrian_full <- pedestrian_full_updated
 
 ### Hourly Pedestrian Activity Over Time
 
+```{r}
+library(plotly)
+```
 
 ```{r}
 hourly_by_sensor_year <- pedestrian_full %>%
@@ -1372,62 +1374,68 @@ hourly_summary <- hourly_index %>%
   )
 ```
 
+```{r}
+hourly_summary <- hourly_index %>%
+  group_by(hourday) %>%
+  summarise(
+    median_index = median(activity_index, na.rm = TRUE),
+    q25 = quantile(activity_index, 0.25, na.rm = TRUE),
+    q75 = quantile(activity_index, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+daily_interactive_data <- hourly_index %>%
+  mutate(
+    year_label = case_when(
+      year == 2009 ~ "2009 (partial)",
+      year == 2026 ~ "2026 (partial)",
+      TRUE ~ as.character(year)
+    )
+  )
+```
 
 ### PLOT 1 — Typical Daily Pedestrian Rhythm
 
 ```{r}
-ggplot(
-  hourly_summary,
-  aes(
-    x = hourday,
-    y = median_index
-  )
-) +
-  geom_ribbon(
-    aes(
-      ymin = q25,
-      ymax = q75
+
+daily_interactive <- plot_ly(
+  daily_interactive_data,
+  x = ~hourday,
+  y = ~activity_index,
+  color = ~year_label,
+  type = "scatter",
+  mode = "lines",
+  text = ~paste0(
+    "Year: ", year_label,
+    "<br>Hour: ", hourday, ":00",
+    "<br>Activity index: ", round(activity_index, 1)
+  ),
+  hoverinfo = "text"
+) %>%
+  layout(
+    title = "Daily Pedestrian Rhythm by Year",
+    xaxis = list(
+      title = "Hour of day",
+      tickmode = "linear",
+      tick0 = 0,
+      dtick = 1
     ),
-    alpha = 0.2
-  ) +
-  geom_line(linewidth = 1) +
-  geom_point(size = 2) +
-  geom_hline(
-    yintercept = 100,
-    linetype = "dashed"
-  ) +
-  scale_x_continuous(breaks = 0:23) +
-  labs(
-    title = "Typical Daily Pedestrian Rhythm Across Years",
-    subtitle = "Median hourly activity across years; shaded area shows the middle 50%",
-    x = "Hour of day",
-    y = "Activity index (100 = yearly average)"
-  ) +
-  theme_minimal()
-```
-
-### PLOT 2 — Daily Rhythm by Year
-
-```{r}
-ggplot(
-  hourly_index,
-  aes(
-    x = hourday,
-    y = factor(year, levels = 2009:2026),
-    fill = activity_index
+    yaxis = list(
+      title = "Activity index (100 = yearly average)"
+    ),
+    hovermode = "closest",
+    legend = list(
+      title = list(text = "Year"),
+      orientation = "v",
+      x = 1.02,
+      y = 1
+    ),
+    margin = list(r = 150)
   )
-) +
-  geom_tile() +
-  scale_x_continuous(breaks = 0:23) +
-  scale_y_discrete(drop = FALSE) +
-  labs(
-    title = "Melbourne's Daily Pedestrian Rhythm Across Years",
-    subtitle = "Activity relative to each year's average (100 = yearly average)",
-    x = "Hour of day",
-    y = "Year",
-    fill = "Activity\nindex"
-  ) +
-  theme_minimal()
+
+daily_interactive
 ```
 
 ## Weekly Rhythm Across the Years, 2009–2026
@@ -1444,7 +1452,6 @@ pedestrian_full <- pedestrian_full %>%
     )
   )
 ```
-
 
 ### Calculating Weekly Patterns
 
@@ -1481,57 +1488,637 @@ weekly_summary <- weekly_index %>%
   )
 ```
 
-### PLOT 3 — Typical Weekly Pedestrian Rhythm
-
 ```{r}
-ggplot(
-  weekly_summary,
-  aes(x = day_name, y = median_index, group = 1)
-) +
-  geom_ribbon(
-    aes(ymin = q25, ymax = q75),
-    alpha = 0.2
-  ) +
-  geom_line(linewidth = 1) +
-  geom_point(size = 3) +
-  geom_hline(
-    yintercept = 100,
-    linetype = "dashed"
-  ) +
-  scale_y_continuous(
-    limits = c(0, 125),
-    breaks = seq(0, 120, 20)
-  ) +
-  labs(
-    title = "Typical Weekly Pedestrian Rhythm Across Years",
-    subtitle = "Median weekly pattern across years",
-    x = "Day of week",
-    y = "Activity index (100 = yearly average)"
-  ) +
-  theme_minimal()
-```
-
-
-### PLOT 4 — Weekly Rhythm by Year
-
-```{r}
-ggplot(
-  weekly_index,
-  aes(
-    x = day_name,
-    y = factor(year, levels = 2009:2026),
-    fill = activity_index
+weekly_interactive_data <- weekly_index %>%
+  mutate(
+    year_label = case_when(
+      year == 2009 ~ "2009 (partial)",
+      year == 2026 ~ "2026 (partial)",
+      TRUE ~ as.character(year)
+    )
   )
-) +
-  geom_tile() +
-  scale_y_discrete(drop = FALSE) +
-  labs(
-    title = "Melbourne's Weekly Pedestrian Rhythm Across Years",
-    subtitle = "Activity relative to each year's average (100 = yearly average)",
-    x = "Day of week",
-    y = "Year",
-    fill = "Activity\nindex"
-  ) +
-  theme_minimal()
 ```
+
+### PLOT 2 — Typical Weekly Pedestrian Rhythm
+
+```{r}
+weekly_interactive <- plot_ly(
+  weekly_interactive_data,
+  x = ~day_name,
+  y = ~activity_index,
+  color = ~year_label,
+  type = "scatter",
+  mode = "lines+markers",
+  text = ~paste0(
+    "Year: ", year_label,
+    "<br>Day: ", day_name,
+    "<br>Activity index: ", round(activity_index, 1)
+  ),
+  hoverinfo = "text"
+) %>%
+  layout(
+    title = "Weekly Pedestrian Rhythm by Year",
+    xaxis = list(
+      title = "Day of week"
+    ),
+    yaxis = list(
+      title = "Activity index (100 = yearly average)"
+    ),
+    hovermode = "closest",
+    legend = list(
+      title = list(text = "Year"),
+      orientation = "v",
+      x = 1.02,
+      y = 1
+    ),
+    margin = list(r = 150)
+  )
+
+weekly_interactive
+```
+
+
+### ### Daily pedestrian activity for dip analysis
+
+```{r}
+
+decrease_sensor_daily <- pedestrian_full %>%
+  filter(
+    !is.na(pedestrian_count)
+  ) %>%
+  group_by(
+    location_id,
+    sensing_date
+  ) %>%
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) %>%
+  filter(
+    hours_observed >= 20
+  )
+```
+
+### Calculate expected activity for each sensor and weekday
+
+```{r}
+
+
+decrease_sensor_index <- decrease_sensor_daily %>%
+  arrange(
+    location_id,
+    sensing_date
+  ) %>%
+  mutate(
+    day_of_week = lubridate::wday(
+      sensing_date,
+      week_start = 1
+    )
+  ) %>%
+  group_by(
+    location_id,
+    day_of_week
+  ) %>%
+  mutate(
+    expected_count = slider::slide_dbl(
+      daily_count,
+      ~ median(
+        .x[-5],
+        na.rm = TRUE
+      ),
+      .before = 4,
+      .after = 4,
+      .complete = TRUE
+    )
+  ) %>%
+  ungroup() %>%
+  mutate(
+    decrease_percent =
+      100 *
+      (daily_count - expected_count) /
+      expected_count
+  ) %>%
+  filter(
+    is.finite(decrease_percent)
+  )
+```
+
+
+### Summarise pedestrian decreases across sensors
+
+
+```{r}
+
+
+decrease_day_summary <- decrease_sensor_index %>%
+  group_by(
+    sensing_date
+  ) %>%
+  summarise(
+    median_decrease = median(
+      decrease_percent,
+      na.rm = TRUE
+    ),
+
+    sensors_reporting = n_distinct(
+      location_id
+    ),
+
+    sensors_below_20 = sum(
+      decrease_percent <= -20,
+      na.rm = TRUE
+    ),
+
+    proportion_below_20 = mean(
+      decrease_percent <= -20,
+      na.rm = TRUE
+    ),
+
+    median_daily_count = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+
+    .groups = "drop"
+  )
+```
+
+### Identify significant pedestrian decreases
+
+```{r}
+
+decrease_candidates <- decrease_day_summary %>%
+  filter(
+    sensors_reporting >= 10,
+    median_decrease <= -20,
+    proportion_below_20 >= 0.30
+  ) %>%
+  arrange(
+    median_decrease
+  )
+
+decrease_candidates %>%
+  slice_head(n = 30)
+```
+
+### Focus on non-COVID significant decreases
+
+```{r}
+
+decrease_non_covid <- decrease_candidates %>%
+  filter(
+    lubridate::year(sensing_date) < 2020 |
+      lubridate::year(sensing_date) > 2022
+  )
+```
+
+
+```{r}
+decrease_non_covid %>%
+  select(
+    sensing_date,
+    median_decrease,
+    sensors_reporting,
+    proportion_below_20
+  ) %>%
+  slice_head(n = 30)
+```
+
+```{r}
+decrease_non_covid %>%
+  mutate(
+    year = lubridate::year(sensing_date)
+  ) %>%
+  count(year)
+```
+
+
+
+```{r}
+### Top non-COVID pedestrian decreases
+
+top_decreases <- decrease_non_covid %>%
+  select(
+    sensing_date,
+    median_decrease,
+    sensors_reporting,
+    proportion_below_20
+  ) %>%
+  slice_head(n = 20) %>%
+  mutate(
+    day = lubridate::wday(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE
+    )
+  )
+
+top_decreases
+```
+
+
+
+```{r}
+top_decreases %>%
+  mutate(
+    month = lubridate::month(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE
+    )
+  ) %>%
+  count(month, sort = TRUE)
+```
+
+```{r}
+top_decreases %>%
+  mutate(
+    month_day = format(
+      sensing_date,
+      "%d %B"
+    )
+  ) %>%
+  count(month_day, sort = TRUE)
+```
+
+
+```{r}
+top_decreases %>%
+  select(
+    sensing_date,
+    median_decrease,
+    sensors_reporting,
+    proportion_below_20,
+    day
+  ) %>%
+  arrange(sensing_date)
+```
+
+
+```{r}
+### Victorian public holidays, 2009–2026
+
+easter_sunday <- function(y) {
+  a <- y %% 19
+  b <- y %/% 100
+  c <- y %% 100
+  d <- b %/% 4
+  e <- b %% 4
+  f <- (b + 8) %/% 25
+  g <- (b - f + 1) %/% 3
+  h <- (19 * a + b - d - g + 15) %% 30
+  i <- c %/% 4
+  k <- c %% 4
+  l <- (32 + 2 * e + 2 * i - h - k) %% 7
+  m <- (a + 11 * h + 22 * l) %/% 451
+
+  month <- (h + l - 7 * m + 114) %/% 31
+  day <- ((h + l - 7 * m + 114) %% 31) + 1
+
+  as.Date(
+    sprintf("%04d-%02d-%02d", y, month, day)
+  )
+}
+```
+
+
+```{r}
+holiday_calendar <- purrr::map_dfr(
+  2009:2026,
+  function(y) {
+
+    easter <- easter_sunday(y)
+
+    first_march <- as.Date(
+      paste0(y, "-03-01")
+    )
+
+    first_june <- as.Date(
+      paste0(y, "-06-01")
+    )
+
+    first_november <- as.Date(
+      paste0(y, "-11-01")
+    )
+
+    second_monday_march <-
+      first_march +
+      lubridate::days(
+        (8 - lubridate::wday(
+          first_march,
+          week_start = 1
+        )) %% 7 + 7
+      )
+
+    second_monday_june <-
+      first_june +
+      lubridate::days(
+        (8 - lubridate::wday(
+          first_june,
+          week_start = 1
+        )) %% 7 + 7
+      )
+
+    first_tuesday_november <-
+      first_november +
+      lubridate::days(
+        (2 - lubridate::wday(
+          first_november,
+          week_start = 1
+        )) %% 7
+      )
+
+    new_year <- as.Date(
+      paste0(y, "-01-01")
+    )
+
+    australia_day <- as.Date(
+      paste0(y, "-01-26")
+    )
+
+    anzac_day <- as.Date(
+      paste0(y, "-04-25")
+    )
+
+    christmas <- as.Date(
+      paste0(y, "-12-25")
+    )
+
+    boxing_day <- as.Date(
+      paste0(y, "-12-26")
+    )
+
+    holidays <- tibble::tibble(
+      holiday_date = c(
+        new_year,
+        australia_day,
+        second_monday_march,
+        easter - 2,
+        easter - 1,
+        easter,
+        easter + 1,
+        anzac_day,
+        second_monday_june,
+        first_tuesday_november,
+        christmas,
+        boxing_day
+      ),
+
+      holiday = c(
+        "New Year's Day",
+        "Australia Day",
+        "Labour Day",
+        "Good Friday",
+        "Easter Saturday",
+        "Easter Sunday",
+        "Easter Monday",
+        "ANZAC Day",
+        if (y <= 2022) {
+          "Queen's Birthday"
+        } else {
+          "King's Birthday"
+        },
+        "Melbourne Cup Day",
+        "Christmas Day",
+        "Boxing Day"
+      )
+    )
+
+    # Substitute holidays
+    if (lubridate::wday(
+      new_year,
+      week_start = 1
+    ) %in% c(6, 7)) {
+
+      holidays <- dplyr::bind_rows(
+        holidays,
+        tibble::tibble(
+          holiday_date =
+            new_year +
+            lubridate::days(
+              8 - lubridate::wday(
+                new_year,
+                week_start = 1
+              )
+            ),
+          holiday = "New Year's Day (substitute)"
+        )
+      )
+    }
+
+    if (lubridate::wday(
+      australia_day,
+      week_start = 1
+    ) %in% c(6, 7)) {
+
+      holidays <- dplyr::bind_rows(
+        holidays,
+        tibble::tibble(
+          holiday_date =
+            australia_day +
+            lubridate::days(
+              8 - lubridate::wday(
+                australia_day,
+                week_start = 1
+              )
+            ),
+          holiday = "Australia Day (substitute)"
+        )
+      )
+    }
+
+    if (lubridate::wday(
+      christmas,
+      week_start = 1
+    ) %in% c(6, 7)) {
+
+      holidays <- dplyr::bind_rows(
+        holidays,
+        tibble::tibble(
+          holiday_date =
+            as.Date(paste0(y, "-12-27")),
+          holiday = "Christmas Day (substitute)"
+        )
+      )
+    }
+
+    if (lubridate::wday(
+      boxing_day,
+      week_start = 1
+    ) %in% c(6, 7)) {
+
+      holidays <- dplyr::bind_rows(
+        holidays,
+        tibble::tibble(
+          holiday_date =
+            as.Date(paste0(y, "-12-28")),
+          holiday = "Boxing Day (substitute)"
+        )
+      )
+    }
+
+    holidays
+  }
+)
+```
+
+
+```{r}
+top_decreases_holidays <- top_decreases %>%
+  left_join(
+    holiday_calendar,
+    by = c(
+      "sensing_date" = "holiday_date"
+    )
+  ) %>%
+  mutate(
+    holiday_status = if_else(
+      is.na(holiday),
+      "Normal day",
+      "Public holiday"
+    )
+  )
+```
+
+```{r}
+top_decreases_holidays %>%
+  count(
+    holiday_status
+  )
+```
+
+
+```{r}
+### Public holiday representation among all significant decreases
+
+decrease_holiday_test <- decrease_non_covid %>%
+  left_join(
+    holiday_calendar,
+    by = c("sensing_date" = "holiday_date")
+  ) %>%
+  mutate(
+    holiday_status = if_else(
+      is.na(holiday),
+      "Normal day",
+      "Public holiday"
+    )
+  )
+
+decrease_holiday_test %>%
+  count(holiday_status) %>%
+  mutate(
+    percentage = n / sum(n) * 100
+  )
+```
+
+
+```{r}
+decrease_holiday_test %>%
+  filter(
+    holiday_status == "Public holiday"
+  ) %>%
+  count(
+    holiday,
+    sort = TRUE
+  )
+```
+
+
+
+```{r}
+decrease_holiday_test %>%
+  group_by(
+    holiday_status
+  ) %>%
+  summarise(
+    n = n(),
+    median_decrease = median(
+      median_decrease,
+      na.rm = TRUE
+    ),
+    mean_decrease = mean(
+      median_decrease,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+```
+
+
+
+```{r}
+### Compare public holiday frequency with all eligible days
+
+eligible_days <- decrease_day_summary %>%
+  filter(
+    sensors_reporting >= 10,
+    lubridate::year(sensing_date) < 2020 |
+      lubridate::year(sensing_date) > 2022
+  ) %>%
+  select(sensing_date) %>%
+  distinct() %>%
+  mutate(
+    holiday_status = if_else(
+      sensing_date %in% holiday_calendar$holiday_date,
+      "Public holiday",
+      "Normal day"
+    )
+  )
+
+baseline_holiday <- eligible_days %>%
+  count(holiday_status) %>%
+  mutate(
+    percentage = n / sum(n) * 100
+  )
+
+baseline_holiday
+```
+
+
+```{r}
+### Compare significant dips with the overall calendar
+
+significant_holiday <- decrease_holiday_test %>%
+  count(holiday_status) %>%
+  mutate(
+    percentage = n / sum(n) * 100
+  )
+
+significant_holiday
+```
+
+
+```{r}
+### Public holiday enrichment among significant decreases
+
+holiday_enrichment <- tibble::tibble(
+  baseline_holiday_percentage =
+    baseline_holiday %>%
+    filter(
+      holiday_status == "Public holiday"
+    ) %>%
+    pull(percentage),
+
+  significant_dip_holiday_percentage =
+    significant_holiday %>%
+    filter(
+      holiday_status == "Public holiday"
+    ) %>%
+    pull(percentage)
+) %>%
+  mutate(
+    enrichment =
+      significant_dip_holiday_percentage /
+      baseline_holiday_percentage
+  )
+
+holiday_enrichment
+```
+
+
+
 
