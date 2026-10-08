@@ -1,0 +1,163 @@
+---
+title: "Melbourne Pedestrian Activity"
+format:
+  pdf:
+    fig-width: 10
+    fig-height: 6.5
+    toc: false
+---
+
+```{r}
+#| message: false
+#| warning: false
+.libPaths(c("~/Rlibs", .libPaths()))
+library(data.table)
+library(ggplot2)
+library(ggrepel)
+```
+
+```{r}
+hist_file <- "pedestrian_counts_processed.csv"
+new_files <- sprintf("%d_Pedestrian_Data.csv", 2022:2025)
+
+new <- rbindlist(lapply(new_files, fread), use.names = TRUE, fill = TRUE)
+new[, sensing_date := as.Date(Sensing_Date)]
+new[, year := as.integer(format(sensing_date, "%Y"))]
+new[, month := as.integer(format(sensing_date, "%m"))]
+new[, dow := as.integer(format(sensing_date, "%u"))]
+
+coords <- new[, .(lat = mean(Latitude, na.rm = TRUE),
+                  lon = mean(Longitude, na.rm = TRUE)), by = Location_ID]
+
+hist <- fread(hist_file, select = c("sensing_date", "location_id", "pedestriancount",
+                                    "year", "month",
+                                    "covid_phase", "mega_event", "is_public_holiday"))
+hist[, sensing_date := as.Date(sensing_date)]
+hist[, dow := as.integer(format(sensing_date, "%u"))]
+```
+
+## RQ5: post-COVID change by location
+
+```{r}
+hist_day <- hist[year >= 2015 & year <= 2019,
+                 .(daily = sum(as.numeric(pedestriancount))),
+                 by = .(location_id, sensing_date, year, month)]
+
+baseline <- hist_day[, .(base = median(daily, na.rm = TRUE),
+                         yrs = uniqueN(year)),
+                     by = .(location_id, month)]
+baseline <- baseline[yrs >= 3]
+
+new_day <- new[year >= 2024,
+               .(daily = sum(as.numeric(PedestrianCount))),
+               by = .(Location_ID, sensing_date, month)]
+good <- new_day[, .N, by = Location_ID][N >= 200, Location_ID]
+
+recent <- new_day[Location_ID %in% good,
+                  .(recent = median(daily, na.rm = TRUE)),
+                  by = .(Location_ID, month)]
+
+chg <- baseline[recent, on = .(location_id = Location_ID, month = month), nomatch = 0]
+chg[, pct := recent / base * 100 - 100]
+
+loc <- chg[, .(change = median(pct, na.rm = TRUE), n = .N), by = location_id]
+loc <- loc[n >= 3]
+loc <- merge(loc, coords, by.x = "location_id", by.y = "Location_ID")
+setorder(loc, change)
+loc[, sensor := factor(location_id, levels = location_id)]
+```
+
+```{r}
+ggplot(loc, aes(lon, lat, colour = change)) +
+  geom_point(size = 4, alpha = 0.9) +
+  coord_quickmap() +
+  scale_colour_gradient2(low = "#d73027", mid = "grey92", high = "#1a9850",
+                         midpoint = 0, labels = function(x) paste0(x, "%")) +
+  labs(title = "Where Melbourne has recovered vs where it has not",
+       subtitle = "2024-25 median daily counts vs same-month 2015-19 baseline",
+       x = NULL, y = NULL, colour = "Change vs\npre-COVID") +
+  theme_minimal(base_size = 11)
+```
+
+```{r}
+ggplot(loc, aes(change, sensor)) +
+  geom_segment(aes(x = 0, xend = change, yend = sensor,
+                   colour = change >= 0), linewidth = 0.8) +
+  geom_point(aes(colour = change >= 0), size = 2.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40") +
+  scale_colour_manual(values = c("TRUE" = "#1a9850", "FALSE" = "#d73027"),
+                      labels = c("TRUE" = "Recovered", "FALSE" = "Still down")) +
+  labs(title = "Post-COVID change by sensor",
+       x = "Change vs pre-COVID baseline (%)", y = NULL, colour = NULL) +
+  theme_minimal(base_size = 9)
+```
+
+## RQ6: unusually busy and quiet days
+
+```{r}
+h_city <- hist[, .(d = sum(as.numeric(pedestriancount))),
+               by = .(location_id, sensing_date, year, month, dow)]
+h_city <- h_city[, .(city = median(d, na.rm = TRUE)),
+                 by = .(sensing_date, year, month, dow)]
+
+n_city <- new[, .(d = sum(as.numeric(PedestrianCount))),
+               by = .(Location_ID, sensing_date, year, month, dow)]
+n_city <- n_city[, .(city = median(d, na.rm = TRUE)),
+                 by = .(sensing_date, year, month, dow)]
+
+h_city <- h_city[sensing_date <= as.Date("2022-11-14")]
+n_city <- n_city[sensing_date > as.Date("2022-11-14")]
+
+city <- rbindlist(list(h_city, n_city), use.names = TRUE)
+city <- city[!is.na(city) & city > 0]
+
+cal <- city[year <= 2019, .(exp = median(city, na.rm = TRUE)), by = .(month, dow)]
+city <- merge(city, cal, by = c("month", "dow"))
+city[, resid := city - exp]
+```
+
+```{r}
+flags <- hist[, .(mega = any(mega_event), hol = any(is_public_holiday),
+                  ph = covid_phase[1]),
+              by = .(sensing_date = as.Date(sensing_date))]
+city <- merge(city, flags, by = "sensing_date", all.x = TRUE)
+
+busy_new <- city[year >= 2022][order(-resid)][1:8, sensing_date]
+busy_old <- city[year <= 2019][order(-resid)][1:4, sensing_date]
+quiet    <- city[order(resid)][1:10, sensing_date]
+
+city[, type := "normal"]
+city[sensing_date %in% busy_new, type := "recent_busy"]
+city[sensing_date %in% busy_old, type := "old_busy"]
+city[sensing_date %in% quiet, type := "quiet"]
+
+city[, lab := ""]
+city[type == "recent_busy" & mega == TRUE, lab := "mega event"]
+city[type == "recent_busy" & mega == FALSE & hol == TRUE, lab := "holiday"]
+city[type == "recent_busy" & lab == "", lab := format(sensing_date, "%Y-%m-%d")]
+city[type == "old_busy" & mega == TRUE, lab := "mega event"]
+city[type == "old_busy" & lab == "", lab := format(sensing_date, "%Y-%m-%d")]
+city[type == "quiet" & !is.na(ph) & ph != "Normal", lab := ph]
+city[type == "quiet" & lab == "", lab := format(sensing_date, "%Y-%m-%d")]
+
+covid <- city[!is.na(ph) & ph != "Normal", range(sensing_date)]
+```
+
+```{r}
+ggplot(city, aes(sensing_date, resid)) +
+  annotate("rect", xmin = covid[1], xmax = covid[2],
+           ymin = -Inf, ymax = Inf, fill = "grey80", alpha = 0.35) +
+  geom_line(colour = "grey75", linewidth = 0.3) +
+  geom_point(data = city[type == "recent_busy"], colour = "#d73027", size = 2.2) +
+  geom_point(data = city[type == "old_busy"], colour = "#e6550d", size = 2) +
+  geom_point(data = city[type == "quiet"], colour = "#2166ac", size = 2.2) +
+  geom_text_repel(data = city[type != "normal"], aes(label = lab),
+                  size = 2.6, max.overlaps = 20,
+                  min.segment.length = 0, segment.size = 0.3) +
+  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
+  scale_y_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
+  labs(title = "Days unusually busy or quiet vs calendar-adjusted expectation",
+       subtitle = "Red: busiest 2022-25   Orange: pre-COVID peaks   Blue: lockdown days",
+       x = NULL, y = "Median sensor count minus expectation") +
+  theme_minimal(base_size = 11)
+```
