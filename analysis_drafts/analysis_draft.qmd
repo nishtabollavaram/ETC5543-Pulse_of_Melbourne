@@ -25,6 +25,7 @@ library(ggrepel)
 library(plotly)
 library(leaflet)
 library(slider)
+library(cluster)
 ```
 
 ```{r}
@@ -2004,76 +2005,8 @@ period_summary <- period_daily |>
 
 period_summary
 ```
-```{r}
-period_summary |>
-  ggplot(
-    aes(
-      x = period,
-      y = typical_daily_activity
-    )
-  ) +
-  geom_col() +
-  labs(
-    title = "How has Melbourne's pedestrian activity changed?",
-    subtitle = "Typical daily activity at sensor locations observed in both periods",
-    x = NULL,
-    y = "Median daily pedestrian count"
-  ) +
-  theme_minimal()
-```
 
-```{r}
-hourly_period <- pedestrian_full |>
-  filter(
-    year %in% c(2017:2019, 2023:2025)
-  ) |>
-  semi_join(
-    common_sensors,
-    by = "location_id"
-  ) |>
-  mutate(
-    period = case_when(
-      year %in% 2017:2019 ~ "Previous: 2017–2019",
-      year %in% 2023:2025 ~ "Now: 2023–2025"
-    )
-  ) |>
-  group_by(
-    period,
-    hourday
-  ) |>
-  summarise(
-    typical_count = median(
-      pedestrian_count,
-      na.rm = TRUE
-    ),
-    .groups = "drop"
-  )
-```
 
-```{r}
-hourly_period |>
-  ggplot(
-    aes(
-      x = hourday,
-      y = typical_count,
-      linetype = period
-    )
-  ) +
-  geom_line(
-    linewidth = 1
-  ) +
-  scale_x_continuous(
-    breaks = 0:23
-  ) +
-  labs(
-    title = "Has Melbourne's daily pedestrian rhythm changed?",
-    subtitle = "Comparison of common sensor locations before and after COVID",
-    x = "Hour of day",
-    y = "Median pedestrian count",
-    linetype = NULL
-  ) +
-  theme_minimal()
-```
 ```{r}
 sensor_coverage_check <- pedestrian_full |>
   filter(year %in% c(2017:2019, 2023:2025)) |>
@@ -2270,5 +2203,271 @@ period_change <- period_summary_consistent |>
   )
 
 period_change
+```
+
+- Do different parts of Melbourne have distinct pedestrian activity rhythms?
+```{r}
+# Check for duplicate sensor-hour observations
+pedestrian_full |>
+  filter(year %in% 2023:2025) |>
+  count(location_id, sensing_date, hourday) |>
+  filter(n > 1) |>
+  summarise(duplicate_sensor_hours = n())
+```
+
+```{r}
+recent_data <- pedestrian_full |>
+  filter(
+    year %in% 2023:2025,
+    between(hourday, 0, 23),
+    !is.na(pedestrian_count),
+    pedestrian_count >= 0
+  )
+
+# Identify sufficiently complete days
+valid_days <- recent_data |>
+  group_by(location_id, year, sensing_date) |>
+  summarise(
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(hours_observed >= 23)
+
+# Check coverage in each year
+recent_coverage <- valid_days |>
+  group_by(location_id, year) |>
+  summarise(
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    expected_days = if_else(leap_year(year), 366, 365),
+    coverage = days_observed / expected_days
+  )
+
+# Retain sensors with good coverage in all 3 years
+reliable_sensors <- recent_coverage |>
+  group_by(location_id) |>
+  summarise(
+    years_covered = n_distinct(year),
+    minimum_coverage = min(coverage),
+    .groups = "drop"
+  ) |>
+  filter(
+    years_covered == 3,
+    minimum_coverage >= 0.80
+  )
+
+reliable_sensors |>
+  summarise(sensors_selected = n())
+```
+
+```{r}
+hourly_profiles <- recent_data |>
+  semi_join(
+    valid_days,
+    by = c("location_id", "year", "sensing_date")
+  ) |>
+  semi_join(
+    reliable_sensors,
+    by = "location_id"
+  ) |>
+  mutate(
+    day_type = if_else(
+      wday(sensing_date, week_start = 1) <= 5,
+      "Weekday",
+      "Weekend"
+    )
+  ) |>
+  group_by(location_id, day_type, hourday) |>
+  summarise(
+    typical_count = median(pedestrian_count),
+    .groups = "drop"
+  ) |>
+  group_by(location_id) |>
+  filter(
+    n() == 48,
+    sum(typical_count) > 0
+  ) |>
+  mutate(
+    hour_share = typical_count / sum(typical_count)
+  ) |>
+  ungroup()
+```
+
+```{r}
+# One row per sensor, with 48 profile measurements
+cluster_features <- hourly_profiles |>
+  mutate(
+    feature = paste0(
+      day_type,
+      "_",
+      str_pad(hourday, width = 2, pad = "0")
+    )
+  ) |>
+  select(location_id, feature, hour_share) |>
+  pivot_wider(
+    names_from = feature,
+    values_from = hour_share
+  ) |>
+  drop_na()
+
+# Calculate distances between sensor profiles
+sensor_distances <- cluster_features |>
+  select(-location_id) |>
+  stats::dist()
+
+set.seed(123)
+
+# Test 2 to 5 clusters
+cluster_tests <- tibble(k = 2:5) |>
+  mutate(
+    model = map(
+      k,
+      ~ stats::kmeans(
+        cluster_features |> select(-location_id),
+        centers = .x,
+        nstart = 30
+      )
+    ),
+    silhouette = map_dbl(
+      model,
+      ~ mean(
+        cluster::silhouette(
+          .x$cluster,
+          sensor_distances
+        )[, "sil_width"]
+      )
+    )
+  )
+
+cluster_tests |>
+  select(k, silhouette)
+```
+
+```{r}
+
+best_k <- cluster_tests |>
+  slice_max(
+    silhouette,
+    n = 1,
+    with_ties = FALSE
+  ) |>
+  pull(k)
+
+set.seed(123)
+
+final_kmeans <- stats::kmeans(
+  cluster_features |> select(-location_id),
+  centers = best_k,
+  nstart = 50
+)
+
+sensor_clusters <- cluster_features |>
+  select(location_id) |>
+  mutate(
+    cluster = paste0(
+      "Cluster ",
+      final_kmeans$cluster
+    )
+  )
+
+sensor_clusters |>
+  count(cluster)
+```
+
+```{r}
+cluster_profiles <- hourly_profiles |>
+  inner_join(
+    sensor_clusters,
+    by = "location_id"
+  ) |>
+  group_by(cluster, day_type, hourday) |>
+  summarise(
+    typical_share = median(hour_share) * 100,
+    .groups = "drop"
+  )
+
+cluster_profiles |>
+  ggplot(
+    aes(
+      x = hourday,
+      y = typical_share,
+      colour = cluster
+    )
+  ) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~day_type) +
+  scale_x_continuous(
+    breaks = seq(0, 23, by = 2)
+  ) +
+  labs(
+    title = "Melbourne has different pedestrian rhythms",
+    subtitle = "K-means clustering of hourly profiles, 2023–2025",
+    x = "Hour of day",
+    y = "Share of typical weekday + weekend activity (%)",
+    colour = "Cluster"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+cluster_locations <- sensor_clusters |>
+  left_join(
+    location_metadata |>
+      select(
+        location_id,
+        sensor_description,
+        latitude,
+        longitude
+      ),
+    by = "location_id"
+  ) |>
+  filter(
+    !is.na(latitude),
+    !is.na(longitude)
+  ) |>
+  mutate(
+    hover_text = paste0(
+      "<b>", sensor_description, "</b>",
+      "<br>Location ID: ", location_id,
+      "<br>", cluster
+    )
+  )
+```
+
+```{r}
+plotly::plot_ly(
+  data = cluster_locations,
+  type = "scattermapbox",
+  mode = "markers",
+  lat = ~latitude,
+  lon = ~longitude,
+  color = ~cluster,
+  colors = "Set2",
+  text = ~hover_text,
+  hoverinfo = "text",
+  marker = list(
+    size = 12,
+    opacity = 0.85
+  )
+) |>
+  plotly::layout(
+    title = "Where are Melbourne's different pedestrian rhythms?",
+    mapbox = list(
+      style = "open-street-map",
+      center = list(
+        lat = -37.8136,
+        lon = 144.9631
+      ),
+      zoom = 12.5
+    ),
+    margin = list(
+      l = 0,
+      r = 0,
+      b = 0,
+      t = 50
+    )
+  )
 ```
 
