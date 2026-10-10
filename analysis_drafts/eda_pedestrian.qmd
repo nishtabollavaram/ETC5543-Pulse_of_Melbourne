@@ -52,6 +52,7 @@ pedestrians %>%
 
 ## Data Preparation
 
+
 # Load historical pedestrian data
 
 ```{r}
@@ -1967,16 +1968,1186 @@ holiday_timeline
 ```
 
 
+## Weather and Pedestrian Activity Analysis
+
+```{r}
+
+weather_daily <- readr::read_csv(
+  "../Data_pedestrians/raw2/melbourne_weather_daily.csv",
+  skip = 3,
+  show_col_types = FALSE
+) %>%
+  transmute(
+    sensing_date = as.Date(time),
+
+    max_temperature_c = `temperature_2m_max (°C)`,
+
+    min_temperature_c = `temperature_2m_min (°C)`,
+
+    max_wind_kmh = `wind_speed_10m_max (km/h)`,
+
+    rainfall_mm = `precipitation_sum (mm)`
+  ) %>%
+  filter(
+    sensing_date >= as.Date("2009-05-01"),
+    sensing_date <= as.Date("2026-09-06")
+  )
+
+weather_daily %>%
+  summarise(
+    total_days = n(),
+    first_date = min(sensing_date),
+    last_date = max(sensing_date),
+    missing_rainfall = sum(is.na(rainfall_mm)),
+    duplicate_dates = n() - n_distinct(sensing_date)
+  )
+```
+
+### Combine Weather with Pedestrian Decreases
+
+```{r}
+
+weather_dip_daily <- decrease_day_summary %>%
+  filter(
+    sensors_reporting >= 10,
+    lubridate::year(sensing_date) %in%
+      c(2019, 2023, 2024, 2025, 2026)
+  ) %>%
+  left_join(
+    weather_daily,
+    by = "sensing_date"
+  ) %>%
+  mutate(
+    significant_dip =
+      median_decrease <= -20 &
+      proportion_below_20 >= 0.30,
+
+    public_holiday =
+      sensing_date %in%
+      holiday_calendar_official$holiday_date
+  )
+
+weather_dip_daily %>%
+  summarise(
+    total_days = n(),
+    significant_dip_days = sum(significant_dip),
+    public_holiday_days = sum(public_holiday),
+    holiday_dip_days = sum(significant_dip & public_holiday),
+    missing_weather = sum(is.na(rainfall_mm)),
+    duplicate_dates = n() - n_distinct(sensing_date)
+  )
+```
+
+
+```{r}
+weather_dip_daily %>%
+  summarise(
+    missing_weather = sum(is.na(rainfall_mm)),
+    duplicate_dates = n() - n_distinct(sensing_date)
+  )
+```
+
+
+
+```{r}
+### Compare Weather on Significant Dip Days and Other Days
+
+weather_comparison <- weather_dip_daily %>%
+  filter(!public_holiday) %>%
+  group_by(significant_dip) %>%
+  summarise(
+    days = n(),
+
+    median_rainfall_mm =
+      round(median(rainfall_mm, na.rm = TRUE), 1),
+
+    heavy_rain_pct =
+      round(mean(rainfall_mm >= 10, na.rm = TRUE) * 100, 1),
+
+    median_max_temp_c =
+      round(median(max_temperature_c, na.rm = TRUE), 1),
+
+    median_min_temp_c =
+      round(median(min_temperature_c, na.rm = TRUE), 1),
+
+    median_max_wind_kmh =
+      round(median(max_wind_kmh, na.rm = TRUE), 1),
+
+    .groups = "drop"
+  )
+
+print(weather_comparison, width = Inf)
+```
+
+
+```{r}
+weather_comparison %>%
+  select(
+    significant_dip,
+    days,
+    median_min_temp_c,
+    median_max_wind_kmh
+  )
+```
+
+
+### Compare Pedestrian Dip Frequency on Heavy Rainfall Days
+
+```{r}
+rain_dip_frequency <- weather_dip_daily %>%
+  filter(!public_holiday) %>%
+  mutate(
+    rain_category = if_else(
+      rainfall_mm >= 10,
+      "Heavy rainfall (10 mm or more)",
+      "Less than 10 mm rainfall"
+    )
+  ) %>%
+  group_by(rain_category) %>%
+  summarise(
+    total_days = n(),
+
+    significant_dip_days = sum(significant_dip),
+
+    dip_percentage = round(
+      mean(significant_dip) * 100,
+      1
+    ),
+
+    .groups = "drop"
+  )
+
+print(rain_dip_frequency, width = Inf)
+```
+
+### Significant Pedestrian Decreases by Rainfall and Season
+
+```{r}
+rain_season_comparison <- weather_dip_daily %>%
+  filter(!public_holiday) %>%
+  mutate(
+    season = case_when(
+      lubridate::month(sensing_date) %in% c(12, 1, 2) ~ "Summer",
+      lubridate::month(sensing_date) %in% c(3, 4, 5) ~ "Autumn",
+      lubridate::month(sensing_date) %in% c(6, 7, 8) ~ "Winter",
+      TRUE ~ "Spring"
+    ),
+    rain_category = if_else(
+      rainfall_mm >= 10,
+      "Heavy rainfall",
+      "Less than 10 mm"
+    )
+  ) %>%
+  group_by(season, rain_category) %>%
+  summarise(
+    total_days = n(),
+    significant_dip_days = sum(significant_dip),
+    dip_percentage = round(
+      mean(significant_dip) * 100, 1
+    ),
+    .groups = "drop"
+  )
+
+print(rain_season_comparison, n = Inf)
+```
+
+
+### Interactive Rainfall and Pedestrian Decreases by Season
+
+```{r}
+### Interactive Rainfall and Pedestrian Decreases by Season
+
+rain_season_plot_data <- rain_season_comparison %>%
+  mutate(
+    season = factor(
+      season,
+      levels = c("Summer", "Autumn", "Winter", "Spring")
+    ),
+    hover_text = paste0(
+      "Season: ", season,
+      "<br>Rainfall: ", rain_category,
+      "<br>Total days: ", total_days,
+      "<br>Significant dip days: ", significant_dip_days,
+      "<br>Dip rate: ", dip_percentage, "%"
+    )
+  )
+
+# Create the interactive graph
+rain_season_plot <- plotly::plot_ly(
+  data = rain_season_plot_data,
+  x = ~season,
+  y = ~dip_percentage,
+  color = ~rain_category,
+  type = "bar",
+  text = ~hover_text,
+hoverinfo = "text",
+textposition = "none"
+)
+
+# Add graph titles and formatting
+rain_season_plot <- plotly::layout(
+  rain_season_plot,
+  title = "Significant Pedestrian Decreases by Rainfall and Season",
+  xaxis = list(title = "Season"),
+  yaxis = list(
+    title = "Significant decrease rate (%)",
+    range = c(0, 40)
+  ),
+  barmode = "group",
+  legend = list(
+    title = list(text = "Rainfall category")
+  )
+)
+
+rain_season_plot
+```
+
+### Significant Pedestrian Decreases by Rainfall Amount
+
+```{r}
+rainfall_levels <- weather_dip_daily %>%
+  filter(!public_holiday) %>%
+  mutate(
+    rainfall_group = case_when(
+      rainfall_mm == 0 ~ "No rain",
+      rainfall_mm < 2 ~ "0–2 mm",
+      rainfall_mm < 5 ~ "2–5 mm",
+      rainfall_mm < 10 ~ "5–10 mm",
+      rainfall_mm < 20 ~ "10–20 mm",
+      TRUE ~ "20 mm or more"
+    ),
+
+    rainfall_group = factor(
+      rainfall_group,
+      levels = c(
+        "No rain",
+        "0–2 mm",
+        "2–5 mm",
+        "5–10 mm",
+        "10–20 mm",
+        "20 mm or more"
+      )
+    )
+  ) %>%
+  group_by(rainfall_group) %>%
+  summarise(
+    total_days = n(),
+    significant_dip_days = sum(significant_dip),
+
+    dip_percentage = round(
+      mean(significant_dip) * 100,
+      1
+    ),
+
+    .groups = "drop"
+  )
+
+print(rainfall_levels, n = Inf)
+```
+
+### Interactive Rainfall Intensity and Pedestrian Decreases
+
+```{r}
+rainfall_levels_plot <- rainfall_levels %>%
+  mutate(
+    hover_text = paste0(
+      "Rainfall: ", rainfall_group,
+      "<br>Total days: ", total_days,
+      "<br>Significant dip days: ", significant_dip_days,
+      "<br>Dip rate: ", dip_percentage, "%"
+    )
+  )
+
+rainfall_interactive <- plotly::plot_ly(
+  data = rainfall_levels_plot,
+  x = ~rainfall_group,
+  y = ~dip_percentage,
+  type = "bar",
+  marker = list(color = "#478FAD"),
+  hovertext = ~hover_text,
+  hoverinfo = "text"
+)
+
+rainfall_interactive <- plotly::layout(
+  rainfall_interactive,
+  title = "Significant Pedestrian Decreases by Daily Rainfall",
+  xaxis = list(
+    title = "Daily rainfall (mm)"
+  ),
+  yaxis = list(
+    title = "Significant decrease rate (%)",
+    range = c(0, 55)
+  ),
+  showlegend = FALSE
+)
+
+rainfall_interactive
+```
+
+
+### Combined Weather Comparison
+
+```{r}
+weather_overview <- weather_comparison %>%
+  mutate(
+    day_type = if_else(
+      significant_dip,
+      "Significant dip days",
+      "Other days"
+    )
+  ) %>%
+  select(
+    day_type,
+    median_rainfall_mm,
+    heavy_rain_pct,
+    median_max_temp_c,
+    median_max_wind_kmh
+  ) %>%
+  tidyr::pivot_longer(
+    cols = -day_type,
+    names_to = "weather_factor",
+    values_to = "value"
+  ) %>%
+  mutate(
+    weather_factor = dplyr::recode(
+      weather_factor,
+      median_rainfall_mm = "Median rainfall (mm)",
+      heavy_rain_pct = "Heavy rainfall days (%)",
+      median_max_temp_c = "Maximum temperature (°C)",
+      median_min_temp_c = "Minimum temperature (°C)",
+      median_max_wind_kmh = "Maximum wind speed (km/h)"
+    )
+  )
+
+weather_overview_plot <- ggplot(
+  weather_overview,
+  aes(
+    x = day_type,
+    y = value,
+    fill = day_type
+  )
+) +
+  geom_col(width = 0.6) +
+  facet_wrap(
+    ~weather_factor,
+    scales = "free_y",
+    ncol = 2
+  ) +
+  labs(
+    title = "Weather Conditions and Pedestrian Decreases",
+    subtitle = "Non-public holidays, 2019 and 2023–2026",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none"
+  )
+
+plotly::ggplotly(weather_overview_plot)
+```
+
+
+### Combined Weather Factors and Pedestrian Decreases
+
+```{r}
+weather_model_data <- weather_dip_daily %>%
+  filter(!public_holiday) %>%
+  mutate(
+    heavy_rain = rainfall_mm >= 10,
+    season = case_when(
+      lubridate::month(sensing_date) %in% c(12, 1, 2) ~ "Summer",
+      lubridate::month(sensing_date) %in% c(3, 4, 5) ~ "Autumn",
+      lubridate::month(sensing_date) %in% c(6, 7, 8) ~ "Winter",
+      TRUE ~ "Spring"
+    )
+  )
+
+weather_model <- glm(
+  significant_dip ~ heavy_rain +
+    max_temperature_c +
+    max_wind_kmh +
+    factor(season),
+  data = weather_model_data,
+  family = binomial
+)
+
+model_summary <- summary(weather_model)$coefficients
+
+data.frame(
+  factor = rownames(model_summary),
+  odds_ratio = round(exp(model_summary[, "Estimate"]), 2),
+  p_value = signif(model_summary[, "Pr(>|z|)"], 3),
+  row.names = NULL
+)
+```
+
+```{r}
+### Check Confidence Intervals for Weather Model
+
+weather_model_ci <- exp(
+  cbind(
+    Odds_Ratio = coef(weather_model),
+    confint.default(weather_model)
+  )
+)
+
+round(weather_model_ci[-1, ], 2)
+```
 
 
 
 
+```{r}
+#| label: prepare-yearly-weather-holiday-data
+
+# Combine weather, pedestrian changes and holiday names
+
+weather_holiday_yearly <- weather_dip_daily %>%
+  left_join(
+    holiday_calendar_official %>%
+      group_by(holiday_date) %>%
+      summarise(
+        holiday = paste(unique(holiday), collapse = " / "),
+        .groups = "drop"
+      ),
+    by = c("sensing_date" = "holiday_date")
+  ) %>%
+  mutate(
+    year_label = factor(
+      as.character(lubridate::year(sensing_date)),
+      levels = c("2019", "2023", "2024", "2025", "2026")
+    ),
+
+    # Align all years by month and day for comparison
+    plot_date = as.Date(
+      paste0("2024-", format(sensing_date, "%m-%d"))
+    ),
+
+    holiday_name = coalesce(
+      holiday,
+      "Not a public holiday"
+    ),
+
+    hover_text = paste0(
+      "Date: ", format(sensing_date, "%d %B %Y"),
+      "<br>Holiday: ", holiday_name,
+      "<br>Median pedestrian change: ",
+      round(median_decrease, 1), "%",
+      "<br>Rainfall: ", rainfall_mm, " mm",
+      "<br>Maximum temperature: ", max_temperature_c, "°C",
+      "<br>Minimum temperature: ", min_temperature_c, "°C",
+      "<br>Maximum wind speed: ", max_wind_kmh, " km/h",
+      "<br>Sensors reporting: ", sensors_reporting
+    )
+  ) %>%
+  arrange(year_label, plot_date)
+```
+
+
+
+```{r}
+### Smoothed Pedestrian Changes, Weather and Holidays by Year
+
+smoothed_yearly_data <- weather_holiday_yearly %>%
+  group_by(year_label) %>%
+  arrange(sensing_date, .by_group = TRUE) %>%
+  mutate(
+    smoothed_change = slider::slide_dbl(
+      median_decrease,
+      ~ median(.x, na.rm = TRUE),
+      .before = 3,
+      .after = 3
+    )
+  ) %>%
+  ungroup()
+
+# Coloured line for each year
+smoothed_yearly_plot <- plotly::plot_ly(
+  data = smoothed_yearly_data,
+  x = ~plot_date,
+  y = ~smoothed_change,
+  color = ~year_label,
+  type = "scatter",
+  mode = "lines",
+  line = list(width = 2),
+  text = ~paste0(
+    hover_text,
+    "<br>7-day median change: ",
+    round(smoothed_change, 1), "%"
+  ),
+  hoverinfo = "text"
+)
+
+# Actual significant decreases on public holidays
+smoothed_yearly_plot <- smoothed_yearly_plot %>%
+  plotly::add_markers(
+    data = smoothed_yearly_data %>%
+      filter(significant_dip, public_holiday),
+    x = ~plot_date,
+    y = ~median_decrease,
+    text = ~hover_text,
+    hoverinfo = "text",
+    name = "Public holiday dip",
+    marker = list(color = "#E87932", size = 9),
+    inherit = FALSE
+  )
+
+# Actual significant decreases on other dates
+smoothed_yearly_plot <- smoothed_yearly_plot %>%
+  plotly::add_markers(
+    data = smoothed_yearly_data %>%
+      filter(significant_dip, !public_holiday),
+    x = ~plot_date,
+    y = ~median_decrease,
+    text = ~hover_text,
+    hoverinfo = "text",
+    name = "Other significant dip",
+    marker = list(color = "#3288BD", size = 8),
+    inherit = FALSE
+  )
+
+# Month labels from January to December
+month_ticks <- seq.Date(
+  as.Date("2024-01-01"),
+  as.Date("2024-12-01"),
+  by = "month"
+)
+
+smoothed_yearly_plot <- plotly::layout(
+  smoothed_yearly_plot,
+  title = list(
+  text = paste0(
+    "Pedestrian Changes, Weather and Public Holidays by Year",
+    "<br><sup>Lines: 7-day rolling median | ",
+    "Dots: actual significant pedestrian decreases</sup>"
+  )
+),
+  xaxis = list(
+    title = "Month of year",
+    tickvals = month_ticks,
+    ticktext = format(month_ticks, "%b"),
+    range = c("2024-01-01", "2024-12-31")
+  ),
+  yaxis = list(
+    title = "Change from expected pedestrian activity (%)"
+  ),
+  hovermode = "closest",
+  legend = list(
+    title = list(text = "Year / Dip type")
+  )
+)
+
+smoothed_yearly_plot
+```
 
 
 
 
+```{r}
+sensor_locations <- readr::read_csv(
+  "../Data_pedestrians/raw/data_pedestrian/2025_Pedestrian_Data.csv",
+  col_select = c(
+    Location_ID,
+    SensorVariable,
+    Latitude,
+    Longitude
+  ),
+  show_col_types = FALSE
+) %>%
+  distinct(Location_ID, .keep_all = TRUE)
+```
 
 
+### Load Sensor Location Information
+
+```{r}
+# Create one location record per sensor
+
+sensor_lookup <- sensor_locations %>%
+  group_by(Location_ID) %>%
+  summarise(
+    sensor_name = first(SensorVariable),
+    latitude = first(Latitude),
+    longitude = first(Longitude),
+    .groups = "drop"
+  ) %>%
+  rename(location_id = Location_ID)
+
+
+# Identify sensors affected on significant decrease dates
+
+sensor_dip_summary <- decrease_sensor_index %>%
+  semi_join(
+    weather_dip_daily %>%
+      filter(
+        significant_dip,
+        lubridate::year(sensing_date) %in% 2023:2025
+      ) %>%
+      distinct(sensing_date),
+    by = "sensing_date"
+  ) %>%
+  filter(!is.na(decrease_percent)) %>%
+  group_by(location_id) %>%
+  summarise(
+    days_reporting = n_distinct(sensing_date),
+
+    sensor_dip_days = sum(decrease_percent <= -20),
+
+    affected_pct = round(
+      100 * sensor_dip_days / days_reporting, 1
+    ),
+
+    median_change_pct = round(
+      median(decrease_percent), 1
+    ),
+
+    .groups = "drop"
+  ) %>%
+  filter(days_reporting >= 10) %>%
+  left_join(sensor_lookup, by = "location_id") %>%
+  arrange(desc(affected_pct), desc(sensor_dip_days))
+
+
+# Display the 15 most frequently affected sensors
+
+sensor_dip_summary %>%
+  select(
+    location_id,
+    sensor_name,
+    days_reporting,
+    sensor_dip_days,
+    affected_pct,
+    median_change_pct
+  ) %>%
+  slice_head(n = 15) %>%
+  print(n = 15, width = Inf)
+
+
+# Check whether any sensors could not be matched
+
+sum(is.na(sensor_dip_summary$sensor_name))
+```
+
+
+```{r}
+sensor_overall_dips <- decrease_sensor_index %>%
+  filter(
+    sensing_date >= as.Date("2023-01-01"),
+    sensing_date <= as.Date("2025-12-31"),
+    !is.na(decrease_percent),
+    is.finite(decrease_percent)
+  ) %>%
+  group_by(location_id) %>%
+  summarise(
+    days_reporting = n_distinct(sensing_date),
+
+    dip_days = sum(decrease_percent <= -20),
+
+    dip_rate_pct = round(
+      100 * mean(decrease_percent <= -20), 1
+    ),
+
+    median_dip_pct = round(
+      median(
+        decrease_percent[decrease_percent <= -20],
+        na.rm = TRUE
+      ), 1
+    ),
+
+    .groups = "drop"
+  ) %>%
+  filter(days_reporting >= 180) %>%
+  left_join(sensor_lookup, by = "location_id") %>%
+  arrange(desc(dip_rate_pct))
+
+print(
+  sensor_overall_dips %>%
+    select(
+      location_id,
+      sensor_name,
+      days_reporting,
+      dip_days,
+      dip_rate_pct,
+      median_dip_pct
+    ) %>%
+    slice_head(n = 15),
+  n = 15,
+  width = Inf
+)
+```
+
+```{r}
+
+# Correct paths for the 2023 and 2024 files
+
+older_sensor_files <- file.path(
+  "..",
+  "Data_pedestrians",
+  "raw",
+  "data_pedestrian",
+  paste0(2023:2024, "_Pedestrian_Data.csv")
+)
+
+file.exists(older_sensor_files)
+```
+
+
+```{r}
+sensor_7_details <- purrr::map_dfr(
+  older_sensor_files,
+  function(f) {
+    readr::read_csv(
+      f,
+      col_select = c(
+        Location_ID,
+        SensorVariable,
+        Latitude,
+        Longitude
+      ),
+      show_col_types = FALSE
+    ) %>%
+      filter(Location_ID == 7) %>%
+      distinct() %>%
+      mutate(source_file = basename(f))
+  }
+)
+
+print(sensor_7_details, n = Inf, width = Inf)
+```
+
+```{r}
+# Add sensor 7 to our sensor lookup
+
+sensor_7_lookup <- sensor_7_details %>%
+  distinct(Location_ID, .keep_all = TRUE) %>%
+  transmute(
+    location_id = Location_ID,
+    sensor_name = SensorVariable,
+    latitude = Latitude,
+    longitude = Longitude
+  )
+
+sensor_lookup <- sensor_lookup %>%
+  filter(location_id != 7) %>%
+  bind_rows(sensor_7_lookup)
+
+# Update the existing results with complete sensor information
+
+sensor_overall_dips <- sensor_overall_dips %>%
+  select(-any_of(c("sensor_name", "latitude", "longitude"))) %>%
+  left_join(sensor_lookup, by = "location_id")
+
+# Verify the correction
+
+sensor_overall_dips %>%
+  filter(location_id == 7) %>%
+  select(
+    location_id, sensor_name,
+    dip_days, dip_rate_pct,
+    latitude, longitude
+  )
+
+# Check for any remaining missing coordinates
+
+sum(is.na(sensor_overall_dips$latitude) |
+    is.na(sensor_overall_dips$longitude))
+```
+
+```{r}
+sensor_overall_dips %>%
+  filter(
+    is.na(latitude) | is.na(longitude)
+  ) %>%
+  select(
+    location_id,
+    sensor_name,
+    days_reporting,
+    dip_days,
+    dip_rate_pct,
+    latitude,
+    longitude
+  ) %>%
+  print(n = Inf, width = Inf)
+```
+
+
+```{r}
+# Check older pedestrian datasets for missing sensor locations
+
+missing_sensor_ids <- c(122, 65, 26, 55)
+
+sensor_history_files <- file.path(
+  "..",
+  "Data_pedestrians",
+  "raw",
+  "data_pedestrian",
+  paste0(2022:2024, "_Pedestrian_Data.csv")
+)
+
+missing_sensor_details <- purrr::map_dfr(
+  sensor_history_files,
+  function(f) {
+    readr::read_csv(
+      f,
+      col_select = c(
+        Location_ID,
+        SensorVariable,
+        Latitude,
+        Longitude
+      ),
+      show_col_types = FALSE
+    ) %>%
+      filter(Location_ID %in% missing_sensor_ids) %>%
+      distinct() %>%
+      mutate(source_file = basename(f))
+  }
+)
+
+print(missing_sensor_details, n = Inf, width = Inf)
+```
+
+
+```{r}
+recovered_sensor_locations <- missing_sensor_details %>%
+  transmute(
+    location_id = Location_ID,
+    sensor_name = SensorVariable,
+    latitude = Latitude,
+    longitude = Longitude
+  ) %>%
+  distinct()
+
+print(recovered_sensor_locations, n = Inf)
+```
+
+
+```{r}
+sensor_lookup_final <- bind_rows(
+  sensor_locations %>%
+    transmute(
+      location_id = Location_ID,
+      sensor_name = SensorVariable,
+      latitude = Latitude,
+      longitude = Longitude
+    ),
+  recovered_sensor_locations
+) %>%
+  distinct(location_id, .keep_all = TRUE)
+```
+
+
+```{r}
+sensor_lookup_final %>%
+  filter(location_id %in% c(122, 65, 26, 55)) %>%
+  print(n = Inf)
+```
+
+
+```{r}
+sensor_dip_map_ready <- sensor_dip_summary %>%
+  left_join(
+    sensor_lookup_final,
+    by = "location_id"
+  )
+```
+
+
+```{r}
+# Combine existing sensor locations with the 4 recovered sensors
+sensor_lookup_final <- bind_rows(
+  sensor_lookup,
+  recovered_sensor_locations
+) %>%
+  distinct(location_id, .keep_all = TRUE)
+
+# Join locations to the overall sensor dip analysis
+sensor_dip_map_ready <- sensor_overall_dips %>%
+  select(
+    -any_of(c("sensor_name", "latitude", "longitude"))
+  ) %>%
+  left_join(
+    sensor_lookup_final,
+    by = "location_id"
+  )
+```
+
+
+```{r}
+sensor_dip_map_ready %>%
+  filter(is.na(latitude) | is.na(longitude)) %>%
+  print(n = Inf)
+```
+
+
+```{r}
+
+sensor_dip_map_ready %>%
+  select(
+    location_id,
+    sensor_name,
+    days_reporting,
+    dip_days,
+    dip_rate_pct,
+    latitude,
+    longitude
+  ) %>%
+  arrange(desc(dip_rate_pct)) %>%
+  print(n = 15, width = Inf)
+```
+
+
+```{r}
+#| label: sensor-dip-map
+
+# Install leaflet once if necessary
+if (!requireNamespace("leaflet", quietly = TRUE)) {
+  install.packages("leaflet")
+}
+
+# Create colour scale
+sensor_palette <- leaflet::colorNumeric(
+  palette = "YlOrRd",
+  domain = sensor_dip_map_ready$dip_rate_pct
+)
+
+# Interactive map
+sensor_dip_map <- leaflet::leaflet(
+  data = sensor_dip_map_ready
+) %>%
+  leaflet::addTiles() %>%
+  leaflet::addCircleMarkers(
+    lng = ~longitude,
+    lat = ~latitude,
+    radius = 5,
+    color = ~sensor_palette(dip_rate_pct),
+    fillColor = ~sensor_palette(dip_rate_pct),
+    fillOpacity = 0.8,
+    weight = 1,
+    label = ~paste0(
+      sensor_name,
+      " | Dip rate: ", dip_rate_pct, "%"
+    ),
+    popup = ~paste0(
+      "<b>Sensor: </b>", sensor_name,
+      "<br><b>Location ID: </b>", location_id,
+      "<br><b>Reporting days: </b>", days_reporting,
+      "<br><b>Dip days: </b>", dip_days,
+      "<br><b>Dip rate: </b>", dip_rate_pct, "%",
+      "<br><b>Median dip: </b>", median_dip_pct, "%"
+    )
+  ) %>%
+  leaflet::addLegend(
+    position = "bottomleft",
+    pal = sensor_palette,
+    values = ~dip_rate_pct,
+    title = "Dip rate (%)",
+    opacity = 0.8
+  )
+
+sensor_dip_map
+
+```
+
+
+```{r}
+#| label: sensor-weather-holiday-comparison
+
+# Combine sensor decreases with weather and holiday information
+
+sensor_condition_data <- decrease_sensor_index %>%
+  filter(
+    sensing_date >= as.Date("2023-01-01"),
+    sensing_date <= as.Date("2025-12-31"),
+    is.finite(decrease_percent),
+    location_id %in% sensor_dip_map_ready$location_id
+  ) %>%
+  inner_join(
+    weather_dip_daily %>%
+      select(sensing_date, rainfall_mm, public_holiday),
+    by = "sensing_date"
+  ) %>%
+  mutate(
+    condition = case_when(
+      public_holiday ~ "Public holiday",
+      rainfall_mm >= 10 ~ "Heavy rainfall",
+      TRUE ~ "Other days"
+    ),
+    sensor_dip = decrease_percent <= -20
+  )
+
+# Calculate how frequently each sensor decreased
+
+sensor_condition_summary <- sensor_condition_data %>%
+  group_by(location_id, condition) %>%
+  summarise(
+    days_reporting = n_distinct(sensing_date),
+    dip_days = sum(sensor_dip),
+    dip_rate_pct = round(
+      100 * mean(sensor_dip), 1
+    ),
+    .groups = "drop"
+  ) %>%
+  left_join(
+    sensor_lookup_final %>%
+      select(location_id, sensor_name),
+    by = "location_id"
+  ) %>%
+  filter(days_reporting >= 15)
+
+# Show the five highest dip rates for each condition
+
+sensor_condition_summary %>%
+  group_by(condition) %>%
+  slice_max(
+    dip_rate_pct,
+    n = 5,
+    with_ties = FALSE
+  ) %>%
+  ungroup() %>%
+  select(
+    condition,
+    sensor_name,
+    days_reporting,
+    dip_days,
+    dip_rate_pct
+  ) %>%
+  print(n = Inf, width = Inf)
+
+```
+
+
+```{r}
+sensor_condition_summary %>%
+  filter(condition == "Public holiday") %>%
+  arrange(desc(dip_rate_pct)) %>%
+  select(
+    sensor_name,
+    days_reporting,
+    dip_days,
+    dip_rate_pct
+  ) %>%
+  slice_head(n = 10) %>%
+  print(n = Inf, width = Inf)
+```
+
+
+```{r}
+# Compare the same sensors across different conditions
+
+comparison_sensors <- c(
+  "NewQ_T", "FedCycle_T", "WatCit_T",
+  "Pel147_T", "UM1_T", "UM2_T",
+  "UM3_T", "KenMac_T",
+  "FedPed_T", "BirFed1120_T"
+)
+
+sensor_final_comparison <- sensor_condition_summary %>%
+  filter(sensor_name %in% comparison_sensors) %>%
+  mutate(
+    condition = recode(
+      condition,
+      "Heavy rainfall" = "Rain",
+      "Public holiday" = "Holiday",
+      "Other days" = "Other"
+    )
+  ) %>%
+  select(
+    location_id,
+    sensor_name,
+    condition,
+    days_reporting,
+    dip_rate_pct
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = condition,
+    values_from = c(dip_rate_pct, days_reporting),
+    names_glue = "{.value}_{condition}"
+  ) %>%
+  arrange(sensor_name)
+
+print(sensor_final_comparison, n = Inf, width = Inf)
+```
+
+
+```{r}
+sensor_final_comparison %>%
+  transmute(
+    Sensor = sensor_name,
+    Rain = dip_rate_pct_Rain,
+    Holiday = dip_rate_pct_Holiday,
+    Other = dip_rate_pct_Other
+  ) %>%
+  print(n = Inf, width = Inf)
+```
+
+```{r}
+# Identify specific public holidays associated with sensor dips
+
+sensor_holiday_breakdown <- decrease_sensor_index %>%
+  filter(
+    sensing_date >= as.Date("2023-01-01"),
+    sensing_date <= as.Date("2025-12-31"),
+    is.finite(decrease_percent),
+    location_id %in% sensor_final_comparison$location_id
+  ) %>%
+  inner_join(
+    holiday_calendar_official %>%
+      group_by(holiday_date) %>%
+      summarise(
+        holiday = paste(unique(holiday), collapse = " / "),
+        .groups = "drop"
+      ),
+    by = c("sensing_date" = "holiday_date")
+  ) %>%
+  group_by(location_id, holiday) %>%
+  summarise(
+    holiday_days = n_distinct(sensing_date),
+    dip_days = sum(decrease_percent <= -20),
+    dip_rate_pct = round(
+      100 * dip_days / holiday_days, 1
+    ),
+    .groups = "drop"
+  ) %>%
+  left_join(
+    sensor_lookup_final %>%
+      select(location_id, sensor_name),
+    by = "location_id"
+  ) %>%
+  arrange(sensor_name, desc(dip_days))
+
+# Look at four interesting sensors
+
+sensor_holiday_breakdown %>%
+  filter(
+    sensor_name %in% c(
+      "Pel147_T", "UM1_T",
+      "NewQ_T", "WatCit_T"
+    )
+  ) %>%
+  select(
+    sensor_name,
+    holiday,
+    holiday_days,
+    dip_days,
+    dip_rate_pct
+  ) %>%
+  print(n = Inf, width = Inf)
+```
+
+
+```{r}
+sensor_holiday_breakdown %>%
+  dplyr::filter(sensor_name == "Pel147_T") %>%
+  dplyr::select(
+    holiday,
+    holiday_days,
+    dip_days,
+    dip_rate_pct
+  ) %>%
+  as.data.frame() %>%
+  print(row.names = FALSE)
+```
 
 
 
