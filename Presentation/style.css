@@ -1,0 +1,87 @@
+
+
+/* Overall presentation */
+.reveal {
+  font-family: Arial, sans-serif;
+  color: #102231;
+}
+
+/* All slides */
+.reveal .slides section {
+  box-sizing: border-box;
+}
+
+/* First slide */
+.reveal .slides section.cover-slide {
+  background: #102231 !important;
+  color: white !important;
+  height: 100%;
+  padding: 65px 80px !important;
+  text-align: left;
+}
+
+/* Main heading */
+.reveal .slides section.cover-slide h2 {
+  color: white !important;
+  font-size: 2.6em;
+  font-weight: 800;
+  margin: 45px 0 35px 0;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+}
+
+/* Small label */
+.reveal .slides section.cover-slide .cover-kicker {
+  color: #42c6b4;
+  font-size: 0.55em;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+}
+
+/* Research question and subtitle */
+.reveal .slides section.cover-slide .cover-body {
+  border-left: 5px solid #42c6b4;
+  padding-left: 25px;
+  margin-top: 30px;
+  max-width: 850px;
+}
+
+.reveal .slides section.cover-slide h3 {
+  color: white !important;
+  font-size: 1.15em;
+  line-height: 1.4;
+  margin: 0 0 20px 0;
+}
+
+.reveal .slides section.cover-slide .cover-body p {
+  color: #b9cbd4;
+  font-size: 0.65em;
+  line-height: 1.5;
+}
+
+/* Footer */
+.reveal .slides section.cover-slide .cover-footer {
+  position: absolute;
+  bottom: 45px;
+  left: 80px;
+  right: 80px;
+  border-top: 1px solid #3b5564;
+  padding-top: 15px;
+  color: #b9cbd4;
+  font-size: 0.45em;
+}
+
+.reveal .slides section.cover-slide .cover-footer p {
+  margin: 5px 0;
+}
+
+/* Upcoming slides */
+.reveal .slides section:not(.cover-slide) {
+  background: #faf9f5;
+  text-align: left;
+}
+
+.reveal .slides section:not(.cover-slide) h2 {
+  color: #102231;
+  font-weight: 800;
+}
