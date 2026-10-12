@@ -127,24 +127,29 @@ pedestrian_full <- bind_rows(
 ```{r}
 pedestrian_full <- pedestrian_full |>
   mutate(
-    year = year(sensing_date),
-    month = month(sensing_date),
-    month_name = month(
+    year = lubridate::year(sensing_date),
+    month = lubridate::month(sensing_date),
+
+    month_name = lubridate::month(
       sensing_date,
       label = TRUE,
       abbr = FALSE
     ),
-    day_name = wday(
+
+    day_name = lubridate::wday(
       sensing_date,
       label = TRUE,
       abbr = FALSE,
       week_start = 1
     ),
-    day_of_week = wday(
+
+    day_of_week = lubridate::wday(
       sensing_date,
       week_start = 1
     ),
+
     is_weekend = day_of_week >= 6,
+
     season = case_when(
       month %in% c(12, 1, 2) ~ "Summer",
       month %in% c(3, 4, 5) ~ "Autumn",
@@ -153,6 +158,7 @@ pedestrian_full <- pedestrian_full |>
     )
   )
 ```
+
 
 ```{r}
 # Check for missing values
@@ -189,9 +195,9 @@ duplicates <- pedestrian_full |>
 duplicates
 ```
 
-- A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
+-   A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
 
-- Recieved this data on 29/09/2026 from data operations manager at city of melbourne on personal mail.
+-   Recieved this data on 29/09/2026 from data operations manager at city of melbourne on personal mail.
 
 ```{r}
 # Snapshot data
@@ -497,3 +503,2502 @@ snapshot_2022_full %>%
 ```
 
 
+## Standardisation and Integration
+
+### Standardise Snapshot Data
+
+```{r}
+snapshot_standardised <- purrr::map_dfr(
+  snapshot_files,
+  function(f) {
+    
+    
+    x <- data.table::fread(file = f) %>%
+      as_tibble()
+    
+    x %>%
+      transmute(
+        location_id = as.numeric(Location_ID),
+        sensing_date = as.Date(Sensing_Date),
+        hourday = as.numeric(HourDay),
+        pedestrian_count = as.numeric(PedestrianCount),
+        hour_repaired = FALSE,
+        source = paste0("city_snapshot_", substr(basename(f), 1, 4))
+      )
+  }
+) %>%
+  mutate(
+    year = lubridate::year(sensing_date),
+    month = lubridate::month(sensing_date),
+    month_name = lubridate::month(sensing_date, label = TRUE),
+    day_name = lubridate::wday(sensing_date, label = TRUE),
+    day_of_week = lubridate::wday(sensing_date, week_start = 1),
+    is_weekend = day_of_week >= 6,
+    season = case_when(
+      month %in% c(12, 1, 2) ~ "Summer",
+      month %in% c(3, 4, 5) ~ "Autumn",
+      month %in% c(6, 7, 8) ~ "Winter",
+      month %in% c(9, 10, 11) ~ "Spring"
+    )
+  )
+```
+
+
+### Replace 2022–2025 with Validated Snapshots
+
+```{r}
+
+
+## Rebuild final pedestrian dataset
+
+### Keep historical data before 2022
+
+historical_data <- pedestrian_full %>%
+  filter(!year %in% c(2022, 2023, 2024, 2025)) %>%
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count,
+    source,
+    any_of("hour_repaired")
+  )
+
+# If the historical dataset does not contain hour_repaired,
+# create it as FALSE.
+if (!"hour_repaired" %in% names(historical_data)) {
+  historical_data$hour_repaired <- FALSE
+}
+
+
+### Prepare validated 2022–2025 snapshots
+
+snapshot_data <- snapshot_standardised %>%
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count,
+    source
+  ) %>%
+  mutate(
+    hour_repaired = FALSE
+  )
+
+
+### Combine historical and validated data
+
+pedestrian_full_updated <- bind_rows(
+  historical_data,
+  snapshot_data
+) %>%
+  mutate(
+    year = lubridate::year(sensing_date),
+
+    month = lubridate::month(sensing_date),
+
+    month_name = lubridate::month(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE
+    ),
+
+    day_name = lubridate::wday(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE
+    ),
+
+    day_of_week = lubridate::wday(
+      sensing_date,
+      week_start = 1
+    ),
+
+    is_weekend = day_of_week >= 6,
+
+    season = case_when(
+      month %in% c(12, 1, 2) ~ "Summer",
+      month %in% c(3, 4, 5) ~ "Autumn",
+      month %in% c(6, 7, 8) ~ "Winter",
+      month %in% c(9, 10, 11) ~ "Spring"
+    )
+  ) %>%
+  arrange(
+    sensing_date,
+    hourday,
+    location_id
+)
+
+```
+
+
+## Final Validation
+
+### Check Yearly Coverage
+
+```{r}
+final_check <- pedestrian_full_updated %>%
+  summarise(
+    total_rows = n(),
+    unique_sensor_hour_records =
+      n_distinct(location_id, sensing_date, hourday),
+    duplicate_rows =
+      n() - n_distinct(location_id, sensing_date, hourday),
+    missing_counts =
+      sum(is.na(pedestrian_count)),
+    first_date = min(sensing_date),
+    last_date = max(sensing_date)
+  )
+
+final_check
+```
+
+```{r}
+pedestrian_full_updated %>%
+  count(year)
+```
+
+```{r}
+pedestrian_full <- pedestrian_full_updated
+```
+
+
+## Daily and Weekly Pedestrian Rhythm
+
+### Hourly Pedestrian Activity Over Time
+
+```{r}
+hourly_by_sensor_year <- pedestrian_full %>%
+  filter(
+    !is.na(hourday),
+    hourday >= 0,
+    hourday <= 23
+  ) %>%
+  group_by(year, location_id, hourday) %>%
+  summarise(
+    sensor_hour_avg = mean(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+hourly_by_year <- hourly_by_sensor_year %>%
+  group_by(year, hourday) %>%
+  summarise(
+    avg_pedestrians = mean(sensor_hour_avg, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+hourly_index <- hourly_by_year %>%
+  group_by(year) %>%
+  mutate(
+    yearly_mean = mean(avg_pedestrians, na.rm = TRUE),
+    activity_index = avg_pedestrians / yearly_mean * 100
+  ) %>%
+  ungroup()
+
+hourly_summary <- hourly_index %>%
+  group_by(hourday) %>%
+  summarise(
+    median_index = median(activity_index, na.rm = TRUE),
+    q25 = quantile(activity_index, 0.25, na.rm = TRUE),
+    q75 = quantile(activity_index, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+
+```{r}
+daily_interactive_data <- hourly_index %>%
+  mutate(
+    year_label = case_when(
+      year == 2009 ~ "2009 (partial)",
+      year == 2026 ~ "2026 (partial)",
+      TRUE ~ as.character(year)
+    )
+  )
+```
+
+### PLOT 1 — Typical Daily Pedestrian Rhythm
+
+```{r}
+
+daily_interactive <- plot_ly(
+  daily_interactive_data,
+  x = ~hourday,
+  y = ~activity_index,
+  color = ~year_label,
+  type = "scatter",
+  mode = "lines",
+  text = ~paste0(
+    "Year: ", year_label,
+    "<br>Hour: ", hourday, ":00",
+    "<br>Activity index: ", round(activity_index, 1)
+  ),
+  hoverinfo = "text"
+) %>%
+  layout(
+    title = "Daily Pedestrian Rhythm by Year",
+    xaxis = list(
+      title = "Hour of day",
+      tickmode = "linear",
+      tick0 = 0,
+      dtick = 1
+    ),
+    yaxis = list(
+      title = "Activity index (100 = yearly average)"
+    ),
+    hovermode = "closest",
+    legend = list(
+      title = list(text = "Year"),
+      orientation = "v",
+      x = 1.02,
+      y = 1
+    ),
+    margin = list(r = 150)
+  )
+
+daily_interactive
+```
+
+## Weekly Rhythm Across the Years, 2009–2026
+
+```{r}
+
+pedestrian_full <- pedestrian_full %>%
+  mutate(
+    day_name = lubridate::wday(
+      sensing_date,
+      label = TRUE,
+      abbr = FALSE,
+      week_start = 1
+    )
+  )
+```
+
+### Calculating Weekly Patterns
+
+```{r}
+weekly_by_sensor_year <- pedestrian_full %>%
+  group_by(year, location_id, day_name) %>%
+  summarise(
+    sensor_day_avg = mean(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+weekly_by_year <- weekly_by_sensor_year %>%
+  group_by(year, day_name) %>%
+  summarise(
+    avg_pedestrians = mean(sensor_day_avg, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+weekly_index <- weekly_by_year %>%
+  group_by(year) %>%
+  mutate(
+    yearly_mean = mean(avg_pedestrians, na.rm = TRUE),
+    activity_index = avg_pedestrians / yearly_mean * 100
+  ) %>%
+  ungroup()
+
+weekly_summary <- weekly_index %>%
+  group_by(day_name) %>%
+  summarise(
+    median_index = median(activity_index, na.rm = TRUE),
+    q25 = quantile(activity_index, 0.25, na.rm = TRUE),
+    q75 = quantile(activity_index, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+weekly_interactive_data <- weekly_index %>%
+  mutate(
+    year_label = case_when(
+      year == 2009 ~ "2009 (partial)",
+      year == 2026 ~ "2026 (partial)",
+      TRUE ~ as.character(year)
+    )
+  )
+```
+
+### PLOT 2 — Typical Weekly Pedestrian Rhythm
+
+```{r}
+weekly_interactive <- plot_ly(
+  weekly_interactive_data,
+  x = ~day_name,
+  y = ~activity_index,
+  color = ~year_label,
+  type = "scatter",
+  mode = "lines+markers",
+  text = ~paste0(
+    "Year: ", year_label,
+    "<br>Day: ", day_name,
+    "<br>Activity index: ", round(activity_index, 1)
+  ),
+  hoverinfo = "text"
+) %>%
+  layout(
+    title = "Weekly Pedestrian Rhythm by Year",
+    xaxis = list(
+      title = "Day of week"
+    ),
+    yaxis = list(
+      title = "Activity index (100 = yearly average)"
+    ),
+    hovermode = "closest",
+    legend = list(
+      title = list(text = "Year"),
+      orientation = "v",
+      x = 1.02,
+      y = 1
+    ),
+    margin = list(r = 150)
+  )
+
+weekly_interactive
+```
+
+
+## Monthly Pedestrian Rhythm
+
+```{r}
+# Monthly rhythm using the full available dataset: 2009–2026
+monthly_profile <- pedestrian_full |>
+  filter(
+    year >= 2009,
+    year <= 2026
+  ) |>
+  group_by(
+    location_id,
+    sensing_date,
+    month,
+    month_name
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  group_by(
+    location_id,
+    month,
+    month_name
+  ) |>
+  summarise(
+    sensor_month_mean = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  group_by(
+    month,
+    month_name
+  ) |>
+  summarise(
+    mean_daily_count = mean(
+      sensor_month_mean,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  arrange(month)
+```
+
+```{r}
+monthly_profile |>
+  ggplot(
+    aes(
+      x = month,
+      y = mean_daily_count
+    )
+  ) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(
+    breaks = monthly_profile$month,
+    labels = monthly_profile$month_name
+  ) +
+  labs(
+    title = "Melbourne's monthly pedestrian rhythm",
+    subtitle = "Average daily pedestrian activity across available data, 2009–2026",
+    x = NULL,
+    y = "Average daily pedestrian count"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+```
+
+
+-   seasons
+
+```{r}
+seasonal_profile <- pedestrian_full |>
+  
+  # Step 1: Daily total for each sensor
+  group_by(
+    location_id,
+    year,
+    sensing_date,
+    season
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  
+  # Step 2: Typical activity for each sensor in each season/year
+  group_by(
+    location_id,
+    year,
+    season
+  ) |>
+  summarise(
+    sensor_season_mean = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  
+  # Step 3: Typical city activity within each year and season
+  group_by(
+    year,
+    season
+  ) |>
+  summarise(
+    yearly_season_mean = mean(
+      sensor_season_mean,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  
+  # Step 4: Average seasonal pattern across all available years
+  group_by(season) |>
+  summarise(
+    mean_daily_count = mean(
+      yearly_season_mean,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  
+  mutate(
+    season = fct_relevel(
+      season,
+      "Summer",
+      "Autumn",
+      "Winter",
+      "Spring"
+    )
+  )
+```
+
+```{r}
+seasonal_profile |>
+  ggplot(
+    aes(
+      x = season,
+      y = mean_daily_count
+    )
+  ) +
+  geom_col() +
+  labs(
+    title = "Seasonal pattern in Melbourne pedestrian activity",
+    subtitle = "Average daily pedestrian activity across available data, 2009–2026",
+    x = NULL,
+    y = "Average daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+sensor_coverage_check <- pedestrian_full |>
+  filter(year %in% c(2017:2019, 2023:2025)) |>
+  group_by(location_id, year) |>
+  summarise(
+    days_observed = n_distinct(sensing_date),
+    .groups = "drop"
+  )
+
+sensor_coverage_check |>
+  arrange(location_id, year)
+```
+
+```{r}
+sensor_coverage_check |>
+  group_by(year) |>
+  summarise(
+    sensors = n_distinct(location_id),
+    median_days = median(days_observed),
+    min_days = min(days_observed),
+    max_days = max(days_observed),
+    .groups = "drop"
+  )
+```
+
+```{r}
+consistent_sensors <- sensor_coverage_check |>
+  filter(days_observed >= 300) |>
+  group_by(location_id) |>
+  summarise(
+    years_covered = n_distinct(year),
+    minimum_days = min(days_observed),
+    .groups = "drop"
+  ) |>
+  filter(years_covered == 6)
+
+consistent_sensors
+```
+
+```{r}
+consistent_sensors |>
+  summarise(
+    number_of_consistent_sensors = n()
+  )
+
+```
+
+```{r}
+pedestrian_consistent <- pedestrian_full |>
+  semi_join(
+    consistent_sensors,
+    by = "location_id"
+  ) |>
+  filter(
+    year %in% c(2017:2019, 2023:2025)
+  )
+
+
+
+pedestrian_consistent |>
+  group_by(year) |>
+  summarise(
+    sensors = n_distinct(location_id),
+    days = n_distinct(sensing_date),
+    .groups = "drop"
+  )
+```
+
+```{r}
+period_daily_consistent <- pedestrian_consistent |>
+  mutate(
+    period = case_when(
+      year %in% 2017:2019 ~ "Previous: 2017–2019",
+      year %in% 2023:2025 ~ "Now: 2023–2025"
+    )
+  ) |>
+  group_by(
+    location_id,
+    sensing_date,
+    period
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+```
+
+```{r}
+period_summary_consistent <- period_daily_consistent |>
+  group_by(period) |>
+  summarise(
+    typical_daily_activity = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  mutate(
+    period = factor(
+      period,
+      levels = c(
+        "Previous: 2017–2019",
+        "Now: 2023–2025"
+      )
+    )
+  )
+
+period_summary_consistent
+```
+
+```{r}
+period_summary_consistent |>
+  ggplot(
+    aes(
+      x = period,
+      y = typical_daily_activity
+    )
+  ) +
+  geom_col(
+    width = 0.65
+  ) +
+  labs(
+    title = "Has Melbourne's pedestrian activity changed?",
+    subtitle = "Typical daily activity across 27 consistently measured locations",
+    x = NULL,
+    y = "Median daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+period_change <- period_summary_consistent |>
+  pivot_wider(
+    names_from = period,
+    values_from = typical_daily_activity
+  ) |>
+  summarise(
+    percent_change =
+      100 *
+      (
+        `Now: 2023–2025` -
+        `Previous: 2017–2019`
+      ) /
+      `Previous: 2017–2019`
+  )
+
+period_change
+```
+
+-   Covid disruption
+
+```{r}
+
+covid_daily <- pedestrian_full |>
+  filter(
+    year >= 2015,
+    year <= 2022
+  ) |>
+  group_by(
+    location_id,
+    sensing_date,
+    year,
+    month
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  mutate(
+    month_date = floor_date(
+      sensing_date,
+      "month"
+    )
+  )
+```
+
+```{r}
+sensor_monthly <- covid_daily |>
+  group_by(
+    location_id,
+    month_date,
+    month
+  ) |>
+  summarise(
+    mean_daily_count = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n_distinct(sensing_date),
+    .groups = "drop"
+  ) |>
+  filter(
+    days_observed >= 20
+  )
+```
+
+```{r}
+pre_covid_baseline <- sensor_monthly |>
+  filter(
+    year(month_date) >= 2015,
+    year(month_date) <= 2019
+  ) |>
+  group_by(
+    location_id,
+    month
+  ) |>
+  summarise(
+    baseline_count = mean(
+      mean_daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+```
+
+```{r}
+covid_index <- sensor_monthly |>
+  left_join(
+    pre_covid_baseline,
+    by = c(
+      "location_id",
+      "month"
+    )
+  ) |>
+  filter(
+    !is.na(baseline_count),
+    baseline_count > 0
+  ) |>
+  mutate(
+    activity_index =
+      mean_daily_count / baseline_count * 100
+  )
+```
+
+```{r}
+melbourne_covid_index <- covid_index |>
+  group_by(month_date) |>
+  summarise(
+    activity_index = median(
+      activity_index,
+      na.rm = TRUE
+    ),
+    sensors = n_distinct(location_id),
+    .groups = "drop"
+  )
+```
+
+```{r}
+melbourne_covid_index |>
+  ggplot(
+    aes(
+      x = month_date,
+      y = activity_index
+    )
+  ) +
+  geom_hline(
+    yintercept = 100,
+    linetype = "dashed"
+  ) +
+  geom_line(
+    linewidth = 0.9
+  ) +
+  labs(
+    title = "COVID-19 disrupted Melbourne's pedestrian pulse",
+    subtitle = "Monthly activity relative to the same-month 2015–2019 baseline",
+    x = NULL,
+    y = "Pedestrian activity index\n(100 = pre-COVID baseline)"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
+sensor_daily_events <- pedestrian_full |>
+  filter(
+    !is.na(pedestrian_count)
+  ) |>
+  group_by(
+    location_id,
+    sensing_date
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    
+    hours_observed = n_distinct(hourday),
+    
+    .groups = "drop"
+  ) |>
+  filter(
+    hours_observed >= 20
+  ) |>
+  mutate(
+  day_of_week = lubridate::wday(
+    sensing_date,
+    week_start = 1
+  ),
+
+  day_name = lubridate::wday(
+    sensing_date,
+    label = TRUE,
+    abbr = FALSE,
+    week_start = 1
+  )
+)
+```
+
+```{r}
+sensor_event_index <- sensor_daily_events |>
+  arrange(
+    location_id,
+    day_of_week,
+    sensing_date
+  ) |>
+  group_by(
+    location_id,
+    day_of_week
+  ) |>
+  mutate(
+    expected_count = slide_dbl(
+      daily_count,
+      ~ median(
+        .x[-5],
+        na.rm = TRUE
+      ),
+      .before = 4,
+      .after = 4,
+      .complete = TRUE
+    )
+  ) |>
+  ungroup() |>
+  mutate(
+    uplift_percent =
+      100 *
+      (daily_count - expected_count) /
+      expected_count
+  ) |>
+  filter(
+    is.finite(uplift_percent)
+  )
+```
+
+```{r}
+event_day_summary <- sensor_event_index |>
+  group_by(sensing_date) |>
+  summarise(
+    median_uplift = median(
+      uplift_percent,
+      na.rm = TRUE
+    ),
+    
+    sensors_reporting = n_distinct(location_id),
+    
+    sensors_above_20 = sum(
+      uplift_percent >= 20,
+      na.rm = TRUE
+    ),
+    
+    proportion_above_20 = mean(
+      uplift_percent >= 20,
+      na.rm = TRUE
+    ),
+    
+    median_daily_count = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    
+    .groups = "drop"
+  )
+```
+
+```{r}
+event_day_summary_non_covid <- event_day_summary |>
+  filter(
+    year(sensing_date) <= 2019 |
+      year(sensing_date) >= 2024
+  )
+
+unusually_busy_dates_non_covid <- event_day_summary_non_covid |>
+  filter(
+    sensors_reporting >= 10
+  ) |>
+  arrange(
+    desc(median_uplift)
+  )
+
+unusually_busy_dates_non_covid |>
+  slice_head(n = 30)
+```
+
+```{r}
+strong_event_candidates_non_covid <- event_day_summary_non_covid |>
+  filter(
+    sensors_reporting >= 10,
+    median_uplift >= 20,
+    proportion_above_20 >= 0.30
+  ) |>
+  arrange(desc(median_uplift))
+
+strong_event_candidates_non_covid |>
+  slice_head(n = 30)
+```
+
+```{r}
+event_candidates_episode <- strong_event_candidates_non_covid |>
+  arrange(sensing_date) |>
+  mutate(
+    gap_days = as.numeric(
+      sensing_date - lag(sensing_date)
+    ),
+    new_episode = is.na(gap_days) | gap_days > 1,
+    episode_id = cumsum(new_episode)
+  )
+```
+
+```{r}
+event_episode_candidates <- event_candidates_episode |>
+  group_by(episode_id) |>
+  summarise(
+    start_date = min(sensing_date),
+    end_date = max(sensing_date),
+    flagged_days = n(),
+    
+    peak_date = sensing_date[
+      which.max(median_uplift)
+    ],
+    
+    peak_uplift = max(
+      median_uplift,
+      na.rm = TRUE
+    ),
+    
+    max_proportion_above_20 = max(
+      proportion_above_20,
+      na.rm = TRUE
+    ),
+    
+    .groups = "drop"
+  ) |>
+  arrange(desc(peak_uplift))
+
+event_episode_candidates |>
+  slice_head(n = 20)
+```
+
+### Summarise pedestrian decreases across sensors
+
+
+```{r}
+
+
+decrease_day_summary <- sensor_event_index %>%
+  group_by(
+    sensing_date
+  ) %>%
+  summarise(
+    median_decrease = median(
+      uplift_percent,
+      na.rm = TRUE
+    ),
+
+    sensors_reporting = n_distinct(
+      location_id
+    ),
+
+    sensors_below_20 = sum(
+      uplift_percent <= -20,
+      na.rm = TRUE
+    ),
+
+    proportion_below_20 = mean(
+      uplift_percent <= -20,
+      na.rm = TRUE
+    ),
+
+    median_daily_count = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+
+    .groups = "drop"
+  )
+```
+
+### Identify significant pedestrian decreases
+
+```{r}
+
+decrease_candidates <- decrease_day_summary %>%
+  filter(
+    sensors_reporting >= 10,
+    median_decrease <= -20,
+    proportion_below_20 >= 0.30
+  ) %>%
+  arrange(
+    median_decrease
+  )
+
+decrease_candidates %>%
+  slice_head(n = 30)
+```
+
+### Focus on non-COVID significant decreases
+
+```{r}
+
+decrease_non_covid <- decrease_candidates %>%
+  filter(
+    lubridate::year(sensing_date) < 2020 |
+      lubridate::year(sensing_date) > 2022
+  )
+```
+
+
+```{r}
+# Downloading the event permits dataset from COM
+event_url <- paste0(
+  "https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/",
+  "event-permits-2014-2018-including-film-shoots-photo-shoots-weddings-christmas-pa/",
+  "exports/csv"
+)
+
+
+event_path <- here::here(
+  "Data_pedestrians",
+  "raw2",
+  "event_permits_2014_2018.csv"
+)
+
+curl::curl_download(
+  event_url,
+  event_path
+)
+
+readr::read_lines(
+  event_path,
+  n_max = 3
+)
+```
+
+```{r}
+event_permits <- readr::read_delim(
+  event_path,
+  delim = ";",
+  show_col_types = FALSE
+) |>
+  clean_names()
+
+event_permits |>
+  glimpse()
+```
+
+
+```{r}
+# Cleaning the inconsistency in the events dataset
+event_permits_relevant <- event_permits |>
+  mutate(
+    category_1_clean = category_1 |>
+      str_to_lower() |>
+      str_squish() |>
+      str_replace_all(
+        "non\\s*-?\\s*ticketed",
+        "non-ticketed"
+      ) |>
+      str_replace_all(
+        "run\\s*/?\\s*walk",
+        "run/walk"
+      ),
+
+    event_type = case_when(
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "non-ticketed"
+        ) ~
+        "Non-ticketed public event",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "ticketed"
+        ) ~
+        "Ticketed public event",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "run/walk"
+        ) ~
+        "Run/Walk",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "music"
+        ) ~
+        "Music event",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "cycling"
+        ) ~
+        "Cycling event",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "parade"
+        ) ~
+        "Parade",
+
+      str_detect(
+        category_1_clean,
+        "^public event"
+      ) &
+        str_detect(
+          category_1_clean,
+          "memorial"
+        ) ~
+        "Memorial",
+
+      category_1_clean == "public event" ~
+        "Other public event",
+
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(
+    !is.na(event_type)
+  )
+```
+
+
+```{r}
+event_permits_qc <- event_permits_relevant |>
+  mutate(
+    duration_days =
+      as.numeric(event_end - event_start) + 1,
+
+    permit_match_class = case_when(
+      is.na(event_end) ~
+        "Missing end date",
+
+      duration_days <= 7 ~
+        "Suitable for automatic matching",
+
+      duration_days <= 30 ~
+        "Extended permit - inspect manually",
+
+      duration_days > 30 ~
+        "Long permit window - do not auto-match"
+    )
+  )
+
+event_permits_qc |>
+  count(
+    permit_match_class,
+    sort = TRUE
+  )
+```
+
+```{r}
+event_permits_auto <- event_permits_qc |>
+  filter(
+    permit_match_class ==
+      "Suitable for automatic matching"
+  )
+
+event_permits_extended <- event_permits_qc |>
+  filter(
+    permit_match_class !=
+      "Suitable for automatic matching"
+  )
+```
+
+```{r}
+event_episodes_2014_2018 <-
+  event_episode_candidates |>
+  filter(
+    end_date >= ymd("2014-01-01"),
+    start_date <= ymd("2018-12-31")
+  )
+
+
+event_episode_matches <-
+  event_episodes_2014_2018 |>
+  inner_join(
+    event_permits_auto,
+    by = join_by(
+      start_date <= event_end,
+      end_date >= event_start
+    )
+  ) |>
+  mutate(
+    peak_date_inside_event =
+      peak_date >= event_start &
+      peak_date <= event_end
+  ) |>
+  arrange(
+    desc(peak_uplift),
+    desc(peak_date_inside_event)
+  )
+```
+
+```{r}
+event_episode_matches_checked <- event_episode_matches |>
+  mutate(
+    date_match_quality = case_when(
+      duration_days == 1 &
+        peak_date == event_start ~
+        "Exact one-day permit match",
+
+      duration_days > 1 &
+        peak_date_inside_event ~
+        "Within short permit window",
+
+      TRUE ~
+        "Weak date match"
+    )
+  )
+
+
+event_matches_temporally_plausible <- event_episode_matches_checked |>
+  filter(peak_date_inside_event)
+
+event_matches_temporally_plausible
+```
+
+```{r}
+event_case_candidates <- event_matches_temporally_plausible |>
+  filter(
+    peak_uplift >= 20,
+    max_proportion_above_20 >= 0.50
+  ) |>
+  select(
+    peak_date,
+    peak_uplift,
+    max_proportion_above_20,
+    title,
+    event_type,
+    event_start,
+    event_end,
+    duration_days,
+    location,
+    date_match_quality
+  ) |>
+  arrange(
+    desc(peak_uplift)
+  )
+
+event_case_candidates
+```
+
+```{r}
+event_date_overview <- event_case_candidates |>
+  group_by(
+    peak_date,
+    peak_uplift,
+    max_proportion_above_20
+  ) |>
+  summarise(
+    number_of_events = n_distinct(title),
+
+    matched_events = stringr::str_c(
+      unique(title),
+      collapse = "; "
+    ),
+
+    event_types = stringr::str_c(
+      unique(event_type),
+      collapse = "; "
+    ),
+
+    .groups = "drop"
+  ) |>
+  arrange(desc(peak_uplift))
+
+event_date_overview
+```
+
+```{r}
+event_plot_data <- event_date_overview |>
+  mutate(
+    date_label = format(
+      peak_date,
+      "%d %b %Y"
+    ),
+
+    hover_text = stringr::str_c(
+      "<b>Date:</b> ", date_label,
+      "<br><b>Pedestrian uplift:</b> ",
+      round(peak_uplift, 1), "%",
+      "<br><b>Sensors >20% above expected:</b> ",
+      scales::percent(
+        max_proportion_above_20,
+        accuracy = 1
+      ),
+      "<br><b>Matched events:</b> ",
+      matched_events
+    )
+  )
+
+event_plot <- event_plot_data |>
+  ggplot(
+    aes(
+      x = peak_uplift,
+      y = forcats::fct_reorder(
+        date_label,
+        peak_uplift
+      ),
+      text = hover_text
+    )
+  ) +
+  geom_segment(
+    aes(
+      x = 0,
+      xend = peak_uplift,
+      yend = forcats::fct_reorder(
+        date_label,
+        peak_uplift
+      )
+    ),
+    linewidth = 0.6
+  ) +
+  geom_point(
+    aes(
+      size = max_proportion_above_20
+    )
+  ) +
+  scale_size_continuous(
+    labels = scales::percent,
+    range = c(3, 7)
+  ) +
+  labs(
+    title = "Major pedestrian surges coincided with permitted Melbourne events",
+    subtitle = "Hover to see the matched events for each date",
+    x = "Median pedestrian uplift (%)",
+    y = NULL,
+    size = "Sensors with\n>20% uplift"
+  ) +
+  theme_minimal()
+
+plotly::ggplotly(
+  event_plot,
+  tooltip = "text"
+)
+```
+
+### Load Victorian Government Public Holiday Data
+
+```{r}
+
+holiday_calendar_official <- readr::read_csv(
+  here::here("Data_pedestrians", "raw2", "important_dates_august_2026.csv"),
+  show_col_types = FALSE
+) %>%
+  filter(dateType == "PUBLIC_HOLIDAY") %>%
+  transmute(
+    holiday_date = lubridate::dmy(important_date),
+    holiday = name,
+    publisher,
+    source
+  ) %>%
+  filter(
+    holiday_date >= as.Date("2019-01-01"),
+    holiday_date <= as.Date("2026-09-06")
+  ) %>%
+  distinct(holiday_date, .keep_all = TRUE) %>%
+  arrange(holiday_date)
+
+holiday_calendar_official %>%
+  count(lubridate::year(holiday_date), name = "holidays")
+```
+
+
+
+```{r}
+
+decrease_holiday_test <- decrease_non_covid %>%
+  filter(
+    lubridate::year(sensing_date) %in%
+      c(2019, 2023, 2024, 2025, 2026)
+  ) %>%
+  left_join(
+    holiday_calendar_official %>%
+      select(holiday_date, holiday),
+    by = c("sensing_date" = "holiday_date")
+  ) %>%
+  mutate(
+    holiday_status = if_else(
+      is.na(holiday),
+      "Normal day",
+      "Public holiday"
+    )
+  )
+
+decrease_holiday_test %>%
+  count(holiday_status) %>%
+  mutate(
+    percentage = round(n / sum(n) * 100, 1)
+  )
+```
+
+### Compare public holidays with all eligible days
+
+```{r}
+
+eligible_days <- decrease_day_summary %>%
+  filter(
+    sensors_reporting >= 10,
+    lubridate::year(sensing_date) %in%
+      c(2019, 2023, 2024, 2025, 2026)
+  ) %>%
+  distinct(sensing_date) %>%
+  mutate(
+    holiday_status = if_else(
+      sensing_date %in% holiday_calendar_official$holiday_date,
+      "Public holiday",
+      "Normal day"
+    )
+  )
+
+baseline_holiday <- eligible_days %>%
+  count(holiday_status) %>%
+  mutate(
+    percentage = round(n / sum(n) * 100, 1)
+  )
+
+baseline_holiday
+```
+
+
+```{r}
+### Public holiday enrichment using official government data
+
+holiday_enrichment <- tibble::tibble(
+  baseline_holiday_percentage =
+    mean(eligible_days$holiday_status == "Public holiday") * 100,
+
+  significant_dip_holiday_percentage =
+    mean(decrease_holiday_test$holiday_status == "Public holiday") * 100
+) %>%
+  mutate(
+    enrichment =
+      significant_dip_holiday_percentage /
+      baseline_holiday_percentage
+  )
+
+holiday_enrichment
+```
+
+
+```{r}
+### Identify Public Holidays Associated with Significant Decreases
+
+public_holiday_dips <- decrease_holiday_test %>%
+  filter(holiday_status == "Public holiday") %>%
+  select(
+    sensing_date,
+    holiday,
+    median_decrease,
+    sensors_reporting
+  ) %>%
+  arrange(median_decrease)
+
+knitr::kable(
+  public_holiday_dips,
+  digits = 1,
+  caption = "Significant Pedestrian Decreases on Victorian Public Holidays"
+)
+```
+
+
+```{r}
+### Interactive Significant Pedestrian Decreases Across Years
+
+holiday_timeline_data <- decrease_holiday_test %>%
+  mutate(
+    holiday_name = if_else(
+      is.na(holiday),
+      "Not a public holiday",
+      holiday
+    ),
+
+    hover_text = paste0(
+      "Date: ", format(sensing_date, "%d %B %Y"),
+      "<br>Holiday: ", holiday_name,
+      "<br>Median decrease: ", round(median_decrease, 1), "%",
+      "<br>Sensors reporting: ", sensors_reporting
+    )
+  ) %>%
+  arrange(sensing_date)
+
+holiday_timeline <- plotly::plot_ly(
+  holiday_timeline_data,
+  x = ~sensing_date,
+  y = ~median_decrease,
+  color = ~holiday_status,
+  colors = c(
+    "Normal day" = "#64748B",
+    "Public holiday" = "#E87932"
+  ),
+  type = "scatter",
+  mode = "markers",
+  marker = list(
+    size = 11,
+    opacity = 0.85
+  ),
+  text = ~hover_text,
+  hoverinfo = "text"
+) %>%
+  layout(
+    title = "Significant Pedestrian Decreases and Public Holidays",
+    xaxis = list(
+      title = "Date"
+    ),
+    yaxis = list(
+      title = "Median change from expected activity (%)"
+    ),
+    hovermode = "closest",
+    legend = list(
+      title = list(text = "Day type")
+    )
+  )
+
+holiday_timeline
+```
+
+## Weather and Pedestrian Activity Analysis
+
+```{r}
+
+weather_daily <- readr::read_csv(
+  here::here("Data_pedestrians", "raw2", "melbourne_weather_daily.csv"),
+  skip = 3,
+  show_col_types = FALSE
+) %>%
+  transmute(
+    sensing_date = as.Date(time),
+
+    max_temperature_c = `temperature_2m_max (°C)`,
+
+    min_temperature_c = `temperature_2m_min (°C)`,
+
+    max_wind_kmh = `wind_speed_10m_max (km/h)`,
+
+    rainfall_mm = `precipitation_sum (mm)`
+  ) %>%
+  filter(
+    sensing_date >= as.Date("2009-05-01"),
+    sensing_date <= as.Date("2026-09-06")
+  )
+
+weather_daily %>%
+  summarise(
+    total_days = n(),
+    first_date = min(sensing_date),
+    last_date = max(sensing_date),
+    missing_rainfall = sum(is.na(rainfall_mm)),
+    duplicate_dates = n() - n_distinct(sensing_date)
+  )
+```
+
+### Combine Weather with Pedestrian Decreases
+
+```{r}
+
+weather_dip_daily <- decrease_day_summary %>%
+  filter(
+    sensors_reporting >= 10,
+    lubridate::year(sensing_date) %in%
+      c(2019, 2023, 2024, 2025, 2026)
+  ) %>%
+  left_join(
+    weather_daily,
+    by = "sensing_date"
+  ) %>%
+  mutate(
+    significant_dip =
+      median_decrease <= -20 &
+      proportion_below_20 >= 0.30,
+
+    public_holiday =
+      sensing_date %in%
+      holiday_calendar_official$holiday_date
+  )
+
+weather_dip_daily %>%
+  summarise(
+    total_days = n(),
+    significant_dip_days = sum(significant_dip),
+    public_holiday_days = sum(public_holiday),
+    holiday_dip_days = sum(significant_dip & public_holiday),
+    missing_weather = sum(is.na(rainfall_mm)),
+    duplicate_dates = n() - n_distinct(sensing_date)
+  )
+```
+
+
+```{r}
+### Compare Weather on Significant Dip Days and Other Days
+
+weather_comparison <- weather_dip_daily %>%
+  filter(!public_holiday) %>%
+  group_by(significant_dip) %>%
+  summarise(
+    days = n(),
+
+    median_rainfall_mm =
+      round(median(rainfall_mm, na.rm = TRUE), 1),
+
+    heavy_rain_pct =
+      round(mean(rainfall_mm >= 10, na.rm = TRUE) * 100, 1),
+
+    median_max_temp_c =
+      round(median(max_temperature_c, na.rm = TRUE), 1),
+
+    median_min_temp_c =
+      round(median(min_temperature_c, na.rm = TRUE), 1),
+
+    median_max_wind_kmh =
+      round(median(max_wind_kmh, na.rm = TRUE), 1),
+
+    .groups = "drop"
+  )
+
+print(weather_comparison, width = Inf)
+```
+
+### Compare Pedestrian Dip Frequency on Heavy Rainfall Days
+
+```{r}
+rain_dip_frequency <- weather_dip_daily %>%
+  filter(!public_holiday) %>%
+  mutate(
+    rain_category = if_else(
+      rainfall_mm >= 10,
+      "Heavy rainfall (10 mm or more)",
+      "Less than 10 mm rainfall"
+    )
+  ) %>%
+  group_by(rain_category) %>%
+  summarise(
+    total_days = n(),
+
+    significant_dip_days = sum(significant_dip),
+
+    dip_percentage = round(
+      mean(significant_dip) * 100,
+      1
+    ),
+
+    .groups = "drop"
+  )
+
+print(rain_dip_frequency, width = Inf)
+```
+
+### Significant Pedestrian Decreases by Rainfall Amount
+
+```{r}
+rainfall_levels <- weather_dip_daily %>%
+  filter(!public_holiday) %>%
+  mutate(
+    rainfall_group = case_when(
+      rainfall_mm == 0 ~ "No rain",
+      rainfall_mm < 2 ~ "0–2 mm",
+      rainfall_mm < 5 ~ "2–5 mm",
+      rainfall_mm < 10 ~ "5–10 mm",
+      rainfall_mm < 20 ~ "10–20 mm",
+      TRUE ~ "20 mm or more"
+    ),
+
+    rainfall_group = factor(
+      rainfall_group,
+      levels = c(
+        "No rain",
+        "0–2 mm",
+        "2–5 mm",
+        "5–10 mm",
+        "10–20 mm",
+        "20 mm or more"
+      )
+    )
+  ) %>%
+  group_by(rainfall_group) %>%
+  summarise(
+    total_days = n(),
+    significant_dip_days = sum(significant_dip),
+
+    dip_percentage = round(
+      mean(significant_dip) * 100,
+      1
+    ),
+
+    .groups = "drop"
+  )
+
+print(rainfall_levels, n = Inf)
+```
+
+### Interactive Rainfall Intensity and Pedestrian Decreases
+
+```{r}
+rainfall_levels_plot <- rainfall_levels %>%
+  mutate(
+    hover_text = paste0(
+      "Rainfall: ", rainfall_group,
+      "<br>Total days: ", total_days,
+      "<br>Significant dip days: ", significant_dip_days,
+      "<br>Dip rate: ", dip_percentage, "%"
+    )
+  )
+
+rainfall_interactive <- plotly::plot_ly(
+  data = rainfall_levels_plot,
+  x = ~rainfall_group,
+  y = ~dip_percentage,
+  type = "bar",
+  marker = list(color = "#478FAD"),
+  hovertext = ~hover_text,
+  hoverinfo = "text"
+)
+
+rainfall_interactive <- plotly::layout(
+  rainfall_interactive,
+  title = "Significant Pedestrian Decreases by Daily Rainfall",
+  xaxis = list(
+    title = "Daily rainfall (mm)"
+  ),
+  yaxis = list(
+    title = "Significant decrease rate (%)",
+    range = c(0, 55)
+  ),
+  showlegend = FALSE
+)
+
+rainfall_interactive
+```
+
+```{r}
+#| label: prepare-yearly-weather-holiday-data
+
+# Combine weather, pedestrian changes and holiday names
+
+weather_holiday_yearly <- weather_dip_daily %>%
+  left_join(
+    holiday_calendar_official %>%
+      group_by(holiday_date) %>%
+      summarise(
+        holiday = paste(unique(holiday), collapse = " / "),
+        .groups = "drop"
+      ),
+    by = c("sensing_date" = "holiday_date")
+  ) %>%
+  mutate(
+    year_label = factor(
+      as.character(lubridate::year(sensing_date)),
+      levels = c("2019", "2023", "2024", "2025", "2026")
+    ),
+
+    # Align all years by month and day for comparison
+    plot_date = as.Date(
+      paste0("2024-", format(sensing_date, "%m-%d"))
+    ),
+
+    holiday_name = coalesce(
+      holiday,
+      "Not a public holiday"
+    ),
+
+    hover_text = paste0(
+      "Date: ", format(sensing_date, "%d %B %Y"),
+      "<br>Holiday: ", holiday_name,
+      "<br>Median pedestrian change: ",
+      round(median_decrease, 1), "%",
+      "<br>Rainfall: ", rainfall_mm, " mm",
+      "<br>Maximum temperature: ", max_temperature_c, "°C",
+      "<br>Minimum temperature: ", min_temperature_c, "°C",
+      "<br>Maximum wind speed: ", max_wind_kmh, " km/h",
+      "<br>Sensors reporting: ", sensors_reporting
+    )
+  ) %>%
+  arrange(year_label, plot_date)
+```
+
+
+
+```{r}
+### Smoothed Pedestrian Changes, Weather and Holidays by Year
+
+smoothed_yearly_data <- weather_holiday_yearly %>%
+  group_by(year_label) %>%
+  arrange(sensing_date, .by_group = TRUE) %>%
+  mutate(
+    smoothed_change = slider::slide_dbl(
+      median_decrease,
+      ~ median(.x, na.rm = TRUE),
+      .before = 3,
+      .after = 3
+    )
+  ) %>%
+  ungroup()
+
+# Coloured line for each year
+smoothed_yearly_plot <- plotly::plot_ly(
+  data = smoothed_yearly_data,
+  x = ~plot_date,
+  y = ~smoothed_change,
+  color = ~year_label,
+  type = "scatter",
+  mode = "lines",
+  line = list(width = 2),
+  text = ~paste0(
+    hover_text,
+    "<br>7-day median change: ",
+    round(smoothed_change, 1), "%"
+  ),
+  hoverinfo = "text"
+)
+
+# Actual significant decreases on public holidays
+smoothed_yearly_plot <- smoothed_yearly_plot %>%
+  plotly::add_markers(
+    data = smoothed_yearly_data %>%
+      filter(significant_dip, public_holiday),
+    x = ~plot_date,
+    y = ~median_decrease,
+    text = ~hover_text,
+    hoverinfo = "text",
+    name = "Public holiday dip",
+    marker = list(color = "#E87932", size = 9),
+    inherit = FALSE
+  )
+
+# Actual significant decreases on other dates
+smoothed_yearly_plot <- smoothed_yearly_plot %>%
+  plotly::add_markers(
+    data = smoothed_yearly_data %>%
+      filter(significant_dip, !public_holiday),
+    x = ~plot_date,
+    y = ~median_decrease,
+    text = ~hover_text,
+    hoverinfo = "text",
+    name = "Other significant dip",
+    marker = list(color = "#3288BD", size = 8),
+    inherit = FALSE
+  )
+
+# Month labels from January to December
+month_ticks <- seq.Date(
+  as.Date("2024-01-01"),
+  as.Date("2024-12-01"),
+  by = "month"
+)
+
+smoothed_yearly_plot <- plotly::layout(
+  smoothed_yearly_plot,
+  title = list(
+  text = paste0(
+    "Pedestrian Changes, Weather and Public Holidays by Year",
+    "<br><sup>Lines: 7-day rolling median | ",
+    "Dots: actual significant pedestrian decreases</sup>"
+  )
+),
+  xaxis = list(
+    title = "Month of year",
+    tickvals = month_ticks,
+    ticktext = format(month_ticks, "%b"),
+    range = c("2024-01-01", "2024-12-31")
+  ),
+  yaxis = list(
+    title = "Change from expected pedestrian activity (%)"
+  ),
+  hovermode = "closest",
+  legend = list(
+    title = list(text = "Year / Dip type")
+  )
+)
+
+smoothed_yearly_plot
+```
+
+
+-   Where is the Melbourne's pulse the strongest currently?
+
+```{r}
+sensor_locations <- readr::read_csv(
+  here::here("Data_pedestrians", "raw", "data_pedestrian", "2025_Pedestrian_Data.csv"),
+  col_select = c(
+    Location_ID,
+    SensorVariable,
+    Latitude,
+    Longitude
+  ),
+  show_col_types = FALSE
+) %>%
+  distinct(Location_ID, .keep_all = TRUE)
+```
+
+
+
+```{r}
+
+if (!"note" %in% names(sensor_locations)) {
+  sensor_locations$note <- NA_character_
+}
+
+sensor_locations <- sensor_locations |>
+  janitor::clean_names() |>
+  mutate(
+    sensor_name = sensor_variable,
+    sensor_description = paste0(
+      "Sensor ", location_id, " (", sensor_variable, ")"
+    ),
+    installation_date = as.Date(NA)
+  )
+
+location_metadata <- sensor_locations |>
+  mutate(
+    relocation_flag = str_detect(
+      str_to_lower(
+        coalesce(note, "")
+      ),
+      "relocat|moved to|move to"
+    )
+  ) |>
+  filter(
+    !is.na(latitude),
+    !is.na(longitude)
+  ) |>
+  select(
+    location_id,
+    sensor_description,
+    sensor_name,
+    latitude,
+    longitude,
+    installation_date,
+    note,
+    relocation_flag
+  )
+```
+
+```{r}
+sensor_daily_spatial <- pedestrian_full |>
+  group_by(
+    location_id,
+    sensing_date,
+    year,
+    month
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(
+    hours_observed >= 20
+  )
+```
+
+
+```{r}
+recent_strength <- sensor_daily_spatial |>
+  filter(
+    year == 2025
+  ) |>
+  group_by(location_id) |>
+  summarise(
+    typical_daily_count = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  filter(
+    days_observed >= 292
+  ) |>
+  inner_join(
+    location_metadata,
+    by = "location_id"
+  )
+```
+
+```{r}
+
+spatial_plot <- recent_strength |>
+  ggplot(
+    aes(
+      x = longitude,
+      y = latitude,
+      size = typical_daily_count,
+      text = paste0(
+        "<b>", sensor_description, "</b>",
+        "<br>Location ID: ", location_id,
+        "<br>Typical daily count: ",
+        scales::comma(round(typical_daily_count))
+      )
+    )
+  ) +
+  geom_point(alpha = 0.65) +
+  coord_quickmap() +
+  labs(
+    title = "Where is Melbourne's pedestrian pulse strongest?",
+    subtitle = "Typical daily pedestrian activity at well-covered sensor locations, 2025",
+    x = NULL,
+    y = NULL,
+    size = "Typical daily count"
+  ) +
+  theme_minimal()
+
+ggplotly(
+  spatial_plot,
+  tooltip = "text"
+)
+```
+
+
+
+```{r}
+top_locations <- recent_strength |>
+  slice_max(
+    typical_daily_count,
+    n = 10
+  ) |>
+  mutate(
+    sensor_description = fct_reorder(
+      sensor_description,
+      typical_daily_count
+    )
+  )
+
+top_locations |>
+  mutate(
+    sensor_description = fct_reorder(
+      sensor_description,
+      typical_daily_count
+    )
+  ) |>
+  ggplot(
+    aes(
+      x = sensor_description,
+      y = typical_daily_count
+    )
+  ) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Melbourne's busiest monitored pedestrian locations",
+    subtitle = "Typical daily pedestrian activity, 2025",
+    x = NULL,
+    y = "Typical daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+recent_data <- pedestrian_full |>
+  filter(
+    year %in% 2023:2025,
+    between(hourday, 0, 23),
+    !is.na(pedestrian_count),
+    pedestrian_count >= 0
+  )
+
+# Identify sufficiently complete days
+valid_days <- recent_data |>
+  group_by(location_id, year, sensing_date) |>
+  summarise(
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(hours_observed >= 23)
+
+# Check coverage in each year
+recent_coverage <- valid_days |>
+  group_by(location_id, year) |>
+  summarise(
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    expected_days = if_else(leap_year(year), 366, 365),
+    coverage = days_observed / expected_days
+  )
+
+# Retain sensors with good coverage in all 3 years
+reliable_sensors <- recent_coverage |>
+  group_by(location_id) |>
+  summarise(
+    years_covered = n_distinct(year),
+    minimum_coverage = min(coverage),
+    .groups = "drop"
+  ) |>
+  filter(
+    years_covered == 3,
+    minimum_coverage >= 0.80
+  )
+
+reliable_sensors |>
+  summarise(sensors_selected = n())
+```
+
+```{r}
+hourly_profiles <- recent_data |>
+  semi_join(
+    valid_days,
+    by = c("location_id", "year", "sensing_date")
+  ) |>
+  semi_join(
+    reliable_sensors,
+    by = "location_id"
+  ) |>
+  mutate(
+    day_type = if_else(
+      lubridate::wday(sensing_date, week_start = 1) <= 5,
+      "Weekday",
+      "Weekend"
+    )
+  ) |>
+  group_by(location_id, day_type, hourday) |>
+  summarise(
+    typical_count = median(pedestrian_count),
+    .groups = "drop"
+  ) |>
+  group_by(location_id) |>
+  filter(
+    n() == 48,
+    sum(typical_count) > 0
+  ) |>
+  mutate(
+    hour_share = typical_count / sum(typical_count)
+  ) |>
+  ungroup()
+```
+
+```{r}
+# One row per sensor, with 48 profile measurements
+cluster_features <- hourly_profiles |>
+  mutate(
+    feature = paste0(
+      day_type,
+      "_",
+      str_pad(hourday, width = 2, pad = "0")
+    )
+  ) |>
+  select(location_id, feature, hour_share) |>
+  pivot_wider(
+    names_from = feature,
+    values_from = hour_share
+  ) |>
+  drop_na()
+
+# Calculate distances between sensor profiles
+sensor_distances <- cluster_features |>
+  select(-location_id) |>
+  stats::dist()
+
+set.seed(123)
+
+# Test 2 to 5 clusters
+cluster_tests <- tibble(k = 2:5) |>
+  mutate(
+    model = map(
+      k,
+      ~ stats::kmeans(
+        cluster_features |> select(-location_id),
+        centers = .x,
+        nstart = 30
+      )
+    ),
+    silhouette = map_dbl(
+      model,
+      ~ mean(
+        cluster::silhouette(
+          .x$cluster,
+          sensor_distances
+        )[, "sil_width"]
+      )
+    )
+  )
+
+cluster_tests |>
+  select(k, silhouette)
+```
+
+```{r}
+
+best_k <- cluster_tests |>
+  slice_max(
+    silhouette,
+    n = 1,
+    with_ties = FALSE
+  ) |>
+  pull(k)
+
+set.seed(123)
+
+final_kmeans <- stats::kmeans(
+  cluster_features |> select(-location_id),
+  centers = best_k,
+  nstart = 50
+)
+
+sensor_clusters <- cluster_features |>
+  select(location_id) |>
+  mutate(
+    cluster = paste0(
+      "Cluster ",
+      final_kmeans$cluster
+    )
+  )
+
+sensor_clusters |>
+  count(cluster)
+```
+
+```{r}
+cluster_profiles <- hourly_profiles |>
+  inner_join(
+    sensor_clusters,
+    by = "location_id"
+  ) |>
+  group_by(cluster, day_type, hourday) |>
+  summarise(
+    typical_share = median(hour_share) * 100,
+    .groups = "drop"
+  )
+
+cluster_profiles |>
+  ggplot(
+    aes(
+      x = hourday,
+      y = typical_share,
+      colour = cluster
+    )
+  ) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~day_type) +
+  scale_x_continuous(
+    breaks = seq(0, 23, by = 2)
+  ) +
+  labs(
+    title = "Melbourne has different pedestrian rhythms",
+    subtitle = "K-means clustering of hourly profiles, 2023–2025",
+    x = "Hour of day",
+    y = "Share of typical weekday + weekend activity (%)",
+    colour = "Cluster"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+cluster_locations <- sensor_clusters |>
+  left_join(
+    location_metadata |>
+      select(
+        location_id,
+        sensor_description,
+        latitude,
+        longitude
+      ),
+    by = "location_id"
+  ) |>
+  filter(
+    !is.na(latitude),
+    !is.na(longitude)
+  ) |>
+  mutate(
+    hover_text = paste0(
+      "<b>", sensor_description, "</b>",
+      "<br>Location ID: ", location_id,
+      "<br>", cluster
+    )
+  )
+```
+
+```{r}
+plotly::plot_ly(
+  data = cluster_locations,
+  type = "scattermapbox",
+  mode = "markers",
+  lat = ~latitude,
+  lon = ~longitude,
+  color = ~cluster,
+  colors = "Set2",
+  text = ~hover_text,
+  hoverinfo = "text",
+  marker = list(
+    size = 12,
+    opacity = 0.85
+  )
+) |>
+  plotly::layout(
+    title = "Where are Melbourne's different pedestrian rhythms?",
+    mapbox = list(
+      style = "open-street-map",
+      center = list(
+        lat = -37.8136,
+        lon = 144.9631
+      ),
+      zoom = 12.5
+    ),
+    margin = list(
+      l = 0,
+      r = 0,
+      b = 0,
+      t = 50
+    )
+  )
+```
+
+```{r}
+sensor_locations <- readr::read_csv(
+here::here("Data_pedestrians", "raw", "data_pedestrian", "2025_Pedestrian_Data.csv"),
+  col_select = c(
+    Location_ID,
+    SensorVariable,
+    Latitude,
+    Longitude
+  ),
+  show_col_types = FALSE
+) %>%
+  distinct(Location_ID, .keep_all = TRUE)
+```
+
+
+### Load Sensor Location Information
+
+```{r}
+# Create one location record per sensor
+
+sensor_lookup <- sensor_locations %>%
+  group_by(Location_ID) %>%
+  summarise(
+    sensor_name = first(SensorVariable),
+    latitude = first(Latitude),
+    longitude = first(Longitude),
+    .groups = "drop"
+  ) %>%
+  rename(location_id = Location_ID)
+
+```
+
+
+```{r}
+sensor_overall_dips <- sensor_event_index %>%
+  filter(
+    sensing_date >= as.Date("2023-01-01"),
+    sensing_date <= as.Date("2025-12-31"),
+    !is.na(uplift_percent),
+    is.finite(uplift_percent)
+  ) %>%
+  group_by(location_id) %>%
+  summarise(
+    days_reporting = n_distinct(sensing_date),
+
+    dip_days = sum(uplift_percent <= -20),
+
+    dip_rate_pct = round(
+      100 * mean(uplift_percent <= -20), 1
+    ),
+
+    median_dip_pct = round(
+      median(
+        uplift_percent[uplift_percent <= -20],
+        na.rm = TRUE
+      ), 1
+    ),
+
+    .groups = "drop"
+  ) %>%
+  filter(days_reporting >= 180) %>%
+  left_join(sensor_lookup, by = "location_id") %>%
+  arrange(desc(dip_rate_pct))
+
+print(
+  sensor_overall_dips %>%
+    select(
+      location_id,
+      sensor_name,
+      days_reporting,
+      dip_days,
+      dip_rate_pct,
+      median_dip_pct
+    ) %>%
+    slice_head(n = 15),
+  n = 15,
+  width = Inf
+)
+```
+
+```{r}
+#| label: sensor-dip-map
+
+sensor_dip_map_ready <- sensor_overall_dips %>%
+  filter(
+    !is.na(latitude),
+    !is.na(longitude)
+  )
+
+# Create colour scale
+sensor_palette <- leaflet::colorNumeric(
+  palette = "YlOrRd",
+  domain = sensor_dip_map_ready$dip_rate_pct
+)
+
+# Interactive map
+sensor_dip_map <- leaflet::leaflet(
+  data = sensor_dip_map_ready
+) %>%
+  leaflet::addTiles() %>%
+  leaflet::addCircleMarkers(
+    lng = ~longitude,
+    lat = ~latitude,
+    radius = 5,
+    color = ~sensor_palette(dip_rate_pct),
+    fillColor = ~sensor_palette(dip_rate_pct),
+    fillOpacity = 0.8,
+    weight = 1,
+    label = ~paste0(
+      sensor_name,
+      " | Dip rate: ", dip_rate_pct, "%"
+    ),
+    popup = ~paste0(
+      "<b>Sensor: </b>", sensor_name,
+      "<br><b>Location ID: </b>", location_id,
+      "<br><b>Reporting days: </b>", days_reporting,
+      "<br><b>Dip days: </b>", dip_days,
+      "<br><b>Dip rate: </b>", dip_rate_pct, "%",
+      "<br><b>Median dip: </b>", median_dip_pct, "%"
+    )
+  ) %>%
+  leaflet::addLegend(
+    position = "bottomleft",
+    pal = sensor_palette,
+    values = ~dip_rate_pct,
+    title = "Dip rate (%)",
+    opacity = 0.8
+  )
+
+sensor_dip_map
+
+```
