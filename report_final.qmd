@@ -499,9 +499,108 @@ snapshot_2022_full %>%
 
 ```{r}
 # 2024 snapshot data
+## Validate the 2024 Snapshot
+### Load 2024 Snapshot
 
+snapshot_2024 <- data.table::fread(
+  file.path(snapshot_dir, "2024_Pedestrian_Data.csv"),
+  select = c(
+    "Location_ID",
+    "Sensing_Date",
+    "HourDay",
+    "PedestrianCount"
+  )
+)
 ```
 
+### Compare with Existing 2024 Data
+
+```{r}
+comparison_2024 <- snapshot_2024 %>%
+  as_tibble() %>%
+  mutate(
+    Sensing_Date = as.Date(Sensing_Date)
+  ) %>%
+  inner_join(
+    pedestrian_full %>%
+      filter(lubridate::year(sensing_date) == 2024) %>%
+      select(
+        location_id,
+        sensing_date,
+        hourday,
+        pedestrian_count
+      ),
+    by = c(
+      "Location_ID" = "location_id",
+      "Sensing_Date" = "sensing_date",
+      "HourDay" = "hourday"
+    )
+  ) %>%
+  mutate(
+    difference = PedestrianCount - pedestrian_count
+  )
+
+comparison_2024 %>%
+  summarise(
+    matched_rows = n(),
+    different_rows = sum(difference != 0, na.rm = TRUE),
+    mean_difference = mean(difference, na.rm = TRUE),
+    max_absolute_difference = max(abs(difference), na.rm = TRUE)
+  )
+```
+
+## Validate the 2025 Snapshot
+
+### Load 2025 Snapshot
+
+```{r}
+
+snapshot_2025 <- data.table::fread(
+  file.path(snapshot_dir, "2025_Pedestrian_Data.csv"),
+  select = c(
+    "Location_ID",
+    "Sensing_Date",
+    "HourDay",
+    "PedestrianCount"
+  )
+)
+```
+
+
+```{r}
+comparison_2025 <- snapshot_2025 %>%
+  as_tibble() %>%
+  mutate(
+    Sensing_Date = as.Date(Sensing_Date)
+  ) %>%
+  inner_join(
+    pedestrian_full %>%
+      filter(lubridate::year(sensing_date) == 2025) %>%
+      select(
+        location_id,
+        sensing_date,
+        hourday,
+        pedestrian_count
+      ),
+    by = c(
+      "Location_ID" = "location_id",
+      "Sensing_Date" = "sensing_date",
+      "HourDay" = "hourday"
+    )
+  ) %>%
+  mutate(
+    difference = PedestrianCount - pedestrian_count
+  )
+
+
+comparison_2025 %>%
+  summarise(
+    matched_rows = n(),
+    different_rows = sum(difference != 0, na.rm = TRUE),
+    mean_difference = mean(difference, na.rm = TRUE),
+    max_absolute_difference = max(abs(difference), na.rm = TRUE)
+  )
+```
 
 ## Standardisation and Integration
 

@@ -1,38 +1,24 @@
+
 ---
 format:
   revealjs:
-    theme: default
-    css: styles.css
+    theme: night
     slide-number: true
     transition: fade
-title-slide-attributes:
-  data-visibility: hidden
-execute:
-  echo: false
-  warning: false
-  message: false
+    center: true
+    width: 1280
+    height: 720
 ---
 
+## PULSE OF MELBOURNE
 
-## Pulse of Melbourne {.cover-slide}
-
-::: {.cover-kicker}
-ETC5543 · BUSINESS ANALYTICS PROJECT
-:::
-
-::: {.cover-body}
-
-### How does Melbourne move—and how has that changed?
+### How does Melbourne move, and how has that changed?
 
 Exploring pedestrian rhythms, long-term changes
 and disruptions across the city.
 
-:::
-
-::: {.cover-footer}
+**ETC5543 | Business Analytics Project**
 
 City of Melbourne Pedestrian Counting System
 
 Monash University · 2026
-
-:::
