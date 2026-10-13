@@ -197,3 +197,26 @@
   padding: 0.45em 0.65em;
   border-bottom: 1px solid #DDE6E4;
 }
+
+
+/* TITLE SLIDE — TEAM MEMBERS */
+
+.reveal #cover .cover-team {
+  margin-top: 1.1em;
+}
+
+.reveal #cover .cover-team p:first-child {
+  color: #42C6B4;
+  font-size: 0.33em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.5em;
+}
+
+.reveal #cover .cover-team p:last-child {
+  color: #FFFFFF;
+  font-size: 0.42em;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
