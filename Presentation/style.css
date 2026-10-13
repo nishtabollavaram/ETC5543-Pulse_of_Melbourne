@@ -1,86 +1,199 @@
+/* PULSE OF MELBOURNE — PRESENTATION THEME */
 
-/* Overall presentation */
+:root {
+  --navy: #102231;
+  --teal: #42C6B4;
+  --muted: #BDCDD6;
+  --cream: #FAF9F5;
+}
+
+/* General theme */
+
 .reveal {
-  font-family: Arial, sans-serif;
-  color: #102231;
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
-/* All slides */
-.reveal .slides section {
-  box-sizing: border-box;
+.reveal h1,
+.reveal h2,
+.reveal h3 {
+  font-family: "Segoe UI", Arial, sans-serif;
+  text-transform: none;
 }
 
-/* First slide */
-.reveal .slides section.cover-slide {
-  background: #102231 !important;
-  color: white !important;
-  height: 100%;
-  padding: 65px 80px !important;
+/* Cover slide */
+
+.reveal #cover {
+  color: white;
   text-align: left;
 }
 
-/* Main heading */
-.reveal .slides section.cover-slide h2 {
-  color: white !important;
-  font-size: 2.6em;
+.reveal #cover > h2 {
+  display: none;
+}
+
+.reveal #cover p {
+  margin: 0;
+}
+
+/* Header */
+
+.reveal #cover .cover-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 2em;
+}
+
+.reveal #cover .cover-top p {
+  color: #CDD9E1;
+  font-size: 0.33em;
+  letter-spacing: 0.08em;
+}
+
+.reveal #cover .cover-top p:first-child {
+  color: var(--teal);
+  font-weight: 700;
+}
+
+/* Two-column layout */
+
+.reveal #cover .cover-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5em;
+  margin-bottom: 2em;
+}
+
+.reveal #cover .cover-left {
+  flex: 1.5;
+  min-width: 0;
+}
+
+.reveal #cover .cover-right {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Main title */
+
+.reveal #cover .cover-title {
+  margin-bottom: 0.6em;
+}
+
+.reveal #cover .cover-title p {
+  color: white;
+  font-size: 1.5em;
   font-weight: 800;
-  margin: 45px 0 35px 0;
-  text-transform: uppercase;
+  line-height: 1.06;
   letter-spacing: -0.04em;
 }
 
-/* Small label */
-.reveal .slides section.cover-slide .cover-kicker {
-  color: #42c6b4;
-  font-size: 0.55em;
-  font-weight: bold;
-  letter-spacing: 0.1em;
+/* Teal accent */
+
+.reveal #cover .teal-line {
+  width: 65px;
+  height: 4px;
+  background: var(--teal);
+  border-radius: 3px;
+  margin-bottom: 0.8em;
 }
 
-/* Research question and subtitle */
-.reveal .slides section.cover-slide .cover-body {
-  border-left: 5px solid #42c6b4;
-  padding-left: 25px;
-  margin-top: 30px;
-  max-width: 850px;
+/* Research question */
+
+.reveal #cover .cover-question {
+  margin-bottom: 0.65em;
 }
 
-.reveal .slides section.cover-slide h3 {
-  color: white !important;
-  font-size: 1.15em;
+.reveal #cover .cover-question p {
+  color: white;
+  font-size: 0.68em;
+  font-weight: 700;
   line-height: 1.4;
-  margin: 0 0 20px 0;
 }
 
-.reveal .slides section.cover-slide .cover-body p {
-  color: #b9cbd4;
-  font-size: 0.65em;
-  line-height: 1.5;
+/* Description */
+
+.reveal #cover .cover-description p {
+  color: var(--muted);
+  font-size: 0.47em;
+  line-height: 1.55;
+}
+
+/* Wave illustration */
+
+.reveal #cover .cover-right img {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 /* Footer */
-.reveal .slides section.cover-slide .cover-footer {
-  position: absolute;
-  bottom: 45px;
-  left: 80px;
-  right: 80px;
-  border-top: 1px solid #3b5564;
-  padding-top: 15px;
-  color: #b9cbd4;
-  font-size: 0.45em;
+
+.reveal #cover .cover-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border-top: 1px solid #37515E;
+  padding-top: 0.75em;
 }
 
-.reveal .slides section.cover-slide .cover-footer p {
-  margin: 5px 0;
+.reveal #cover .cover-bottom p {
+  color: #A9C0CD;
+  font-size: 0.29em;
+  letter-spacing: 0.03em;
 }
 
-/* Upcoming slides */
-.reveal .slides section:not(.cover-slide) {
-  background: #faf9f5;
+.reveal #cover .cover-bottom p:last-child {
+  color: var(--teal);
+}
+
+/* Content slides */
+
+.reveal .slides section:not(#cover) {
   text-align: left;
+  color: var(--navy);
 }
 
-.reveal .slides section:not(.cover-slide) h2 {
-  color: #102231;
+.reveal .slides section:not(#cover) h2 {
+  color: var(--navy);
+  font-size: 1.3em;
   font-weight: 800;
+  padding-bottom: 0.25em;
+  border-bottom: 3px solid var(--teal);
+}
+
+.reveal .slides section:not(#cover) strong {
+  color: #137D73;
+}
+
+/* Figures */
+
+.reveal .slides section:not(#cover) img {
+  border: none;
+  box-shadow: none;
+}
+
+/* Tables */
+
+.reveal table {
+  border-collapse: collapse;
+  font-size: 0.7em;
+}
+
+.reveal table th {
+  background: #E5F2EF;
+  color: var(--navy);
+}
+
+.reveal table th,
+.reveal table td {
+  padding: 0.45em 0.65em;
+  border-bottom: 1px solid #DDE6E4;
 }
