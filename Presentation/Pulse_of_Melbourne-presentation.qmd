@@ -43,6 +43,7 @@ MONASH UNIVERSITY · 2026
 
 :::
 
+
 ::: {.cover-description}
 
 Exploring pedestrian rhythms, long-term changes
@@ -50,11 +51,19 @@ and disruptions across the city.
 
 :::
 
+::: {.cover-team}
+
+**PRESENTED BY**
+
+Richa Anghan - 35760982 · Team Member 2 · Team Member 3
+
+:::
+
 :::
 
 ::: {.cover-right}
 
-![](wave.svg){fig-alt="Decorative flowing wave illustration"}
+![](wave.png){width="100%" fig-alt="Decorative flowing wave illustration"}
 
 :::
 
