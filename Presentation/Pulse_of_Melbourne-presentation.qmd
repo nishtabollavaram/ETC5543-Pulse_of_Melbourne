@@ -12,7 +12,7 @@ execute:
   message: false
 ---
 
-## {#cover background-color="#102231"}
+## {#cover background-color="#FAF9F5"}
 
 ::: {.cover-top}
 
@@ -76,3 +76,200 @@ CITY OF MELBOURNE · PEDESTRIAN COUNTING SYSTEM
 RHYTHM / CHANGE / DISRUPTION
 
 :::
+
+
+## {#motivation background-color="#FAF9F5"}
+
+::: {.motivation-top}
+
+**01 / THE MOTIVATION**
+
+PULSE OF MELBOURNE
+
+:::
+
+::: {.motivation-title}
+
+**A changing city needs more than just foot traffic numbers.**
+
+:::
+
+::: {.motivation-line}
+:::
+
+::: {.motivation-intro}
+
+Pedestrian activity reveals when people use Melbourne,
+how patterns vary across locations, and how these
+patterns evolve over time.
+
+:::
+
+:::: {.motivation-cards}
+
+::: {.motivation-card}
+
+**01 / WHEN**
+
+Daily, weekly and seasonal pedestrian rhythms.
+
+:::
+
+::: {.motivation-card}
+
+**02 / WHERE**
+
+Locations experiencing important changes in activity.
+
+:::
+
+::: {.motivation-card}
+
+**03 / HOW IT CHANGES**
+
+Long-term shifts, disruptions and unusual periods.
+
+:::
+
+::::
+
+::: {.motivation-takeaway}
+
+**OUR GOAL**
+
+Turn pedestrian counts into useful evidence for
+understanding Melbourne's changing activity.
+
+:::
+
+::: {.motivation-bottom}
+
+
+:::
+
+::: {.notes}
+Pedestrian counts tell us more than how busy
+Melbourne is.
+
+We want to understand when people use the city,
+how activity differs across locations, and how
+these patterns have changed over time.
+
+These insights may help the City of Melbourne
+understand changing pedestrian demand and inform
+planning decisions.
+:::
+
+
+## {#data-preparation background-color="#FAF9F5"}
+
+::: {.data-top}
+
+**02 / DATA & PREPARATION**
+
+PULSE OF MELBOURNE
+
+:::
+
+::: {.data-title}
+
+**From raw records to reliable pedestrian data**
+
+:::
+
+::: {.data-line}
+:::
+
+:::: {.data-sources}
+
+::: {.data-source}
+
+**01 / HISTORICAL**
+
+### Historical CSV
+
+2009–2022
+
+source: City of Melbourne
+
+:::
+
+::: {.data-source}
+
+**02 / CURRENT**
+
+### Open Data API
+
+2024-2026
+
+source: City of Melbourne
+
+:::
+
+::: {.data-source}
+
+**03 / PROVIDED**
+
+### Data snapshots
+
+2022–2025
+
+Provided by City of Melbourne Data Operations Manager
+
+:::
+
+::::
+
+::: {.data-process}
+
+**STANDARDISE → REPAIR → VALIDATE → INTEGRATE**
+
+Standardised data formats · Reconstructed duplicated
+hour labels · Cross-checked overlapping records
+
+:::
+
+::: {.data-result}
+
+**pedestrian_full**
+
+**7,523,688 hourly observations**
+
+May 2009 – October 2026
+
+:::
+
+::: {.data-support}
+
+**SUPPORTING DATASETS**
+
+Event permits · Public holidays · Daily weather ·
+Sensor location metadata
+
+:::
+
+::: {.notes}
+
+We combined pedestrian counts from three sources:
+historical CSV records, the recent Open Data API,
+and annual data snapshots received from the City
+of Melbourne Data Operations Manager in September 2026.
+
+The snapshots cover 2022 to 2025 and helped us
+recover missing data, particularly for 2023.
+
+We also repaired duplicated historical hour labels
+rather than simply deleting the affected records.
+We cross-checked overlapping sources and used the
+validated snapshots for 2022 to 2025.
+
+Our final dataset contains approximately 7.52 million
+hourly pedestrian records, with no remaining duplicate
+sensor-date-hour keys or missing pedestrian counts.
+
+Finally, we incorporated supporting datasets on
+events, public holidays, weather and sensor locations
+for the later analyses.
+:::
+
+
