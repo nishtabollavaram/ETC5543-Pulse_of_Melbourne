@@ -220,3 +220,438 @@
   line-height: 1.5;
 }
 
+/* =====================================
+   SLIDE 1 — LIGHT THEME
+   ===================================== */
+
+.reveal #cover {
+  color: #102231;
+}
+
+.reveal #cover .cover-top p {
+  color: #506474;
+}
+
+.reveal #cover .cover-top p:first-child {
+  color: #147D73;
+}
+
+.reveal #cover .cover-title p {
+  color: #102231;
+}
+
+.reveal #cover .teal-line {
+  background: #147D73;
+}
+
+.reveal #cover .cover-question p {
+  color: #102231;
+}
+
+.reveal #cover .cover-description p {
+  color: #506474;
+}
+
+.reveal #cover .cover-team p:first-child {
+  color: #147D73;
+}
+
+.reveal #cover .cover-team p:last-child {
+  color: #102231;
+}
+
+.reveal #cover .cover-bottom {
+  border-top-color: #DCE7E5;
+}
+
+.reveal #cover .cover-bottom p {
+  color: #506474;
+}
+
+.reveal #cover .cover-bottom p:last-child {
+  color: #147D73;
+}
+
+/* =====================================
+   SLIDE 2 — MOTIVATION
+   MATCHING LIGHT THEME
+   ===================================== */
+
+.reveal #motivation {
+  color: #102231;
+  text-align: left;
+}
+
+/* Hide Quarto's empty slide heading */
+.reveal #motivation > h2 {
+  display: none;
+}
+
+.reveal #motivation p {
+  margin: 0;
+}
+
+/* Top information */
+.reveal #motivation .motivation-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  margin-bottom: 0.8em;
+}
+
+.reveal #motivation .motivation-top p {
+  font-size: 0.32em;
+  color: #506474;
+}
+
+.reveal #motivation .motivation-top p:first-child {
+  color: #147D73;
+  font-weight: 700;
+}
+
+/* Main headline */
+.reveal #motivation .motivation-title p {
+  font-size: 1.05em;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #102231;
+}
+
+.reveal #motivation .motivation-title strong {
+  color: #102231;
+}
+
+/* Teal accent line */
+.reveal #motivation .motivation-line {
+  width: 65px;
+  height: 4px;
+  background: #147D73;
+  border-radius: 3px;
+  margin: 0.5em 0 0.65em;
+}
+
+/* Introductory description */
+.reveal #motivation .motivation-intro p {
+  color: #506474;
+  font-size: 0.52em;
+  line-height: 1.45;
+}
+
+/* Three matching cards */
+.reveal #motivation .motivation-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45em;
+  margin: 0.85em 0;
+}
+
+.reveal #motivation .motivation-card {
+  background: #FFFFFF;
+  border: 1px solid #DCE7E5;
+  border-top: 4px solid #147D73;
+  border-radius: 8px;
+  padding: 0.5em;
+  min-width: 0;
+}
+
+.reveal #motivation .motivation-card p {
+  font-size: 0.43em;
+  color: #506474;
+  line-height: 1.45;
+}
+
+.reveal #motivation .motivation-card p:first-child {
+  color: #147D73;
+  margin-bottom: 0.55em;
+  font-weight: 700;
+}
+
+/* Key takeaway */
+.reveal #motivation .motivation-takeaway {
+  border-left: 4px solid #147D73;
+  padding: 0.15em 0.55em;
+  margin: 0.6em 0;
+}
+
+.reveal #motivation .motivation-takeaway p {
+  font-size: 0.44em;
+  color: #102231;
+  line-height: 1.4;
+}
+
+.reveal #motivation .motivation-takeaway p:first-child {
+  color: #147D73;
+  font-weight: 700;
+  margin-bottom: 0.3em;
+}
+
+/* Consistent footer */
+.reveal #motivation .motivation-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1em;
+  border-top: 1px solid #DCE7E5;
+  padding-top: 0.5em;
+  margin-top: 0.7em;
+}
+
+.reveal #motivation .motivation-bottom p {
+  color: #506474;
+  font-size: 0.27em;
+}
+
+.reveal #motivation .motivation-bottom p:last-child {
+  color: #147D73;
+}
+
+/* ==========================================
+   SLIDE 3 — DATA & PREPARATION
+   ========================================== */
+
+.reveal #data-preparation {
+  color: #102231;
+  text-align: left;
+}
+
+.reveal #data-preparation > h2 {
+  display: none;
+}
+
+.reveal #data-preparation p {
+  margin: 0;
+}
+
+/* Top labels */
+
+.reveal #data-preparation .data-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  margin-bottom: 0.7em;
+}
+
+.reveal #data-preparation .data-top p {
+  font-size: 0.32em;
+  color: #506474;
+}
+
+.reveal #data-preparation .data-top p:first-child {
+  color: #147D73;
+  font-weight: 700;
+}
+
+/* Main title */
+
+.reveal #data-preparation .data-title p {
+  color: #102231;
+  font-size: 0.98em;
+  line-height: 1.22;
+  font-weight: 800;
+}
+
+.reveal #data-preparation .data-title strong {
+  color: #102231;
+}
+
+/* Accent line */
+
+.reveal #data-preparation .data-line {
+  width: 65px;
+  height: 4px;
+  background: #147D73;
+  border-radius: 3px;
+  margin: 0.5em 0 0.65em;
+}
+
+/* Three data source cards */
+
+.reveal #data-preparation .data-sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45em;
+  margin: 0.7em 0;
+}
+
+.reveal #data-preparation .data-source {
+  background: #FFFFFF;
+  border: 1px solid #DCE7E5;
+  border-top: 4px solid #147D73;
+  border-radius: 8px;
+  padding: 0.48em;
+  min-width: 0;
+}
+
+.reveal #data-preparation .data-source p {
+  font-size: 0.36em;
+  color: #506474;
+  line-height: 1.4;
+  margin: 0.15em 0;
+}
+
+.reveal #data-preparation .data-source p:first-child {
+  color: #147D73;
+  font-weight: 700;
+}
+
+.reveal #data-preparation .data-source h3 {
+  color: #102231;
+  font-size: 0.57em;
+  font-weight: 750;
+  margin: 0.35em 0;
+}
+
+/* Processing stage */
+
+.reveal #data-preparation .data-process {
+  text-align: center;
+  border: 1px dashed #8AB8AF;
+  border-radius: 7px;
+  padding: 0.4em;
+  margin: 0.55em 0;
+}
+
+.reveal #data-preparation .data-process p {
+  color: #506474;
+  font-size: 0.34em;
+  line-height: 1.4;
+  margin: 0.15em 0;
+}
+
+.reveal #data-preparation .data-process p:first-child {
+  color: #147D73;
+  font-size: 0.43em;
+  font-weight: 700;
+}
+
+/* Final dataset result */
+
+.reveal #data-preparation .data-result {
+  background: #EAF4F1;
+  border-left: 4px solid #147D73;
+  border-radius: 6px;
+  text-align: center;
+  padding: 0.4em;
+  margin: 0.6em 0;
+}
+
+.reveal #data-preparation .data-result p {
+  color: #506474;
+  font-size: 0.35em;
+  line-height: 1.4;
+  margin: 0.15em 0;
+}
+
+.reveal #data-preparation .data-result p:first-child {
+  color: #102231;
+  font-size: 0.72em;
+  font-weight: 800;
+}
+
+.reveal #data-preparation .data-result p:nth-child(2) {
+  color: #102231;
+  font-size: 0.42em;
+  font-weight: 700;
+}
+
+/* Supporting datasets */
+
+.reveal #data-preparation .data-support {
+  background: #FFFFFF;
+  border: 1px solid #DCE7E5;
+  border-radius: 7px;
+  padding: 0.38em 0.55em;
+  margin-top: 0.55em;
+}
+
+.reveal #data-preparation .data-support p {
+  color: #506474;
+  font-size: 0.38em;
+  line-height: 1.4;
+  margin: 0.15em 0;
+}
+
+.reveal #data-preparation .data-support p:first-child {
+  color: #147D73;
+  font-weight: 700;
+}
+
+/* SLIDE 3 — FIX VERTICAL OVERFLOW */
+
+/* Reduce spacing below the heading */
+.reveal #data-preparation .data-top {
+  margin-bottom: 0.35em;
+}
+
+.reveal #data-preparation .data-title p {
+  font-size: 0.85em;
+  line-height: 1.15;
+}
+
+.reveal #data-preparation .data-line {
+  margin: 0.3em 0 0.4em;
+}
+
+/* Make source cards more compact */
+.reveal #data-preparation .data-sources {
+  margin: 0.4em 0;
+  gap: 0.4em;
+}
+
+.reveal #data-preparation .data-source {
+  padding: 0.32em 0.4em;
+}
+
+.reveal #data-preparation .data-source h3 {
+  margin: 0.2em 0;
+}
+
+/* Reduce processing box height */
+.reveal #data-preparation .data-process {
+  padding: 0.25em;
+  margin: 0.3em 0;
+}
+
+/* Reduce final dataset box height */
+.reveal #data-preparation .data-result {
+  padding: 0.25em;
+  margin: 0.3em 0;
+}
+
+.reveal #data-preparation .data-result p {
+  line-height: 1.25;
+  margin: 0.1em 0;
+}
+
+/* Keep supporting datasets visible */
+.reveal #data-preparation .data-support {
+  padding: 0.25em 0.45em;
+  margin-top: 0.3em;
+}
+/* Slide 3 — Final dataset box spacing */
+
+.reveal #data-preparation .data-result {
+  padding: 0.45em 0.4em;
+  margin: 0.4em 0;
+  text-align: center;
+}
+
+.reveal #data-preparation .data-result p {
+  margin: 0.12em 0;
+  line-height: 1.3;
+}
+
+/* Dataset name */
+.reveal #data-preparation .data-result p:first-child {
+  margin-bottom: 0.25em;
+}
+
+/* Observation count */
+.reveal #data-preparation .data-result p:nth-child(2) {
+  margin-bottom: 0.18em;
+}
+
+/* Date range */
+.reveal #data-preparation .data-result p:last-child {
+  margin-bottom: 0;
+}

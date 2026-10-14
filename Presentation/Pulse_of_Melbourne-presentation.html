@@ -127,7 +127,7 @@
     <div class="slides">
 
 
-<section id="cover" class="slide level2 center" data-background-color="#102231">
+<section id="cover" class="slide level2 center" data-background-color="#FAF9F5">
 <h2></h2>
 <div class="cover-top">
 <p>ETC5543 · BUSINESS ANALYTICS PROJECT</p>
@@ -161,6 +161,121 @@
 <p>CITY OF MELBOURNE · PEDESTRIAN COUNTING SYSTEM</p>
 <p>RHYTHM / CHANGE / DISRUPTION</p>
 </div>
+</section>
+<section id="motivation" class="slide level2 center" data-background-color="#FAF9F5">
+<h2></h2>
+<div class="motivation-top">
+<p><strong>01 / THE MOTIVATION</strong></p>
+<p>PULSE OF MELBOURNE</p>
+</div>
+<div class="motivation-title">
+<p><strong>A changing city needs more than just foot traffic numbers.</strong></p>
+</div>
+<div class="motivation-line">
+
+</div>
+<div class="motivation-intro">
+<p>Pedestrian activity reveals when people use Melbourne, how patterns vary across locations, and how these patterns evolve over time.</p>
+</div>
+<div class="motivation-cards">
+<div class="motivation-card">
+<p><strong>01 / WHEN</strong></p>
+<p>Daily, weekly and seasonal pedestrian rhythms.</p>
+</div>
+<div class="motivation-card">
+<p><strong>02 / WHERE</strong></p>
+<p>Locations experiencing important changes in activity.</p>
+</div>
+<div class="motivation-card">
+<p><strong>03 / HOW IT CHANGES</strong></p>
+<p>Long-term shifts, disruptions and unusual periods.</p>
+</div>
+</div>
+<div class="motivation-takeaway">
+<p><strong>OUR GOAL</strong></p>
+<p>Turn pedestrian counts into useful evidence for understanding Melbourne’s changing activity.</p>
+</div>
+<div class="motivation-bottom">
+
+</div>
+<aside class="notes">
+<p>Pedestrian counts tell us more than how busy Melbourne is.</p>
+<p>We want to understand when people use the city, how activity differs across locations, and how these patterns have changed over time.</p>
+<p>These insights may help the City of Melbourne understand changing pedestrian demand and inform planning decisions.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="data-preparation" class="slide level2 center" data-background-color="#FAF9F5">
+<h2></h2>
+<div class="data-top">
+<p><strong>02 / DATA &amp; PREPARATION</strong></p>
+<p>PULSE OF MELBOURNE</p>
+</div>
+<div class="data-title">
+<p><strong>From raw records to reliable pedestrian data</strong></p>
+</div>
+<div class="data-line">
+
+</div>
+<div class="data-sources">
+<div class="data-source">
+<p><strong>01 / HISTORICAL</strong></p>
+<h3 id="historical-csv">Historical CSV</h3>
+<p>2009–2022</p>
+<p>source: City of Melbourne</p>
+</div>
+<div class="data-source">
+<p><strong>02 / CURRENT</strong></p>
+<h3 id="open-data-api">Open Data API</h3>
+<p>2024-2026</p>
+<p>source: City of Melbourne</p>
+</div>
+<div class="data-source">
+<p><strong>03 / PROVIDED</strong></p>
+<h3 id="data-snapshots">Data snapshots</h3>
+<p>2022–2025</p>
+<p>Provided by City of Melbourne Data Operations Manager</p>
+</div>
+</div>
+<div class="data-process">
+<p><strong>STANDARDISE → REPAIR → VALIDATE → INTEGRATE</strong></p>
+<p>Standardised data formats · Reconstructed duplicated hour labels · Cross-checked overlapping records</p>
+</div>
+<div class="data-result">
+<p><strong>pedestrian_full</strong></p>
+<p><strong>7,523,688 hourly observations</strong></p>
+<p>May 2009 – October 2026</p>
+</div>
+<div class="data-support">
+<p><strong>SUPPORTING DATASETS</strong></p>
+<p>Event permits · Public holidays · Daily weather · Sensor location metadata</p>
+</div>
+<aside class="notes">
+<p>We combined pedestrian counts from three sources: historical CSV records, the recent Open Data API, and annual data snapshots received from the City of Melbourne Data Operations Manager in September 2026.</p>
+<p>The snapshots cover 2022 to 2025 and helped us recover missing data, particularly for 2023.</p>
+<p>We also repaired duplicated historical hour labels rather than simply deleting the affected records. We cross-checked overlapping sources and used the validated snapshots for 2022 to 2025.</p>
+<p>Our final dataset contains approximately 7.52 million hourly pedestrian records, with no remaining duplicate sensor-date-hour keys or missing pedestrian counts.</p>
+<p>Finally, we incorporated supporting datasets on events, public holidays, weather and sensor locations for the later analyses.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
 
 </section>
     </div>
