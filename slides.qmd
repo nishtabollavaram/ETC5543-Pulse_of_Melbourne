@@ -1,0 +1,183 @@
+---
+title: "Pulse of Melbourne"
+subtitle: "Post-COVID Pedestrian Recovery, 2022–2025"
+format:
+  revealjs:
+    echo: false
+    warning: false
+    message: false
+    embed-resources: true
+    theme: white
+    slide-number: true
+    progress: true
+---
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(ggrepel)
+
+hist_file <- "pedestrian_counts_processed.csv"
+new_files <- sprintf("%d_Pedestrian_Data.csv", 2022:2025)
+new <- rbindlist(lapply(new_files, fread), use.names = TRUE, fill = TRUE)
+new[, sensing_date := as.Date(Sensing_Date)]
+new[, year := as.integer(format(sensing_date, "%Y"))]
+new[, month := as.integer(format(sensing_date, "%m"))]
+new[, dow := as.integer(format(sensing_date, "%u"))]
+
+coords <- new[, .(lat = mean(Latitude, na.rm = TRUE),
+                  lon = mean(Longitude, na.rm = TRUE)), by = Location_ID]
+
+hist <- fread(hist_file, select = c("sensing_date", "location_id", "pedestriancount",
+                                    "year", "month",
+                                    "covid_phase", "mega_event", "is_public_holiday"))
+hist[, sensing_date := as.Date(sensing_date)]
+hist[, dow := as.integer(format(sensing_date, "%u"))]
+
+hist_day <- hist[year >= 2015 & year <= 2019,
+                 .(daily = sum(as.numeric(pedestriancount))),
+                 by = .(location_id, sensing_date, year, month)]
+baseline <- hist_day[, .(base = median(daily, na.rm = TRUE), yrs = uniqueN(year)),
+                     by = .(location_id, month)]
+baseline <- baseline[yrs >= 3]
+
+new_day <- new[year >= 2024,
+               .(daily = sum(as.numeric(PedestrianCount))),
+               by = .(Location_ID, sensing_date, month)]
+good <- new_day[, .N, by = Location_ID][N >= 200, Location_ID]
+recent <- new_day[Location_ID %in% good,
+                  .(recent = median(daily, na.rm = TRUE)),
+                  by = .(Location_ID, month)]
+
+chg <- baseline[recent, on = .(location_id = Location_ID, month = month), nomatch = 0]
+chg[, pct := recent / base * 100 - 100]
+loc <- chg[, .(change = median(pct, na.rm = TRUE), n = .N), by = location_id]
+loc <- loc[n >= 3]
+loc <- merge(loc, coords, by.x = "location_id", by.y = "Location_ID")
+setorder(loc, change)
+loc[, sensor := factor(location_id, levels = location_id)]
+
+h_city <- hist[, .(d = sum(as.numeric(pedestriancount))),
+               by = .(location_id, sensing_date, year, month, dow)]
+h_city <- h_city[, .(city = median(d, na.rm = TRUE)),
+                 by = .(sensing_date, year, month, dow)]
+n_city <- new[, .(d = sum(as.numeric(PedestrianCount))),
+              by = .(Location_ID, sensing_date, year, month, dow)]
+n_city <- n_city[, .(city = median(d, na.rm = TRUE)),
+                 by = .(sensing_date, year, month, dow)]
+h_city <- h_city[sensing_date <= as.Date("2022-11-14")]
+n_city <- n_city[sensing_date > as.Date("2022-11-14")]
+city <- rbindlist(list(h_city, n_city), use.names = TRUE)
+city <- city[!is.na(city) & city > 0]
+cal <- city[year <= 2019, .(exp = median(city, na.rm = TRUE)), by = .(month, dow)]
+city <- merge(city, cal, by = c("month", "dow"))
+city[, resid := city - exp]
+
+flags <- hist[, .(mega = any(mega_event), hol = any(is_public_holiday),
+                  ph = covid_phase[1]),
+              by = .(sensing_date = as.Date(sensing_date))]
+city <- merge(city, flags, by = "sensing_date", all.x = TRUE)
+busy_new <- city[year >= 2022][order(-resid)][1:8, sensing_date]
+busy_old <- city[year <= 2019][order(-resid)][1:4, sensing_date]
+quiet <- city[order(resid)][1:10, sensing_date]
+city[, type := "normal"]
+city[sensing_date %in% busy_new, type := "recent_busy"]
+city[sensing_date %in% busy_old, type := "old_busy"]
+city[sensing_date %in% quiet, type := "quiet"]
+city[, lab := ""]
+city[type == "recent_busy" & mega == TRUE, lab := "mega event"]
+city[type == "recent_busy" & mega == FALSE & hol == TRUE, lab := "holiday"]
+city[type == "recent_busy" & lab == "", lab := format(sensing_date, "%Y-%m-%d")]
+city[type == "old_busy" & mega == TRUE, lab := "mega event"]
+city[type == "old_busy" & lab == "", lab := format(sensing_date, "%Y-%m-%d")]
+city[type == "quiet" & !is.na(ph) & ph != "Normal", lab := ph]
+city[type == "quiet" & lab == "", lab := format(sensing_date, "%Y-%m-%d")]
+covid <- city[!is.na(ph) & ph != "Normal", range(sensing_date)]
+```
+
+## Project progress
+
+| Stage | Status |
+|---|---|
+| Data acquisition (2009–2025, 110 sensors) | Done |
+| Data cleaning & hourly aggregation | Done |
+| RQ5: post-COVID spatial recovery | Done |
+| RQ6: calendar-adjusted outlier days | Done |
+| Interpretation & write-up | In progress |
+| Final report & presentation | This week |
+
+::: {.notes}
+Good morning everyone. Today I'd like to walk you through where the project stands. Over the past few weeks I've pulled together the full pedestrian counter dataset from the City of Melbourne, covering hourly counts from 2009 right through to the end of 2025, across 110 sensor locations. I've finished the cleaning and aggregation work, and I've now completed the two core research questions. RQ5 looks at whether different parts of the city recovered unevenly after COVID, and RQ6 identifies which days were unusually busy or quiet once we adjust for the calendar. Both analyses are done and the key charts are on the next slides. Right now I'm working through the interpretation and the written report, and the final submission is due this week. What I want to focus on today is what the numbers are actually telling us about how Melbourne is walking again.
+:::
+
+## Where Melbourne stands in 2025
+
+```{r}
+ggplot(loc, aes(lon, lat, colour = change)) +
+  geom_point(size = 5, alpha = 0.9) +
+  coord_quickmap() +
+  scale_colour_gradient2(low = "#d73027", mid = "grey92", high = "#1a9850",
+                         midpoint = 0, labels = function(x) paste0(x, "%")) +
+  labs(x = NULL, y = NULL, colour = "Change vs\npre-COVID") +
+  theme_minimal(base_size = 14)
+```
+
+::: {.notes}
+The map below shows all pedestrian counters in central Melbourne, categorized according to whether their 2024/25 median daily count is below or above the same months from 2015 to 2019. The color red shows that the counter's count is below the pre-pandemic level, while green shows that it has recovered or surpassed that level. Most counters are in the red/orange category; the median for 40 locations is minus 20 percent. A few counters in the CBD have recovered above the baseline, but some in the west and south are below 50 percent.
+:::
+
+## Which streets have recovered, which have not
+
+```{r}
+ggplot(loc, aes(change, sensor)) +
+  geom_segment(aes(x = 0, xend = change, yend = sensor, colour = change >= 0),
+               linewidth = 0.8) +
+  geom_point(aes(colour = change >= 0), size = 3) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40") +
+  scale_colour_manual(values = c("TRUE" = "#1a9850", "FALSE" = "#d73027"),
+                      labels = c("TRUE" = "Recovered", "FALSE" = "Still down")) +
+  labs(x = "Change vs pre-COVID baseline (%)", y = NULL, colour = NULL) +
+  theme_minimal(base_size = 10)
+```
+
+::: {.notes}
+A ranking of the sensors in order from worst to best serves to highlight the disparity. The five sensors which have recovered completely (IDs 11, 25, 8, 27 and 42) are located in the very heart of the CBD around Bourke and Collins Streets, where there has been a strong recovery of retail and office pedestrian activity. In contrast, the sensors with readings that are 50 to 70 percent below their pre-COVID levels (sensors 6, 10, 9 and 39) are found on peripheral, wider streets where commuter driving has substituted for pedestrian activity.
+:::
+
+## Days that stood out, 2009–2025
+
+```{r}
+ggplot(city, aes(sensing_date, resid)) +
+  annotate("rect", xmin = covid[1], xmax = covid[2],
+           ymin = -Inf, ymax = Inf, fill = "grey80", alpha = 0.35) +
+  geom_line(colour = "grey75", linewidth = 0.3) +
+  geom_point(data = city[type == "recent_busy"], colour = "#d73027", size = 3) +
+  geom_point(data = city[type == "old_busy"], colour = "#e6550d", size = 2.5) +
+  geom_point(data = city[type == "quiet"], colour = "#2166ac", size = 3) +
+  geom_text_repel(data = city[type != "normal"], aes(label = lab),
+                  size = 3, max.overlaps = 15, min.segment.length = 0) +
+  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
+  scale_y_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
+  labs(x = NULL, y = "Residual vs calendar expectation") +
+  theme_minimal(base_size = 12)
+```
+
+::: {.notes}
+This graph strips away the calendar pattern – same month, same day of week, 2009-2019 base period – so that you can see what days really stood out. The grey bar shows the COVID period, and the blue dots within it show the lockdowns: Layer 4, Stages 2 and 3, and Lockdowns 6 to 8, which are the lowest negative residuals of the entire sequence. The red dots on the right show the busiest days since 2022: New Year's Eves of 2022 and 2023, and event days in June, July, and August coinciding with the Australian Open, Moomba, and Spring Racing Carnival.
+:::
+
+## Key findings and next steps
+
+- Median CBD foot traffic in 2024–25 is still **~20% below** the 2015–19 baseline.
+- Recovery is **spatially uneven**: retail cores near Bourke/Collins are back; peripheral arterials remain down 50–70%.
+- The deepest negative residuals on record are the **2020–21 lockdowns**, not holidays or weather.
+- The busiest post-COVID days are **NYE and major events**, not ordinary weekdays — leisure-driven demand has returned faster than commuter demand.
+- Next: write up results, test sensitivity to baseline window, add a brief policy discussion.
+
+::: {.notes}
+In sum, Melbourne has not yet fully recovered its pre-COVID pedestrian numbers, and the discrepancy is unevenly distributed. While the shopping district is bustling again, there is less walking going on in the broader peripheral streets. With the calendar adjusted, the results indicate that the peak periods are due to special events and New Year's Eve, while the everyday working week continues to suffer – in line with hybrid work schedules. The lock-down periods in 2020-21 continue to be the worst negative outliers in 16 years of data. Over the next few days I'll finalise the write-up, run a sensitivity check on the baseline years, and wrap up the report. Happy to take any questions.
+:::
+
+Included is some information about a GitHub repository and its language composition.
+repo: nishtabollavaram/ETC5543-Pulse_of_Melbourne
+repo ID: 1333646964
