@@ -17,65 +17,59 @@ library(data.table)
 library(ggplot2)
 library(ggrepel)
 
-hist_file <- "pedestrian_counts_processed.csv"
-new_files <- sprintf("%d_Pedestrian_Data.csv", 2022:2025)
-new <- rbindlist(lapply(new_files, fread), use.names = TRUE, fill = TRUE)
-new[, sensing_date := as.Date(Sensing_Date)]
-new[, year := as.integer(format(sensing_date, "%Y"))]
-new[, month := as.integer(format(sensing_date, "%m"))]
-new[, dow := as.integer(format(sensing_date, "%u"))]
+pedestrian_full <- fread("pedestrian_full.csv")
+pedestrian_full[, sensing_date := as.Date(sensing_date)]
+pedestrian_full[, year := as.integer(format(sensing_date, "%Y"))]
+pedestrian_full[, month := as.integer(format(sensing_date, "%m"))]
+pedestrian_full[, dow := as.integer(format(sensing_date, "%u"))]
 
-coords <- new[, .(lat = mean(Latitude, na.rm = TRUE),
-                  lon = mean(Longitude, na.rm = TRUE)), by = Location_ID]
+coords <- pedestrian_full[!is.na(lat),
+                          .(lat = mean(lat, na.rm = TRUE),
+                            lon = mean(lon, na.rm = TRUE)), by = location_id]
 
-hist <- fread(hist_file, select = c("sensing_date", "location_id", "pedestriancount",
-                                    "year", "month",
-                                    "covid_phase", "mega_event", "is_public_holiday"))
-hist[, sensing_date := as.Date(sensing_date)]
-hist[, dow := as.integer(format(sensing_date, "%u"))]
-
-hist_day <- hist[year >= 2015 & year <= 2019,
-                 .(daily = sum(as.numeric(pedestriancount))),
-                 by = .(location_id, sensing_date, year, month)]
+hist_day <- pedestrian_full[source == "historical" & year >= 2015 & year <= 2019,
+                            .(daily = sum(as.numeric(pedestrian_count))),
+                            by = .(location_id, sensing_date, year, month)]
 baseline <- hist_day[, .(base = median(daily, na.rm = TRUE), yrs = uniqueN(year)),
                      by = .(location_id, month)]
 baseline <- baseline[yrs >= 3]
 
-new_day <- new[year >= 2024,
-               .(daily = sum(as.numeric(PedestrianCount))),
-               by = .(Location_ID, sensing_date, month)]
-good <- new_day[, .N, by = Location_ID][N >= 200, Location_ID]
-recent <- new_day[Location_ID %in% good,
+new_day <- pedestrian_full[year >= 2024,
+                           .(daily = sum(as.numeric(pedestrian_count))),
+                           by = .(location_id, sensing_date, month)]
+good <- new_day[, .N, by = location_id][N >= 200, location_id]
+recent <- new_day[location_id %in% good,
                   .(recent = median(daily, na.rm = TRUE)),
-                  by = .(Location_ID, month)]
+                  by = .(location_id, month)]
 
-chg <- baseline[recent, on = .(location_id = Location_ID, month = month), nomatch = 0]
+chg <- baseline[recent, on = .(location_id, month), nomatch = 0]
 chg[, pct := recent / base * 100 - 100]
 loc <- chg[, .(change = median(pct, na.rm = TRUE), n = .N), by = location_id]
 loc <- loc[n >= 3]
-loc <- merge(loc, coords, by.x = "location_id", by.y = "Location_ID")
+loc <- merge(loc, coords, by = "location_id")
 setorder(loc, change)
 loc[, sensor := factor(location_id, levels = location_id)]
 
-h_city <- hist[, .(d = sum(as.numeric(pedestriancount))),
-               by = .(location_id, sensing_date, year, month, dow)]
+h_city <- pedestrian_full[source == "historical",
+                          .(d = sum(as.numeric(pedestrian_count))),
+                          by = .(location_id, sensing_date, year, month, dow)]
 h_city <- h_city[, .(city = median(d, na.rm = TRUE)),
                  by = .(sensing_date, year, month, dow)]
-n_city <- new[, .(d = sum(as.numeric(PedestrianCount))),
-              by = .(Location_ID, sensing_date, year, month, dow)]
+n_city <- pedestrian_full[source == "api" & sensing_date > as.Date("2022-11-14"),
+                          .(d = sum(as.numeric(pedestrian_count))),
+                          by = .(location_id, sensing_date, year, month, dow)]
 n_city <- n_city[, .(city = median(d, na.rm = TRUE)),
                  by = .(sensing_date, year, month, dow)]
-h_city <- h_city[sensing_date <= as.Date("2022-11-14")]
-n_city <- n_city[sensing_date > as.Date("2022-11-14")]
 city <- rbindlist(list(h_city, n_city), use.names = TRUE)
 city <- city[!is.na(city) & city > 0]
 cal <- city[year <= 2019, .(exp = median(city, na.rm = TRUE)), by = .(month, dow)]
 city <- merge(city, cal, by = c("month", "dow"))
 city[, resid := city - exp]
 
-flags <- hist[, .(mega = any(mega_event), hol = any(is_public_holiday),
-                  ph = covid_phase[1]),
-              by = .(sensing_date = as.Date(sensing_date))]
+flags <- pedestrian_full[source == "historical",
+                         .(mega = any(mega_event), hol = any(is_public_holiday),
+                           ph = covid_phase[1]),
+                         by = .(sensing_date)]
 city <- merge(city, flags, by = "sensing_date", all.x = TRUE)
 busy_new <- city[year >= 2022][order(-resid)][1:8, sensing_date]
 busy_old <- city[year <= 2019][order(-resid)][1:4, sensing_date]
@@ -99,7 +93,7 @@ covid <- city[!is.na(ph) & ph != "Normal", range(sensing_date)]
 
 | Stage | Status |
 |---|---|
-| Data acquisition (2009–2025, 110 sensors) | Done |
+| Data acquisition (2009–2025, 120 sensors) | Done |
 | Data cleaning & hourly aggregation | Done |
 | RQ5: post-COVID spatial recovery | Done |
 | RQ6: calendar-adjusted outlier days | Done |
@@ -107,7 +101,7 @@ covid <- city[!is.na(ph) & ph != "Normal", range(sensing_date)]
 | Final report & presentation | This week |
 
 ::: {.notes}
-Good morning everyone. Today I'd like to walk you through where the project stands. Over the past few weeks I've pulled together the full pedestrian counter dataset from the City of Melbourne, covering hourly counts from 2009 right through to the end of 2025, across 110 sensor locations. I've finished the cleaning and aggregation work, and I've now completed the two core research questions. RQ5 looks at whether different parts of the city recovered unevenly after COVID, and RQ6 identifies which days were unusually busy or quiet once we adjust for the calendar. Both analyses are done and the key charts are on the next slides. Right now I'm working through the interpretation and the written report, and the final submission is due this week. What I want to focus on today is what the numbers are actually telling us about how Melbourne is walking again.
+Good morning everyone. Today I'd like to walk you through where the project stands. Over the past few weeks I've pulled together the full pedestrian counter dataset from the City of Melbourne, covering hourly counts from 2009 right through to the end of 2025, across 120 sensor locations. I've finished the cleaning and aggregation work, and I've now completed the two core research questions. RQ5 looks at whether different parts of the city recovered unevenly after COVID, and RQ6 identifies which days were unusually busy or quiet once we adjust for the calendar. Both analyses are done and the key charts are on the next slides. Right now I'm working through the interpretation and the written report, and the final submission is due this week. What I want to focus on today is what the numbers are actually telling us about how Melbourne is walking again.
 :::
 
 ## Where Melbourne stands in 2025
@@ -177,7 +171,3 @@ This graph strips away the calendar pattern – same month, same day of week, 20
 ::: {.notes}
 In sum, Melbourne has not yet fully recovered its pre-COVID pedestrian numbers, and the discrepancy is unevenly distributed. While the shopping district is bustling again, there is less walking going on in the broader peripheral streets. With the calendar adjusted, the results indicate that the peak periods are due to special events and New Year's Eve, while the everyday working week continues to suffer – in line with hybrid work schedules. The lock-down periods in 2020-21 continue to be the worst negative outliers in 16 years of data. Over the next few days I'll finalise the write-up, run a sensitivity check on the baseline years, and wrap up the report. Happy to take any questions.
 :::
-
-Included is some information about a GitHub repository and its language composition.
-repo: nishtabollavaram/ETC5543-Pulse_of_Melbourne
-repo ID: 1333646964
