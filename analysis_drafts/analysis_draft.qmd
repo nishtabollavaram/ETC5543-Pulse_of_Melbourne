@@ -315,6 +315,15 @@ sensor_installations |>
     y = "Sensors installed"
   ) +
   theme_minimal()
+
+ggsave(
+  "Presentation/figures/sensor_installations.png",
+  plot = sensor_installation_plot,
+  width = 10,
+  height = 4.5,
+  dpi = 300,
+  bg = "white"
+)
 ```
 
 -   Is there a monthly or seasonal rhythm?
