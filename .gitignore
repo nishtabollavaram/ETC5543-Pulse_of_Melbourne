@@ -9,4 +9,8 @@ Data_pedestrians/raw2/
 
 # Quarto generated files
 *_cache/
+<<<<<<< HEAD
 *_files/analysis_drafts/Data_pedestrians/raw2/pedestrian_counts_raw.csv
+=======
+*_files/
+>>>>>>> origin/main

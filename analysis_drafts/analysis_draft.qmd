@@ -195,6 +195,7 @@ duplicates
 
 -   A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
 
+<<<<<<< HEAD
 
 
 
@@ -867,6 +868,8 @@ pedestrian_full_updated %>%
 pedestrian_full <- pedestrian_full_updated
 ```
 
+=======
+>>>>>>> origin/main
 ```{r}
 #Download  the sensors location dataset
 
@@ -973,14 +976,22 @@ sensor_installations <- sensor_locations |>
     name = "new_sensors"
   )
 
+<<<<<<< HEAD
 sensor_installation_plot <- sensor_installations |>
+=======
+sensor_installations |>
+>>>>>>> origin/main
   ggplot(
     aes(
       x = installation_year,
       y = new_sensors
     )
   ) +
+<<<<<<< HEAD
   geom_col(fill = "#147D73") +
+=======
+  geom_col() +
+>>>>>>> origin/main
   labs(
     title = "Expansion of Melbourne's pedestrian sensor network",
     x = "Installation year",
@@ -988,9 +999,14 @@ sensor_installation_plot <- sensor_installations |>
   ) +
   theme_minimal()
 
+<<<<<<< HEAD
 
 ggsave(
   "../Presentation/figures/sensor_installations.png",
+=======
+ggsave(
+  "Presentation/figures/sensor_installations.png",
+>>>>>>> origin/main
   plot = sensor_installation_plot,
   width = 10,
   height = 4.5,
@@ -2956,7 +2972,11 @@ hourly_profiles <- recent_data |>
   ) |>
   mutate(
     day_type = if_else(
+<<<<<<< HEAD
       lubridate::wday(sensing_date, week_start = 1) <= 5,
+=======
+      wday(sensing_date, week_start = 1) <= 5,
+>>>>>>> origin/main
       "Weekday",
       "Weekend"
     )
