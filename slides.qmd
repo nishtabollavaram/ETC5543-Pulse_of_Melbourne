@@ -17,7 +17,7 @@ library(data.table)
 library(ggplot2)
 library(ggrepel)
 
-pedestrian_full <- fread("pedestrian_full.csv")
+pedestrian_full <- fread("pedestrian_full.csv.gz")
 pedestrian_full[, sensing_date := as.Date(sensing_date)]
 pedestrian_full[, year := as.integer(format(sensing_date, "%Y"))]
 pedestrian_full[, month := as.integer(format(sensing_date, "%m"))]
