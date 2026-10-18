@@ -694,3 +694,51 @@ is the quietest.
 Both graphs come from the team's existing analysis.
 
 :::
+
+
+## Melbourne's pedestrian activity over time {#long-term-slide}
+
+```{r}
+#| label: long-term-pedestrian-trend
+#| echo: false
+#| warning: false
+#| message: false
+
+library(plotly)
+
+long_term_graph <- readRDS(
+  "figures/long_term_plotly.rds"
+)
+
+long_term_graph |>
+  plotly::layout(
+    title = list(text = ""),
+    font = list(size = 15),
+    margin = list(
+      l = 90,
+      r = 40,
+      t = 35,
+      b = 75
+    )
+  ) |>
+  plotly::config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+```
+
+::: {.notes}
+
+We also examined Melbourne's long-term
+pedestrian activity using common sensor
+locations.
+
+The graph shows monthly median activity
+over the available years.
+
+This helps us identify long-term changes,
+including major disruptions and subsequent
+recovery.
+
+:::
+

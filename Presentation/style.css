@@ -232,3 +232,9 @@
   margin: 0 0 0.5em;
   color: #333333;
 }
+
+.reveal #long-term-slide > h2 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-bottom: 0.4em;
+}
