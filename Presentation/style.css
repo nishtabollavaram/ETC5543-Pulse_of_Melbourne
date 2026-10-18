@@ -98,3 +98,39 @@
   height: 410px;
   object-fit: cover;
 }
+
+
+/* Slide 3 — Clean interactive sensor map */
+
+.reveal #sensor-map-slide .cell-output-display {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.2em;
+}
+
+.reveal #sensor-map-slide .js-plotly-plot {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.10);
+}
+
+
+/* Slide 3 subtitle */
+.reveal #sensor-map-slide .map-subtitle p {
+  text-align: center;
+  font-size: 0.55em;
+  color: #5f5f5f;
+  margin-top: -0.2em;
+  margin-bottom: 0.7em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+
+/* Slide 3 — Smaller main heading */
+.reveal #sensor-map-slide > h2 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-bottom: 0.3em;
+}
+
