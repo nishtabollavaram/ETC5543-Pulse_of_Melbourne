@@ -100,6 +100,26 @@
 }
 
 
+/* Slide 2 — Minimal pedestrian data snapshot */
+
+.reveal #flinders-opening-slide .flinders-snapshot {
+  text-align: center;
+  margin-top: 0.2em;
+}
+
+.reveal #flinders-opening-slide .flinders-snapshot p {
+  font-size: 0.46em !important;
+  color: #626b76;
+  font-weight: 400;
+  margin: 0;
+}
+
+.reveal #flinders-opening-slide .flinders-snapshot strong {
+  color: #005EB8;
+  font-weight: 700;
+}
+
+
 /* Slide 3 — Clean interactive sensor map */
 
 .reveal #sensor-map-slide .cell-output-display {
@@ -154,3 +174,18 @@
   font-weight: 700;
 }
 
+
+/* Slide 4 — Smaller heading */
+.reveal #daily-patterns-slide > h2 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-bottom: 0.4em;
+}
+
+
+/* Slide 5 — Weekly patterns heading */
+.reveal #weekly-patterns-slide > h2 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-bottom: 0.4em;
+}

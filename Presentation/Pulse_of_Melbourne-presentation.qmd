@@ -66,7 +66,7 @@ That is the idea behind Pulse of Melbourne.
 
 :::
 
-## Flinders Street came alive after dark
+## Flinders Street came alive after dark {#flinders-opening-slide}
 
 ```{r}
 #| echo: false
@@ -179,6 +179,11 @@ ggplotly(
 
 ```
 
+::: {.flinders-snapshot}
+**FULL STUDY: 2009–2026** · **7.52 million hourly sensor observations**
+:::
+
+
 ::: {.notes}
 
 Let’s go back to Flinders Street on Saturday, 22 February 2014.
@@ -209,43 +214,39 @@ Melbourne's pedestrian sensor network
 #| warning: false
 #| message: false
 
+
 library(data.table)
 library(plotly)
 
-# Load 2025 sensor location data
-sensor_data <- fread(
-  "../Data_pedestrians/raw/data_pedestrian/2025_Pedestrian_Data.csv",
-  select = c("Location_ID", "SensorVariable",
-             "Latitude", "Longitude")
+
+# Official City of Melbourne sensor inventory
+sensor_map <- fread(
+  "figures/melbourne_sensor_locations.csv"
 )
 
-# Keep valid coordinates
-sensor_data <- sensor_data[
-  !is.na(Latitude) & !is.na(Longitude) &
-  is.finite(Latitude) & is.finite(Longitude) &
-  Latitude >= -38.5 & Latitude <= -37.2 &
-  Longitude >= 144.3 & Longitude <= 145.5
-]
+# Keep sensor IDs with valid coordinates
+sensor_map <- unique(
+  sensor_map[
+    is.finite(latitude) &
+    is.finite(longitude)
+  ],
+  by = "location_id"
+)
 
-# One marker per location
-sensor_map <- sensor_data[
-  , .(
-    lat = median(Latitude),
-    lon = median(Longitude),
-    sensor_name = as.character(SensorVariable[1])
-  ),
-  by = Location_ID
-]
+setnames(
+  sensor_map,
+  c("latitude", "longitude"),
+  c("lat", "lon")
+)
 
+# Hover information without 2025-only counts
 sensor_map[, hover_text := paste0(
-  "<b>", sensor_name, "</b>",
-  "<br>Location ID: ", Location_ID
+  "<b>", sensor_description, "</b>",
+  "<br>Sensor ID: ", location_id,
+  "<br>Installation date: ", installation_date
 )]
 
-
-# Interactive Melbourne map
-
-# Interactive Melbourne map
+# Interactive map
 plot_ly(
   data = sensor_map,
   type = "scattermapbox",
@@ -272,12 +273,7 @@ plot_ly(
     ),
     width = 1180,
     height = 590,
-    margin = list(
-      l = 0,
-      r = 0,
-      t = 0,
-      b = 0
-    )
+    margin = list(l = 0, r = 0, t = 0, b = 0)
   ) |>
   config(
     displaylogo = FALSE,
@@ -287,10 +283,11 @@ plot_ly(
 
 
 
+
 ```
 
 ::: {.sensor-snapshot}
-**2025 SENSOR SNAPSHOT** · **`r nrow(sensor_map)` monitored locations** · Hover to explore
+**134 SENSOR IDs** · **INSTALLATIONS: 2009–2025** · Hover to explore
 :::
 
 ::: {.notes}
@@ -304,5 +301,183 @@ These markers show pedestrian sensor locations recorded in 2025 across the city.
 Using pedestrian-counting data from the City of Melbourne, we investigated how movement varies throughout the day, across the week, between different locations and over time.
 
 Let's begin by looking at the rhythms that shape an ordinary day in Melbourne.
+
+:::
+
+
+## Melbourne has its own daily rhythm {#daily-patterns-slide}
+
+
+
+```{r}
+
+#| label: daily-pedestrian-patterns
+#| echo: false
+#| warning: false
+#| message: false
+
+library(plotly)
+
+# Original interactive graph — no colour changes
+daily_graph <- readRDS("figures/daily_plotly.rds")
+
+daily_graph |>
+  layout(
+    width = 1150,
+    height = 480
+  ) |>
+  config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+
+```
+
+::: {.notes}
+
+After seeing where Melbourne's pedestrian sensors are located,
+let's look at how activity changes throughout a typical day.
+
+Pedestrian movement is not evenly distributed across 24 hours.
+
+Activity is generally quieter overnight, increases during
+the morning, and becomes much busier around lunchtime
+and the late afternoon.
+
+This shows that Melbourne has a recognisable daily rhythm.
+
+:::
+
+
+## How has Melbourne's weekly rhythm changed? {#weekly-patterns-slide}
+
+```{r}
+
+#| label: weekly-pedestrian-patterns
+#| echo: false
+#| warning: false
+#| message: false
+
+library(plotly)
+library(readr)
+library(dplyr)
+
+# Load weekly data covering 2009–2026
+weekly_periods <- read_csv(
+  "figures/weekly_periods.csv",
+  show_col_types = FALSE
+)
+
+# All seven days
+days <- c(
+  "Monday", "Tuesday", "Wednesday",
+  "Thursday", "Friday",
+  "Saturday", "Sunday"
+)
+
+# Four periods covering the full study
+periods <- c(
+  "2009–2014",
+  "2015–2019",
+  "2020–2022",
+  "2023–2026"
+)
+
+weekly_periods <- weekly_periods |>
+  mutate(
+    day = factor(day, levels = days),
+    period = factor(period, levels = periods)
+  ) |>
+  arrange(period, day)
+
+# Interactive line graph
+weekly_graph <- plot_ly(
+  data = weekly_periods,
+  x = ~day,
+  y = ~activity_index,
+  color = ~period,
+  colors = c(
+    "2009–2014" = "#005EB8",
+    "2015–2019" = "#9467BD",
+    "2020–2022" = "#D97706",
+    "2023–2026" = "#159A88"
+  ),
+  type = "scatter",
+  mode = "lines+markers",
+  line = list(width = 3),
+  marker = list(size = 8),
+  hovertemplate = paste0(
+    "<b>%{fullData.name}</b>",
+    "<br>Day: %{x}",
+    "<br>Activity index: %{y:.1f}",
+    "<extra></extra>"
+  )
+) |>
+  layout(
+    width = 1150,
+    height = 480,
+
+    xaxis = list(
+      title = "Day of week",
+      type = "category",
+      categoryorder = "array",
+      categoryarray = days,
+      automargin = TRUE
+    ),
+
+    yaxis = list(
+      title = "Activity index (100 = yearly average)",
+      showgrid = TRUE,
+      automargin = TRUE
+    ),
+
+    legend = list(
+      orientation = "h",
+      x = 0.5,
+      xanchor = "center",
+      y = 1.15
+    ),
+
+    font = list(size = 15),
+
+    margin = list(
+      l = 85,
+      r = 65,
+      t = 65,
+      b = 75
+    )
+  ) |>
+  config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+
+# Display the graph in Quarto
+weekly_graph
+
+
+```
+
+::: {.notes}
+
+We investigated how Melbourne's weekly pedestrian
+rhythm has changed across the available years.
+
+To make the changes easier to see, we summarised
+2009 to 2026 into four periods.
+
+Each line shows the relative activity pattern
+from Monday to Sunday.
+
+This allows us to examine whether the busiest
+days have shifted over time, including whether
+weekday and weekend activity patterns differ.
+
+The index measures relative activity rather than
+total pedestrian counts.
+
+Because the monitoring network changes over time,
+these results describe the observed network
+rather than a fixed set of locations.
 
 :::
