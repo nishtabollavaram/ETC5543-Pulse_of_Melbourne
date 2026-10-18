@@ -304,9 +304,122 @@ Let's begin by looking at the rhythms that shape an ordinary day in Melbourne.
 
 :::
 
+## How Melbourne's sensor network evolved {#sensor-expansion-slide}
+
+:::: {.columns}
+
+::: {.column width="52%"}
+
+::: {.sensor-chart-heading}
+Monitoring coverage
+:::
+
+```{r}
+#| label: network-coverage-interactive
+#| echo: false
+#| warning: false
+#| message: false
+
+library(plotly)
+
+network_graph <- readRDS(
+  "figures/sensor_coverage_plotly.rds"
+)
+
+network_graph |>
+  plotly::layout(
+    title = list(text = ""),
+    width = 500,
+    height = 440,
+
+    font = list(size = 12),
+
+    legend = list(
+      orientation = "h",
+      x = 0,
+      y = -0.22,
+      font = list(size = 10)
+    ),
+
+    margin = list(
+      l = 75,
+      r = 10,
+      t = 20,
+      b = 95
+    )
+  ) |>
+  plotly::config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+```
+
+:::
+
+::: {.column width="48%"}
+
+::: {.sensor-chart-heading}
+Sensor installations
+:::
+
+```{r}
+#| label: sensor-installations-interactive
+#| echo: false
+#| warning: false
+#| message: false
+
+library(plotly)
+
+installation_graph <- readRDS(
+  "figures/sensor_installations_plotly.rds"
+)
+
+installation_graph |>
+  plotly::layout(
+    title = list(text = ""),
+    width = 500,
+    height = 440,
+
+    font = list(size = 12),
+
+    margin = list(
+      l = 65,
+      r = 15,
+      t = 20,
+      b = 95
+    )
+  ) |>
+  plotly::config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+```
+
+:::
+
+::::
+
+::: {.notes}
+
+Before examining Melbourne's pedestrian activity,
+we looked at how the sensor network evolved.
+
+The first graph shows how many sensor locations
+reported pedestrian data each year, including
+locations with at least 80 percent coverage.
+
+The second graph shows how many sensors in the
+current inventory were installed each year.
+
+These measures are different because a sensor
+may be installed without reporting data continuously.
+
+This is important when comparing pedestrian
+activity across different years.
+
+:::
 
 ## Melbourne has its own daily rhythm {#daily-patterns-slide}
-
 
 
 ```{r}
@@ -347,7 +460,6 @@ and the late afternoon.
 This shows that Melbourne has a recognisable daily rhythm.
 
 :::
-
 
 ## How has Melbourne's weekly rhythm changed? {#weekly-patterns-slide}
 
@@ -479,5 +591,106 @@ total pedestrian counts.
 Because the monitoring network changes over time,
 these results describe the observed network
 rather than a fixed set of locations.
+
+:::
+
+## Melbourne's monthly and seasonal rhythm {#monthly-seasonal-slide}
+
+:::: {.columns}
+
+::: {.column width="55%"}
+
+::: {.sensor-chart-heading}
+Monthly pattern
+:::
+
+```{r}
+#| label: monthly-rhythm-interactive
+#| echo: false
+#| warning: false
+#| message: false
+
+library(plotly)
+
+monthly_graph <- readRDS(
+  "figures/monthly_plotly.rds"
+)
+
+monthly_graph |>
+  plotly::layout(
+    title = list(text = ""),
+    width = 500,
+    height = 440,
+    font = list(size = 12),
+    margin = list(
+      l = 85,
+      r = 15,
+      t = 30,
+      b = 95
+    )
+  ) |>
+  plotly::config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+```
+
+:::
+
+::: {.column width="45%"}
+
+::: {.sensor-chart-heading}
+Seasonal pattern
+:::
+
+```{r}
+#| label: seasonal-rhythm-interactive
+#| echo: false
+#| warning: false
+#| message: false
+
+library(plotly)
+
+seasonal_graph <- readRDS(
+  "figures/seasonal_plotly.rds"
+)
+
+seasonal_graph |>
+  plotly::layout(
+    title = list(text = ""),
+    width = 500,
+    height = 440,
+    font = list(size = 12),
+    margin = list(
+      l = 80,
+      r = 10,
+      t = 30,
+      b = 95
+    )
+  ) |>
+  plotly::config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+```
+
+:::
+
+::::
+
+::: {.notes}
+
+We also examined how pedestrian activity varies
+throughout the calendar year.
+
+The monthly analysis shows that March has the
+highest average daily pedestrian activity,
+followed by December, while June is the lowest.
+
+The seasonal analysis shows that autumn and
+summer have the highest activity, while winter
+is the quietest.
+
+Both graphs come from the team's existing analysis.
 
 :::

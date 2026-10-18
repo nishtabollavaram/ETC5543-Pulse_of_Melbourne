@@ -175,7 +175,33 @@
 }
 
 
-/* Slide 4 — Smaller heading */
+/* Slide 4 — Sensor Expansion */
+.reveal #sensor-expansion-slide > h2 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-bottom: 0.4em;
+}
+
+
+/* Slide 4 — Sensor Network */
+
+.reveal #sensor-expansion-slide > h2 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-bottom: 0.8em;
+}
+
+/* Smaller, cleaner chart subheadings */
+.reveal #sensor-expansion-slide .sensor-chart-heading p {
+  font-size: 0.62em;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+  color: #333333;
+}
+
+
+/* Slide 5 — Smaller heading */
 .reveal #daily-patterns-slide > h2 {
   font-size: 1.25em;
   font-weight: 700;
@@ -183,9 +209,26 @@
 }
 
 
-/* Slide 5 — Weekly patterns heading */
+/* Slide 6 — Weekly patterns heading */
 .reveal #weekly-patterns-slide > h2 {
   font-size: 1.25em;
   font-weight: 700;
   margin-bottom: 0.4em;
+}
+
+
+/* Slide 7 — Monthly and Seasonal Patterns */
+
+.reveal #monthly-seasonal-slide > h2 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-bottom: 0.8em;
+}
+
+.reveal #monthly-seasonal-slide .sensor-chart-heading p {
+  font-size: 0.62em;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+  color: #333333;
 }
