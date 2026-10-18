@@ -134,3 +134,23 @@
   margin-bottom: 0.3em;
 }
 
+
+/* Slide 3 — Minimal sensor data snapshot */
+.reveal #sensor-map-slide .sensor-snapshot {
+  text-align: center;
+  margin-top: 0.35em;
+}
+
+.reveal #sensor-map-slide .sensor-snapshot p {
+  font-size: 0.43em;
+  color: #626b76;
+  font-weight: 400;
+  letter-spacing: 0.025em;
+  margin: 0;
+}
+
+.reveal #sensor-map-slide .sensor-snapshot strong {
+  color: #005EB8;
+  font-weight: 700;
+}
+

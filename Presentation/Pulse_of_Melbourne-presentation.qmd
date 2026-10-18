@@ -200,7 +200,7 @@ how does Melbourne move, and what changes its rhythm?
 ## Beyond Flinders Street {#sensor-map-slide}
 
 ::: {.map-subtitle}
-One street. A whole city of movement.
+Melbourne's pedestrian sensor network
 :::
 
 ```{r}
@@ -288,6 +288,10 @@ plot_ly(
 
 
 ```
+
+::: {.sensor-snapshot}
+**2025 SENSOR SNAPSHOT** · **`r nrow(sensor_map)` monitored locations** · Hover to explore
+:::
 
 ::: {.notes}
 
