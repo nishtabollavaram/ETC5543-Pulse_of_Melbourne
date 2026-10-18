@@ -66,6 +66,7 @@ current_clean <- current |>
 # Historical data
 historical <- read_csv(
   here(
+    "ETC5543-Pulse_of_Melbourne",
     "Data_pedestrians",
     "raw",
     "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"

@@ -566,7 +566,7 @@ This is useful for understanding where pedestrian demand is concentrated, while 
 ##  {#pedestrian-clusters background-color="#FAF9F5"}
 
 ::: cl-top
-**11 / PEDESTRIAN BEHAVIOUR**
+**10 / PEDESTRIAN BEHAVIOUR**
 
 PULSE OF MELBOURNE
 :::
@@ -639,7 +639,7 @@ This demonstrates that different monitored locations can have distinct patterns 
 ##  {#event-surges background-color="#FAF9F5"}
 
 ::: ev-top
-**12 / UNUSUAL ACTIVITY**
+**11 / UNUSUAL ACTIVITY**
 
 PULSE OF MELBOURNE
 :::
@@ -702,7 +702,7 @@ Although this suggests that major events may be associated with pedestrian surge
 ##  {#weather-holidays background-color="#FAF9F5"}
 
 ::: wx-top
-**13 / WEATHER & HOLIDAYS**
+**12 / WEATHER & HOLIDAYS**
 
 PULSE OF MELBOURNE
 :::
@@ -772,7 +772,7 @@ However, these are observed associations, not proof of direct causation.
 ##  {#final-insights background-color="#FAF9F5"}
 
 ::: fi-top
-**14 / KEY TAKEAWAYS**
+**13 / KEY TAKEAWAYS**
 
 PULSE OF MELBOURNE
 :::
