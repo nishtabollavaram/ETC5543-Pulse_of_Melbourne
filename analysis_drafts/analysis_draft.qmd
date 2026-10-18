@@ -976,22 +976,16 @@ sensor_installations <- sensor_locations |>
     name = "new_sensors"
   )
 
-<<<<<<< HEAD
 sensor_installation_plot <- sensor_installations |>
-=======
 sensor_installations |>
->>>>>>> origin/main
   ggplot(
     aes(
       x = installation_year,
       y = new_sensors
     )
   ) +
-<<<<<<< HEAD
   geom_col(fill = "#147D73") +
-=======
   geom_col() +
->>>>>>> origin/main
   labs(
     title = "Expansion of Melbourne's pedestrian sensor network",
     x = "Installation year",
@@ -999,20 +993,16 @@ sensor_installations |>
   ) +
   theme_minimal()
 
-<<<<<<< HEAD
-
 ggsave(
   "../Presentation/figures/sensor_installations.png",
-=======
 ggsave(
   "Presentation/figures/sensor_installations.png",
->>>>>>> origin/main
   plot = sensor_installation_plot,
   width = 10,
   height = 4.5,
   dpi = 300,
   bg = "white"
-)
+))
 ```
 
 -   Is there a monthly or seasonal rhythm?
@@ -2349,6 +2339,7 @@ event_permits_qc |>
     sort = TRUE
   )
 ```
+
 ```{r}
 event_permits_auto <- event_permits_qc |>
   filter(
@@ -2972,11 +2963,8 @@ hourly_profiles <- recent_data |>
   ) |>
   mutate(
     day_type = if_else(
-<<<<<<< HEAD
       lubridate::wday(sensing_date, week_start = 1) <= 5,
-=======
       wday(sensing_date, week_start = 1) <= 5,
->>>>>>> origin/main
       "Weekday",
       "Weekend"
     )
@@ -3099,6 +3087,12 @@ cluster_profiles |>
     )
   ) +
   geom_line(linewidth = 1) +
+  scale_colour_manual(
+  values = c(
+    "Cluster 1" = "#F8766D",
+    "Cluster 2" = "#00BFC4"
+  )
+) +
   facet_wrap(~day_type) +
   scale_x_continuous(
     breaks = seq(0, 23, by = 2)
@@ -3145,8 +3139,11 @@ plotly::plot_ly(
   mode = "markers",
   lat = ~latitude,
   lon = ~longitude,
-  color = ~cluster,
-  colors = "Set2",
+ color = ~cluster,
+colors = c(
+  "Cluster 1" = "#F8766D",
+  "Cluster 2" = "#00BFC4"
+),
   text = ~hover_text,
   hoverinfo = "text",
   marker = list(

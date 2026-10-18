@@ -195,6 +195,7 @@ duplicates
 
 -   A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
 
+<<<<<<< HEAD
 
 
 
@@ -867,6 +868,8 @@ pedestrian_full_updated %>%
 pedestrian_full <- pedestrian_full_updated
 ```
 
+=======
+>>>>>>> origin/main
 ```{r}
 #Download  the sensors location dataset
 
@@ -974,6 +977,7 @@ sensor_installations <- sensor_locations |>
   )
 
 sensor_installation_plot <- sensor_installations |>
+sensor_installations |>
   ggplot(
     aes(
       x = installation_year,
@@ -981,6 +985,7 @@ sensor_installation_plot <- sensor_installations |>
     )
   ) +
   geom_col(fill = "#147D73") +
+  geom_col() +
   labs(
     title = "Expansion of Melbourne's pedestrian sensor network",
     x = "Installation year",
@@ -988,15 +993,16 @@ sensor_installation_plot <- sensor_installations |>
   ) +
   theme_minimal()
 
-
 ggsave(
   "../Presentation/figures/sensor_installations.png",
+ggsave(
+  "Presentation/figures/sensor_installations.png",
   plot = sensor_installation_plot,
   width = 10,
   height = 4.5,
   dpi = 300,
   bg = "white"
-)
+))
 ```
 
 -   Is there a monthly or seasonal rhythm?
@@ -2333,6 +2339,7 @@ event_permits_qc |>
     sort = TRUE
   )
 ```
+
 ```{r}
 event_permits_auto <- event_permits_qc |>
   filter(
@@ -2957,6 +2964,7 @@ hourly_profiles <- recent_data |>
   mutate(
     day_type = if_else(
       lubridate::wday(sensing_date, week_start = 1) <= 5,
+      wday(sensing_date, week_start = 1) <= 5,
       "Weekday",
       "Weekend"
     )
@@ -3079,6 +3087,12 @@ cluster_profiles |>
     )
   ) +
   geom_line(linewidth = 1) +
+  scale_colour_manual(
+  values = c(
+    "Cluster 1" = "#F8766D",
+    "Cluster 2" = "#00BFC4"
+  )
+) +
   facet_wrap(~day_type) +
   scale_x_continuous(
     breaks = seq(0, 23, by = 2)
@@ -3125,8 +3139,11 @@ plotly::plot_ly(
   mode = "markers",
   lat = ~latitude,
   lon = ~longitude,
-  color = ~cluster,
-  colors = "Set2",
+ color = ~cluster,
+colors = c(
+  "Cluster 1" = "#F8766D",
+  "Cluster 2" = "#00BFC4"
+),
   text = ~hover_text,
   hoverinfo = "text",
   marker = list(
