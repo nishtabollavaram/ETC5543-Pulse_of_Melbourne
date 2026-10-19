@@ -742,3 +742,105 @@ recovery.
 
 :::
 
+## Has Melbourne returned to its earlier pedestrian activity? {#then-now}
+
+::: {.tn-graphs}
+
+::: {.tn-graph}
+
+```{r}
+#| label: slide9-daily-comparison
+#| echo: false
+#| message: false
+#| warning: false
+
+plotly::config(
+  readRDS("figures/slide9_daily_plotly.rds"),
+  responsive = TRUE,
+  displayModeBar = FALSE
+)
+```
+
+:::
+
+::: {.tn-graph}
+
+
+```{r}
+#| label: slide9-hourly-comparison
+#| echo: false
+#| message: false
+#| warning: false
+
+plotly::config(
+  readRDS("figures/slide9_hourly_plotly.rds"),
+  responsive = TRUE,
+  displayModeBar = FALSE
+)
+```
+
+:::
+
+:::
+
+::: {.notes}
+After examining long-term changes, we wanted to understand whether Melbourne had returned to its pre-pandemic pedestrian activity levels.
+
+To make a more reliable comparison, we selected 27 sensor locations with at least 300 observed days in each of the six comparison years.
+
+The first graph compares the median daily pedestrian count from 2017–2019 with 2023–2025.
+
+We found a decrease from 10,091 to 7,211, which represents a 28.5% reduction.
+
+The second graph compares hourly pedestrian activity between these periods.
+
+Although recent pedestrian counts are generally lower, the daily rhythm remains recognisable, with activity increasing during the day and declining overnight.
+
+This suggests that the overall level of pedestrian activity has changed more noticeably than the broad daily pattern.
+
+These findings apply to the 27 consistently monitored locations, rather than all of Melbourne.
+:::
+
+## Where is Melbourne busiest on foot? {#spatial-pulse}
+
+::: {.sp-bars}
+
+```{r}
+#| label: slide10-top-locations
+#| echo: false
+#| message: false
+#| warning: false
+
+plotly::config(
+  readRDS("figures/slide10_top_locations_plotly.rds"),
+  responsive = TRUE,
+  displayModeBar = FALSE
+)
+```
+
+:::
+
+::: {.sp-method}
+**2025 DATA** · Median daily pedestrian count · At least 20 hours/day and 292 valid days/location
+:::
+
+::: {.sp-takeaway}
+**KEY FINDING:** Pedestrian activity varies substantially across monitored locations.
+:::
+
+
+::: {.notes}
+We have looked at how Melbourne's pedestrian activity changes over time. Now we turn to where pedestrian activity is concentrated.
+
+For this analysis, we focus on 2025 and compare monitored locations using their median daily pedestrian counts.
+
+To improve reliability, we include days with at least 20 hours of observations and locations with at least 292 valid days.
+
+The graph shows the ten busiest monitored locations meeting these criteria.
+
+We can see that some locations record considerably higher pedestrian activity than others.
+
+This highlights how pedestrian demand varies spatially and why planning decisions need to consider individual locations.
+
+These rankings describe the monitored locations, rather than every street in Melbourne.
+:::
