@@ -844,3 +844,71 @@ This highlights how pedestrian demand varies spatially and why planning decision
 
 These rankings describe the monitored locations, rather than every street in Melbourne.
 :::
+
+
+## Two distinct pedestrian rhythms {#pedestrian-clusters}
+
+::: {.cl-visuals}
+
+::: {.cl-profile}
+
+![](figures/cluster_profiles_matched.png)
+
+:::
+
+::: {.cl-map}
+
+```{r}
+#| label: slide11-cluster-map
+#| echo: false
+#| message: false
+#| warning: false
+
+plotly::config(
+  readRDS("figures/cluster_map.rds"),
+  responsive = TRUE,
+  displayModeBar = FALSE
+)
+```
+
+:::
+
+:::
+
+::: {.cl-insights}
+
+::: {.cl-card .cl-card-one}
+**CLUSTER 1 · 9 SENSORS**
+
+Stronger weekday-focused activity peaks.
+:::
+
+::: {.cl-card .cl-card-two}
+**CLUSTER 2 · 35 SENSORS**
+
+Broader daytime and weekend activity.
+:::
+
+:::
+
+::: {.notes}
+We have explored when Melbourne's pedestrian activity changes and where it is concentrated.
+
+Our final analysis looks at whether different locations follow similar daily activity patterns.
+
+Using data from 2023 to 2025, we selected sensor locations with sufficient coverage across all three years.
+
+We applied K-means clustering to their normalised hourly activity profiles, separately considering weekdays and weekends.
+
+This identified two groups across 44 monitored locations.
+
+Cluster 1 contains nine locations, with stronger weekday-focused activity peaks, often associated with commuter areas.
+
+Cluster 2 contains 35 locations and shows broader daytime and weekend activity.
+
+The graph compares these patterns, while the interactive map shows where the two groups are located.
+
+The key finding is that Melbourne does not have one uniform pedestrian rhythm. Different locations experience different patterns of demand.
+
+This can help inform more location-specific planning and management of public spaces.
+:::

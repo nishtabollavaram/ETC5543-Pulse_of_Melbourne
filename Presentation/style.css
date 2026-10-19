@@ -313,3 +313,65 @@
 .reveal #spatial-pulse .sp-takeaway p {
   margin: 0 !important;
 }
+
+
+/* Slide 11 - Pedestrian Clustering */
+
+.reveal #pedestrian-clusters h2 {
+  font-size: 1.25em !important;
+  line-height: 1.15;
+  margin-bottom: 0.3em;
+}
+
+.reveal #pedestrian-clusters .cl-visuals {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  gap: 18px;
+  width: 100%;
+  align-items: center;
+}
+
+.reveal #pedestrian-clusters .cl-profile,
+.reveal #pedestrian-clusters .cl-map {
+  width: 100%;
+  min-width: 0;
+}
+
+.reveal #pedestrian-clusters .cl-profile img {
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+.reveal #pedestrian-clusters .cl-map .html-widget,
+.reveal #pedestrian-clusters .cl-map .plotly {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.reveal #pedestrian-clusters .cl-insights {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 0.35em;
+}
+
+.reveal #pedestrian-clusters .cl-card {
+  padding-top: 0.3em;
+  text-align: left;
+}
+
+.reveal #pedestrian-clusters .cl-card-one {
+  border-top: 3px solid #66C2A5;
+}
+
+.reveal #pedestrian-clusters .cl-card-two {
+  border-top: 3px solid #FC8D62;
+}
+
+.reveal #pedestrian-clusters .cl-card p {
+  font-size: 0.5em !important;
+  line-height: 1.3;
+  margin: 0.15em 0 !important;
+}
