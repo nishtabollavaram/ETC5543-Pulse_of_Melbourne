@@ -67,7 +67,7 @@
 .reveal #cover img.cover-image {
   display: block;
   width: 100%;
-  height: 365px;
+  height: 700px;
   max-height: none;
   object-fit: cover;
   object-position: center;
@@ -589,4 +589,17 @@
   font-size: 0.56em;
   line-height: 1.3;
   margin: 0;
+}
+
+/* First slide only */
+.reveal .quarto-title-block .title {
+  font-size: 3.5em !important;
+}
+
+.reveal .quarto-title-block .subtitle {
+  font-size: 2.2em !important;
+}
+
+.reveal .quarto-title-block .quarto-title-authors {
+  font-size: 2.2em !important;
 }

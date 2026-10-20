@@ -28,17 +28,19 @@ How does Melbourne move, and what changes its rhythm?
 
 ::: {.cover-details}
 
-ETC5543 · EBS-Business Analytics Project
+<div style="font-size: 42px; font-weight: 700;">
+  ETC5543 — Pulse of Melbourne
 
-Richa Anghan · Zhuo Zhang · Nishta Bollavaram
-
+<div style="font-size: 40px; margin-top: 30px;">
+  Richa Anghan · Nishtha Bollavaram · Zhuo Zhang
+</div>
 :::
 
 :::
 
 ::: {.column width="53%"}
 
-![](figures/pedestrian_image.png){.cover-image fig-alt="Pedestrians and trams in central Melbourne"}
+![](figures/pedestrian_image.png){width="85%"}
 
 ::: {.cover-credit}
 
@@ -850,7 +852,7 @@ rainfall_plot
 ::::
 
 
-## Melbourne has a rhythm — but it never stands still. {#conclusion-slide}
+## Melbourne has a rhythm - but it never stands still. {#conclusion-slide}
 
 ::: {.conclusion-content}
 
