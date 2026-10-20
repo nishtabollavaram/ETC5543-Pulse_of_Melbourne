@@ -1,7 +1,6 @@
 
 /* ===================================
    PULSE OF MELBOURNE
-   Minimal presentation adjustments
    =================================== */
 
 /* SLIDE 1 */
@@ -155,50 +154,97 @@
 }
 
 
-/* Slide 3 — Minimal sensor data snapshot */
-.reveal #sensor-map-slide .sensor-snapshot {
-  text-align: center;
-  margin-top: 0.35em;
+
+/* Slide 3 — Short analysis overview */
+
+.reveal #sensor-map-slide .sensor-overview {
+  margin-top: 0.25em;
 }
 
-.reveal #sensor-map-slide .sensor-snapshot p {
-  font-size: 0.43em;
-  color: #626b76;
-  font-weight: 400;
-  letter-spacing: 0.025em;
-  margin: 0;
-}
-
-.reveal #sensor-map-slide .sensor-snapshot strong {
-  color: #005EB8;
-  font-weight: 700;
-}
-
-
-/* Slide 4 — Sensor Expansion */
-.reveal #sensor-expansion-slide > h2 {
-  font-size: 1.25em;
-  font-weight: 700;
-  margin-bottom: 0.4em;
-}
-
-
-/* Slide 4 — Sensor Network */
-
-.reveal #sensor-expansion-slide > h2 {
-  font-size: 1.25em;
-  font-weight: 700;
-  margin-bottom: 0.8em;
-}
-
-/* Smaller, cleaner chart subheadings */
-.reveal #sensor-expansion-slide .sensor-chart-heading p {
-  font-size: 0.62em;
+.reveal #sensor-map-slide .sensor-overview > p {
+  font-size: 0.55em;
   font-weight: 600;
-  line-height: 1.2;
-  margin: 0 0 0.5em;
-  color: #333333;
+  margin: 0 0 0.2em;
 }
+
+
+.reveal #sensor-map-slide .sensor-overview ul {
+  columns: 2;
+  column-gap: 1.2em;
+  margin: 0;
+  padding-left: 1em;
+}
+
+.reveal #sensor-map-slide .sensor-overview li {
+  font-size: 0.45em;
+  line-height: 1.4;
+  margin-bottom: 0.15em;
+}
+
+.reveal #sensor-map-slide .map-subtitle {
+  font-size: 0.65em;
+  margin-bottom: 0.2em;
+}
+
+/* Slide 3 — Resize the complete Plotly widget */
+
+.reveal #sensor-map-slide .cell-output-display {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 0.15em auto;
+}
+
+.reveal #sensor-map-slide .html-widget,
+.reveal #sensor-map-slide .plotly,
+.reveal #sensor-map-slide .js-plotly-plot {
+  width: 1050px !important;
+  height: 390px !important;
+  max-width: 100%;
+  margin: 0 auto !important;
+}
+
+.reveal #sensor-map-slide .svg-container,
+.reveal #sensor-map-slide .main-svg {
+  height: 390px !important;
+}
+
+.reveal #sensor-map-slide .sensor-overview {
+  margin-top: 0.25em;
+}
+
+
+/* Slide 4 — Sensor network and data */
+
+.reveal #sensor-expansion-slide .columns {
+  align-items: center;
+}
+
+.reveal #sensor-expansion-slide h3 {
+  font-size: 0.8em;
+  margin-bottom: 0.5em;
+}
+
+.reveal #sensor-expansion-slide ul {
+  margin-left: 0.8em;
+}
+
+.reveal #sensor-expansion-slide li {
+  font-size: 0.65em;
+  line-height: 1.5;
+  margin-bottom: 0.45em;
+}
+
+.reveal #sensor-expansion-slide img.installation-chart {
+  display: block;
+  width: 100%;
+  max-height: 440px;
+  object-fit: contain;
+  margin: 0 auto;
+  border: none;
+  box-shadow: none;
+}
+
 
 
 /* Slide 5 — Smaller heading */
@@ -217,161 +263,330 @@
 }
 
 
-/* Slide 7 — Monthly and Seasonal Patterns */
+/* Slide 7 — Monthly and seasonal patterns */
 
-.reveal #monthly-seasonal-slide > h2 {
-  font-size: 1.25em;
-  font-weight: 700;
-  margin-bottom: 0.8em;
-}
-
-.reveal #monthly-seasonal-slide .sensor-chart-heading p {
-  font-size: 0.62em;
-  font-weight: 600;
-  line-height: 1.2;
-  margin: 0 0 0.5em;
-  color: #333333;
-}
-
-.reveal #long-term-slide > h2 {
-  font-size: 1.25em;
-  font-weight: 700;
-  margin-bottom: 0.4em;
-}
-
-
-/* ===================================
-   SLIDE 9 - BEFORE VS AFTER COVID
-   Interactive Plotly graphs
-   =================================== */
-
-#then-now .tn-graphs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  width: 100%;
+.reveal #seasonal-patterns .columns {
   align-items: center;
-  margin: 0 auto;
+  gap: 0.6em;
 }
 
-#then-now .tn-graph {
-  min-width: 0;
+.reveal #seasonal-patterns .column img {
   width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  margin: 0;
 }
 
-#then-now .tn-graph .html-widget,
-#then-now .tn-graph .plotly {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-
-/* Slide 10 - Busiest pedestrian locations */
-
-#spatial-pulse .sp-bars {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-}
-
-#spatial-pulse .sp-bars .html-widget,
-#spatial-pulse .sp-bars .plotly {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-
-/* Slide 10 - Spatial Activity */
-
-.reveal #spatial-pulse h2 {
-  font-size: 1.4em !important;
-  line-height: 1.15;
-  margin-bottom: 0.25em;
-}
-
-.reveal #spatial-pulse .sp-bars {
-  width: 100%;
-  max-width: 1150px;
-  margin: 0 auto;
-}
-
-.reveal #spatial-pulse .sp-method {
-  font-size: 0.48em !important;
-  line-height: 1.25;
+.reveal #seasonal-patterns > p:last-of-type {
+  font-size: 0.65em;
   text-align: center;
-  margin: 0.2em auto 0;
+  margin-top: 0.4em;
 }
 
-.reveal #spatial-pulse .sp-takeaway {
-  font-size: 0.52em !important;
-  line-height: 1.3;
-  text-align: center;
+
+/* Slide 8 — COVID takeaway */
+
+.reveal .covid-takeaway {
+  background-color: #F2F4F5;
+  border-left: 4px solid #526B7A;
+  padding: 0.35em 0.6em;
+  margin-top: 0.3em;
+  border-radius: 2px;
+}
+
+.reveal .covid-takeaway p {
+  font-size: 0.52em;
+  line-height: 1.35;
+  margin: 0;
+}
+
+
+/* Slide 9 — Before and after COVID */
+
+.reveal #before-after-slide .columns {
+  align-items: center;
+  gap: 0.5em;
+}
+
+.reveal #before-after-slide .column img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  margin: 0;
+}
+
+
+/* Slide 10 — Busiest pedestrian locations */
+
+.reveal #busiest-locations-slide .location-chart {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   margin: 0.3em auto 0;
 }
 
-.reveal #spatial-pulse .sp-method p,
-.reveal #spatial-pulse .sp-takeaway p {
-  margin: 0 !important;
-}
-
-
-/* Slide 11 - Pedestrian Clustering */
-
-.reveal #pedestrian-clusters h2 {
-  font-size: 1.25em !important;
-  line-height: 1.15;
-  margin-bottom: 0.3em;
-}
-
-.reveal #pedestrian-clusters .cl-visuals {
-  display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-  gap: 18px;
+.reveal #busiest-locations-slide .location-chart img {
+  display: block;
   width: 100%;
-  align-items: center;
+  max-width: 1150px;
+  max-height: 560px;
+  object-fit: contain;
+  margin: 0 auto;
+  border: none;
+  box-shadow: none;
 }
 
-.reveal #pedestrian-clusters .cl-profile,
-.reveal #pedestrian-clusters .cl-map {
-  width: 100%;
+
+/* Slide 11 — Two pedestrian rhythms */
+
+.reveal #cluster-slide .columns {
+  align-items: flex-start;
+  gap: 0.6em;
+  margin-top: 0.25em;
+}
+
+.reveal #cluster-slide .column {
   min-width: 0;
 }
 
-.reveal #pedestrian-clusters .cl-profile img {
+/* Static cluster profile graph */
+
+.reveal #cluster-slide .column img {
+  display: block;
   width: 100%;
-  max-height: 340px;
+  max-height: 480px;
   object-fit: contain;
+  margin: 0 auto;
+  border: none;
+  box-shadow: none;
+}
+
+/* Interactive cluster map */
+
+.reveal #cluster-slide .cell {
+  width: 100%;
+  margin: 0;
+}
+
+.reveal #cluster-slide .cell-output-display {
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.reveal #cluster-slide .html-widget,
+.reveal #cluster-slide .js-plotly-plot {
+  max-width: 100%;
+}
+
+/* Cluster explanations */
+
+.reveal #cluster-slide .cluster-one,
+.reveal #cluster-slide .cluster-two {
+  margin-top: 0.3em;
+  padding-top: 0.3em;
+}
+
+.reveal #cluster-slide .cluster-one {
+  border-top: 4px solid #00B4D8;
+}
+
+.reveal #cluster-slide .cluster-two {
+  border-top: 4px solid #FF4D4D;
+}
+
+.reveal #cluster-slide .cluster-one p,
+.reveal #cluster-slide .cluster-two p {
+  font-size: 0.56em;
+  line-height: 1.3;
+  margin: 0.12em 0;
+}
+
+
+/* Slide 12 — Event surges */
+
+.reveal #event-surge-slide .event-surge-graph {
+  width: 100%;
+  height: 410px;
+  margin: 0.15em auto 0;
+  overflow: hidden;
+}
+
+.reveal #event-surge-slide .event-surge-graph .cell,
+.reveal #event-surge-slide .event-surge-graph .cell-output,
+.reveal #event-surge-slide .event-surge-graph .cell-output-display {
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.reveal #event-surge-slide .event-surge-graph .html-widget,
+.reveal #event-surge-slide .event-surge-graph .js-plotly-plot {
+  width: 100% !important;
+  height: 390px !important;
+  max-width: 100%;
   margin: 0 auto;
 }
 
-.reveal #pedestrian-clusters .cl-map .html-widget,
-.reveal #pedestrian-clusters .cl-map .plotly {
-  width: 100% !important;
-  max-width: 100% !important;
+/* Finding below graph */
+
+.reveal #event-surge-slide .event-surge-finding {
+  width: 94%;
+  margin: 0.15em auto 0;
+  padding-top: 0.25em;
+  border-top: 2px solid #D9D9D9;
+  text-align: center;
 }
 
-.reveal #pedestrian-clusters .cl-insights {
+.reveal #event-surge-slide .event-surge-finding p {
+  font-size: 0.48em;
+  line-height: 1.25;
+  margin: 0;
+}
+
+/* Slide 13 — Weather and holidays */
+
+.reveal #weather-slide .weather-chart {
+  width: 100%;
+  height: 420px;
+  margin: 0.1em auto 0;
+  overflow: hidden;
+}
+
+/* Interactive Plotly sizing */
+
+.reveal #weather-slide .weather-chart .cell,
+.reveal #weather-slide .weather-chart .cell-output,
+.reveal #weather-slide .weather-chart .cell-output-display {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.reveal #weather-slide .weather-chart .html-widget,
+.reveal #weather-slide .weather-chart .js-plotly-plot {
+  width: 100% !important;
+  height: 410px !important;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Two findings below the graph */
+
+.reveal #weather-slide .weather-findings {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-top: 0.35em;
+  gap: 1.2em;
+  width: 95%;
+  margin: 0.2em auto 0;
 }
 
-.reveal #pedestrian-clusters .cl-card {
+.reveal #weather-slide .weather-finding {
+  border-top: 3px solid #D9D9D9;
   padding-top: 0.3em;
-  text-align: left;
 }
 
-.reveal #pedestrian-clusters .cl-card-one {
-  border-top: 3px solid #66C2A5;
+.reveal #weather-slide .weather-finding p {
+  font-size: 0.46em;
+  line-height: 1.35;
+  margin: 0.12em 0;
 }
 
-.reveal #pedestrian-clusters .cl-card-two {
-  border-top: 3px solid #FC8D62;
+.reveal #weather-slide .weather-finding strong {
+  font-weight: 700;
 }
 
-.reveal #pedestrian-clusters .cl-card p {
-  font-size: 0.5em !important;
+
+/* Slide 14 — Conclusion */
+
+.reveal #conclusion-slide .conclusion-content {
+  width: 94%;
+  margin: 0.65em auto 0;
+}
+
+/* Three findings */
+
+.reveal #conclusion-slide .conclusion-item {
+  display: grid;
+  grid-template-columns: 75px 1fr;
+  column-gap: 0.6em;
+  align-items: start;
+  padding: 0.48em 0;
+  border-bottom: 1px solid #D9D9D9;
+}
+
+.reveal #conclusion-slide .conclusion-number {
+  font-size: 0.8em;
+  font-weight: 700;
+  color: #727272;
+  line-height: 1.2;
+}
+
+
+.reveal #conclusion-slide .conclusion-text p:first-child {
+  font-size: 0.64em;
+  font-weight: 700;
+  margin-bottom: 0.18em;
+}
+
+.reveal #conclusion-slide .conclusion-text p:not(:first-child) {
+  font-size: 0.53em;
+  font-weight: 400;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Closing statement */
+
+.reveal #conclusion-slide .conclusion-ending {
+  width: 90%;
+  margin: 0.75em auto 0;
+  text-align: center;
+}
+
+.reveal #conclusion-slide .conclusion-ending p {
+  font-size: 0.64em;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.reveal #conclusion-slide .conclusion-ending strong {
+  font-weight: 700;
+}
+
+/* Slide 14 — Final layout refinements */
+
+/* Slightly smaller title */
+.reveal #conclusion-slide h2 {
+  font-size: 1.55em;
+  line-height: 1.15;
+  margin-bottom: 0.35em;
+}
+
+/* Bring findings closer to heading */
+.reveal #conclusion-slide .conclusion-content {
+  width: 94%;
+  margin: 0.3em auto 0;
+}
+
+/* Reduce vertical spacing between findings */
+.reveal #conclusion-slide .conclusion-item {
+  padding: 0.3em 0;
+}
+
+/* Make closing statement more compact */
+.reveal #conclusion-slide .conclusion-ending {
+  width: 90%;
+  margin: 0.35em auto 0;
+  text-align: center;
+}
+
+.reveal #conclusion-slide .conclusion-ending p {
+  font-size: 0.56em;
   line-height: 1.3;
-  margin: 0.15em 0 !important;
+  margin: 0;
 }

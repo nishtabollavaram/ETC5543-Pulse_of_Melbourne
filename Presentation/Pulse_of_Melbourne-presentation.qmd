@@ -179,11 +179,6 @@ ggplotly(
 
 ```
 
-::: {.flinders-snapshot}
-**FULL STUDY: 2009–2026** · **7.52 million hourly sensor observations**
-:::
-
-
 ::: {.notes}
 
 Let’s go back to Flinders Street on Saturday, 22 February 2014.
@@ -271,8 +266,8 @@ plot_ly(
       ),
       zoom = 12.5
     ),
-    width = 1180,
-    height = 590,
+    width = 1050,
+    height = 390,
     margin = list(l = 0, r = 0, t = 0, b = 0)
   ) |>
   config(
@@ -286,114 +281,68 @@ plot_ly(
 
 ```
 
-::: {.sensor-snapshot}
-**134 SENSOR IDs** · **INSTALLATIONS: 2009–2025** · Hover to explore
+::: {.sensor-overview}
+
+**What we'll explore**
+
+- **Time:** Daily, weekly and seasonal rhythms
+- **Change:** Long-term trends and COVID-19
+- **Space:** Activity across different locations
+- **Disruptions:** Events, rainfall and public holidays
+
 :::
 
 ::: {.notes}
 
-We've just seen how one street in Melbourne behaved on one particular Saturday.
+We've just seen how pedestrian activity
+changed on one particular Saturday near
+Flinders Street.
 
 But Melbourne is much more than one street.
 
-These markers show pedestrian sensor locations recorded in 2025 across the city.
+This map shows pedestrian sensor locations
+across the city.
 
-Using pedestrian-counting data from the City of Melbourne, we investigated how movement varies throughout the day, across the week, between different locations and over time.
+Using these observations, we investigated
+four main areas.
 
-Let's begin by looking at the rhythms that shape an ordinary day in Melbourne.
+First, Melbourne's daily, weekly and
+seasonal rhythms.
+
+Second, how activity has changed over
+the years, particularly around COVID-19.
+
+Third, how pedestrian patterns differ
+between locations.
+
+And finally, unusual changes linked to
+events, rainfall and public holidays.
+
+Let's begin by looking at how Melbourne's
+pedestrian movement changes throughout
+a normal day.
 
 :::
+
 
 ## How Melbourne's sensor network evolved {#sensor-expansion-slide}
 
 :::: {.columns}
 
-::: {.column width="52%"}
+::: {.column width="40%"}
 
-::: {.sensor-chart-heading}
-Monitoring coverage
-:::
+### Our data
 
-```{r}
-#| label: network-coverage-interactive
-#| echo: false
-#| warning: false
-#| message: false
-
-library(plotly)
-
-network_graph <- readRDS(
-  "figures/sensor_coverage_plotly.rds"
-)
-
-network_graph |>
-  plotly::layout(
-    title = list(text = ""),
-    width = 500,
-    height = 440,
-
-    font = list(size = 12),
-
-    legend = list(
-      orientation = "h",
-      x = 0,
-      y = -0.22,
-      font = list(size = 10)
-    ),
-
-    margin = list(
-      l = 75,
-      r = 10,
-      t = 20,
-      b = 95
-    )
-  ) |>
-  plotly::config(
-    displaylogo = FALSE,
-    responsive = TRUE
-  )
-```
+- **7.52 million** hourly observations
+- **May 2009 – October 2026**
+- **Source:** City of Melbourne pedestrian-counting system
+- **Preparation:** Historical and recent records combined and validated
 
 :::
 
-::: {.column width="48%"}
+::: {.column width="60%"}
 
-::: {.sensor-chart-heading}
-Sensor installations
-:::
-
-```{r}
-#| label: sensor-installations-interactive
-#| echo: false
-#| warning: false
-#| message: false
-
-library(plotly)
-
-installation_graph <- readRDS(
-  "figures/sensor_installations_plotly.rds"
-)
-
-installation_graph |>
-  plotly::layout(
-    title = list(text = ""),
-    width = 500,
-    height = 440,
-
-    font = list(size = 12),
-
-    margin = list(
-      l = 65,
-      r = 15,
-      t = 20,
-      b = 95
-    )
-  ) |>
-  plotly::config(
-    displaylogo = FALSE,
-    responsive = TRUE
-  )
-```
+![](figures/sensor_installations.png){.installation-chart fig-alt="Bar chart showing new pedestrian sensor installations by year"}
 
 :::
 
@@ -401,23 +350,27 @@ installation_graph |>
 
 ::: {.notes}
 
-Before examining Melbourne's pedestrian activity,
-we looked at how the sensor network evolved.
+To investigate Melbourne's pedestrian activity,
+we used data from the City of Melbourne,
+covering approximately 7.52 million hourly
+observations between May 2009 and October 2026.
 
-The first graph shows how many sensor locations
-reported pedestrian data each year, including
-locations with at least 80 percent coverage.
+We combined historical records with recent
+data and validated the observations.
 
-The second graph shows how many sensors in the
-current inventory were installed each year.
+One important point is that Melbourne's
+pedestrian monitoring network expanded
+over time, as shown in this graph.
 
-These measures are different because a sensor
-may be installed without reporting data continuously.
+This means we need to be careful when
+comparing different years.
 
-This is important when comparing pedestrian
-activity across different years.
+For our historical comparisons, we use
+consistent sensor locations wherever possible.
+
 
 :::
+
 
 ## Melbourne has its own daily rhythm {#daily-patterns-slide}
 
@@ -594,85 +547,20 @@ rather than a fixed set of locations.
 
 :::
 
-## Melbourne's monthly and seasonal rhythm {#monthly-seasonal-slide}
+
+## Melbourne's pedestrian activity changes with the seasons {#seasonal-patterns}
 
 :::: {.columns}
 
-::: {.column width="55%"}
+::: {.column width="50%"}
 
-::: {.sensor-chart-heading}
-Monthly pattern
-:::
-
-```{r}
-#| label: monthly-rhythm-interactive
-#| echo: false
-#| warning: false
-#| message: false
-
-library(plotly)
-
-monthly_graph <- readRDS(
-  "figures/monthly_plotly.rds"
-)
-
-monthly_graph |>
-  plotly::layout(
-    title = list(text = ""),
-    width = 500,
-    height = 440,
-    font = list(size = 12),
-    margin = list(
-      l = 85,
-      r = 15,
-      t = 30,
-      b = 95
-    )
-  ) |>
-  plotly::config(
-    displaylogo = FALSE,
-    responsive = TRUE
-  )
-```
+![](figures/monthly_rhythm.png){fig-alt="Monthly pedestrian activity showing variation throughout the year"}
 
 :::
 
-::: {.column width="45%"}
+::: {.column width="50%"}
 
-::: {.sensor-chart-heading}
-Seasonal pattern
-:::
-
-```{r}
-#| label: seasonal-rhythm-interactive
-#| echo: false
-#| warning: false
-#| message: false
-
-library(plotly)
-
-seasonal_graph <- readRDS(
-  "figures/seasonal_plotly.rds"
-)
-
-seasonal_graph |>
-  plotly::layout(
-    title = list(text = ""),
-    width = 500,
-    height = 440,
-    font = list(size = 12),
-    margin = list(
-      l = 80,
-      r = 10,
-      t = 30,
-      b = 95
-    )
-  ) |>
-  plotly::config(
-    displaylogo = FALSE,
-    responsive = TRUE
-  )
-```
+![](figures/seasonal_rhythm.png){fig-alt="Seasonal pedestrian activity showing lower activity during winter"}
 
 :::
 
@@ -680,18 +568,28 @@ seasonal_graph |>
 
 ::: {.notes}
 
-We also examined how pedestrian activity varies
-throughout the calendar year.
+We've seen how pedestrian movement changes
+throughout the day and week.
 
-The monthly analysis shows that March has the
-highest average daily pedestrian activity,
-followed by December, while June is the lowest.
+But does Melbourne also have a seasonal rhythm?
 
-The seasonal analysis shows that autumn and
-summer have the highest activity, while winter
-is the quietest.
+On the left, the monthly graph shows that
+pedestrian activity varies throughout the year,
+with a noticeable decline around June.
 
-Both graphs come from the team's existing analysis.
+The graph on the right shows a similar pattern
+when we group activity by season.
+
+Winter generally has lower pedestrian activity
+than the warmer parts of the year.
+
+This suggests that Melbourne's pedestrian
+rhythm is influenced by the time of year.
+
+However, these graphs alone don't establish
+whether temperature or rainfall causes the
+difference. We'll examine rainfall separately
+later in the presentation.
 
 :::
 
@@ -727,6 +625,11 @@ long_term_graph |>
   )
 ```
 
+::: {.covid-takeaway}
+**Key finding:** COVID-19 marked a major break in Melbourne's pedestrian activity, with sharp declines during 2020–2021.
+:::
+
+
 ::: {.notes}
 
 We also examined Melbourne's long-term
@@ -744,152 +647,79 @@ recovery.
 
 ## Has Melbourne returned to its earlier pedestrian activity? {#then-now}
 
-::: {.tn-graphs}
+:::: {.columns}
 
-::: {.tn-graph}
+::: {.column width="50%"}
 
-```{r}
-#| label: slide9-daily-comparison
-#| echo: false
-#| message: false
-#| warning: false
-
-plotly::config(
-  readRDS("figures/slide9_daily_plotly.rds"),
-  responsive = TRUE,
-  displayModeBar = FALSE
-)
-```
+![](figures/before_after_daily.png){fig-alt="Comparison of typical daily pedestrian activity before and after COVID-19"}
 
 :::
 
-::: {.tn-graph}
+::: {.column width="50%"}
 
-
-```{r}
-#| label: slide9-hourly-comparison
-#| echo: false
-#| message: false
-#| warning: false
-
-plotly::config(
-  readRDS("figures/slide9_hourly_plotly.rds"),
-  responsive = TRUE,
-  displayModeBar = FALSE
-)
-```
+![](figures/before_after_hourly.png){fig-alt="Comparison of hourly pedestrian activity profiles before and after COVID-19"}
 
 :::
-
-:::
-
-::: {.notes}
-After examining long-term changes, we wanted to understand whether Melbourne had returned to its pre-pandemic pedestrian activity levels.
-
-To make a more reliable comparison, we selected 27 sensor locations with at least 300 observed days in each of the six comparison years.
-
-The first graph compares the median daily pedestrian count from 2017–2019 with 2023–2025.
-
-We found a decrease from 10,091 to 7,211, which represents a 28.5% reduction.
-
-The second graph compares hourly pedestrian activity between these periods.
-
-Although recent pedestrian counts are generally lower, the daily rhythm remains recognisable, with activity increasing during the day and declining overnight.
-
-This suggests that the overall level of pedestrian activity has changed more noticeably than the broad daily pattern.
-
-These findings apply to the 27 consistently monitored locations, rather than all of Melbourne.
-:::
+::::
 
 ## Where is Melbourne busiest on foot? {#spatial-pulse}
 
-::: {.sp-bars}
+![](figures/busiest_locations_2025.png){fig-alt="Top ten monitored pedestrian locations ranked by median daily pedestrian count in 2025"}
+
+
+
+## Two distinct pedestrian rhythms {#cluster-slide}
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+![](figures/cluster_profiles.png){fig-alt="Weekday and weekend pedestrian activity patterns for the two clusters"}
+
+:::
+
+::: {.column width="50%"}
 
 ```{r}
-#| label: slide10-top-locations
 #| echo: false
-#| message: false
 #| warning: false
+#| message: false
+#| out-width: 100%
 
-plotly::config(
-  readRDS("figures/slide10_top_locations_plotly.rds"),
-  responsive = TRUE,
-  displayModeBar = FALSE
-)
+library(plotly)
+
+cluster_map <- readRDS("figures/cluster_map.rds")
+
+cluster_map
 ```
 
 :::
 
-::: {.sp-method}
-**2025 DATA** · Median daily pedestrian count · At least 20 hours/day and 292 valid days/location
-:::
+::::
 
-::: {.sp-takeaway}
-**KEY FINDING:** Pedestrian activity varies substantially across monitored locations.
-:::
+:::: {.columns}
 
+::: {.column width="50%"}
 
-::: {.notes}
-We have looked at how Melbourne's pedestrian activity changes over time. Now we turn to where pedestrian activity is concentrated.
-
-For this analysis, we focus on 2025 and compare monitored locations using their median daily pedestrian counts.
-
-To improve reliability, we include days with at least 20 hours of observations and locations with at least 292 valid days.
-
-The graph shows the ten busiest monitored locations meeting these criteria.
-
-We can see that some locations record considerably higher pedestrian activity than others.
-
-This highlights how pedestrian demand varies spatially and why planning decisions need to consider individual locations.
-
-These rankings describe the monitored locations, rather than every street in Melbourne.
-:::
-
-
-## Two distinct pedestrian rhythms {#pedestrian-clusters}
-
-::: {.cl-visuals}
-
-::: {.cl-profile}
-
-![](figures/cluster_profiles_matched.png)
-
-:::
-
-::: {.cl-map}
-
-```{r}
-#| label: slide11-cluster-map
-#| echo: false
-#| message: false
-#| warning: false
-
-plotly::config(
-  readRDS("figures/cluster_map.rds"),
-  responsive = TRUE,
-  displayModeBar = FALSE
-)
-```
-
-:::
-
-:::
-
-::: {.cl-insights}
-
-::: {.cl-card .cl-card-one}
+::: {.cluster-one}
 **CLUSTER 1 · 9 SENSORS**
 
 Stronger weekday-focused activity peaks.
 :::
 
-::: {.cl-card .cl-card-two}
+:::
+
+::: {.column width="50%"}
+
+::: {.cluster-two}
 **CLUSTER 2 · 35 SENSORS**
 
 Broader daytime and weekend activity.
 :::
 
 :::
+
+::::
 
 ::: {.notes}
 We have explored when Melbourne's pedestrian activity changes and where it is concentrated.
@@ -912,3 +742,151 @@ The key finding is that Melbourne does not have one uniform pedestrian rhythm. D
 
 This can help inform more location-specific planning and management of public spaces.
 :::
+
+## Major pedestrian surges coincide with city events {#event-surge-slide}
+
+::: {.event-surge-graph}
+
+```{r}
+
+#| echo: false
+#| warning: false
+#| message: false
+#| out-width: "100%"
+
+library(plotly)
+
+event_plot_interactive <- readRDS(
+  "figures/event_plot_interactive.rds"
+)
+
+event_plot_interactive <- event_plot_interactive |>
+  plotly::layout(
+    title = list(text = ""),
+    autosize = TRUE,
+    width = NULL,
+    height = 390,
+    margin = list(
+      l = 75,
+      r = 25,
+      t = 25,
+      b = 55
+    ),
+    font = list(size = 13)
+  ) |>
+  plotly::config(
+    displayModeBar = FALSE,
+    displaylogo = FALSE,
+    scrollZoom = FALSE
+  )
+
+event_plot_interactive
+
+```
+
+:::
+
+::: {.event-surge-finding}
+**22 February 2014:** The largest matched surge, with pedestrian activity **51.7% above expected levels**.
+:::
+
+
+## When does Melbourne slow down? {#weather-slide}
+
+::: {.weather-chart}
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| out-width: "100%"
+
+library(plotly)
+
+rainfall_plot <- readRDS(
+  "figures/rainfall_interactive.rds"
+)
+
+# Adjust presentation display only
+rainfall_plot <- rainfall_plot |>
+  plotly::layout(
+    title = list(text = ""),
+    autosize = TRUE,
+    width = NULL,
+    height = 410,
+    margin = list(
+      l = 85,
+      r = 25,
+      t = 15,
+      b = 85
+    ),
+    font = list(size = 14)
+  ) |>
+  plotly::config(
+    displayModeBar = FALSE,
+    displaylogo = FALSE,
+    scrollZoom = FALSE
+  )
+
+rainfall_plot
+```
+
+:::
+
+:::: {.weather-findings}
+
+::: {.weather-finding}
+**HEAVY RAINFALL**
+
+**24.7%** of days with ≥10 mm rainfall had significant pedestrian decreases, compared with **1.3%** of days with less rain.
+:::
+
+::: {.weather-finding}
+**PUBLIC HOLIDAYS**
+
+**34.9%** of public holidays had significant pedestrian decreases, compared with **2.5%** of other days.
+:::
+
+::::
+
+
+## Melbourne has a rhythm — but it never stands still. {#conclusion-slide}
+
+::: {.conclusion-content}
+
+::: {.conclusion-item}
+<span class="conclusion-number">01</span>
+
+::: {.conclusion-text}
+**One city, different rhythms**
+
+Melbourne follows familiar daily and weekly patterns, but its streets don't all move to the same beat.
+:::
+:::
+
+::: {.conclusion-item}
+<span class="conclusion-number">02</span>
+
+::: {.conclusion-text}
+**The city hasn't returned to its old pace**
+
+Across 27 consistently monitored locations, typical daily pedestrian activity was **28.5% lower in 2023–2025 than in 2017–2019**.
+:::
+:::
+
+::: {.conclusion-item}
+<span class="conclusion-number">03</span>
+
+::: {.conclusion-text}
+**Some days change everything**
+
+Major events coincide with unexpected surges, while heavy rain and public holidays are linked to quieter streets.
+:::
+:::
+
+:::
+
+::: {.conclusion-ending}
+**Melbourne's rhythm isn't just about when people move. It's about where they go, how the city has changed, and what brings it to life.**
+:::
+
