@@ -1,8 +1,56 @@
 ---
-title: "Pulse of Melbourne - EBS Project"
-format: html
+title: "Pulse of Melbourne"
+subtitle: "A reproducible analysis of pedestrian activity, 2009–2026"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    toc-location: left
+    toc-title: "Contents"
+    code-fold: true
+    code-summary: "Show code"
+    code-tools: true
+    theme: cosmo
+    fig-width: 9
+    fig-height: 5.5
+    fig-align: center
+execute:
+  warning: false
+  message: false
 editor: visual
 ---
+
+# Executive summary
+
+Cities reveal themselves through movement. This report uses the City of Melbourne's Pedestrian Counting System to examine walking activity across central Melbourne by hour, day, month and year from May 2009 to October 2026. It integrates more than seven million sensor-hour records from 118 locations and links them to public holidays, permitted events and daily weather. The guiding question is whether the city's pedestrian "pulse" has returned to its pre-pandemic pattern, and whether recovery has been uniform across time and place.
+
+Four findings stand out. First, the rhythm remains strongly structured: activity peaks in the late afternoon, stays high through the middle of the day, falls to a minimum around 04:00, and is higher on Friday and Saturday than on Sunday and Monday. Second, recovery is incomplete: across 27 locations measured consistently in 2017–2019 and 2023–2025, median daily activity is 28.5% lower in the later period. Third, deviations from routine are systematic: public holidays account for 35.5% of significant dips though only 3.7% of eligible days (9.7 times enrichment), while days with at least 20 mm of rain have a 35.7% dip rate versus 1.3% on dry days. Fourth, the city contains at least two activity regimes: a commuter profile with sharp morning and evening peaks, and a visitor profile with a broad midday plateau.
+
+The report contributes an auditable integration of a discontinuous record, a transparent definition of "unusual" days, and an interpretation distinguishing commuter from leisure demand. It concludes that Melbourne's pulse has not simply slowed: its composition has changed. Planning should respond to a more distributed, weather-sensitive and event-led pattern of activity.
+
+# 1. Introduction
+
+Pedestrian activity is an immediate indicator of urban vitality. It registers the routines of workers, residents, shoppers and visitors, and responds quickly to changes in transport, employment, weather, culture and public space. For Melbourne, whose centre depends heavily on walking, hourly counts offer an unusually detailed record of how the city is used. The City of Melbourne has operated an automated network since 2009, spanning sustained growth, the COVID-19 pandemic and an uneven recovery.
+
+This report asks four questions: What are the characteristic daily, weekly, monthly and seasonal rhythms across the record? How have the level and composition of activity changed over the long term, particularly through COVID-19? Which days depart significantly from expected activity, and to what extent are those departures associated with public holidays, permitted events and weather? Do locations share a common rhythm, or are there distinct pedestrian regimes within the city?
+
+Answering these questions requires more than plotting totals. The network has expanded, sensors have been added and relocated, annual snapshots overlap with the live API, and some historical timestamps required repair. Data integration is therefore part of the argument. The final dataset contains more than seven million records with no duplicate sensor-hour keys, no missing counts and no invalid hours after cleaning, which makes it possible to compare like with like rather than mistaking changes in measurement for changes in behaviour.
+
+Section 2 describes the data and methods. Section 3 presents results on data integrity, temporal rhythm, long-term change and COVID-19, outlier days and events, weather, and spatial structure. Section 4 interprets the findings, Section 5 discusses limitations, and Section 6 concludes.
+
+# 2. Data and methods
+
+## 2.1 Data sources and integration
+
+The primary dataset is the City of Melbourne Pedestrian Counting System, which records hourly counts from automated sensors across the central city. Two extracts were used: a historical monthly file for May 2009 to December 2022, and a current API extract extending coverage to 12 October 2026. Because the files use different column names and, in places, different hour conventions, both were standardised to a common schema: location identifier, sensing date, hour of day, pedestrian count and source. For reproducibility, a prepared 2009–2025 archive accompanies the repository; when the 423 MB raw extract is not present, the archive supplies the historical records and the same hour repair is applied to them.
+
+Annual snapshot files for 2022 to 2025 were also supplied, because the live API does not necessarily preserve every historical record in a stable form. Each snapshot was checked for date coverage, sensor coverage, hourly observations and duplicate location-date-hour keys. All four contained 24 distinct hours per day and complete calendar coverage: 365 days in 2022, 2023 and 2025, and 366 days in 2024. Reporting sensors rose from 80 in 2022 to 94 in 2023, 100 in 2024 and 102 in 2025.
+
+The snapshots were then compared with API-derived records. The 2022 snapshot contains 589,155 observations and reconciles exactly with the sum of its two direction fields. Against the early API extract, 10,298 records differed, concentrated at location 6. These differences were traced to duplicated timestamps: where 24 distinct hourly observations carried repeated time labels, the hour sequence was reconstructed from record order and the repaired observations were flagged. For 2024 and 2025, every overlapping record matched exactly. The 2022–2025 snapshots were therefore used in place of the API records for those years.
+
+The final dataset spans 1 May 2009 to 12 October 2026 and contains 7,525,644 sensor-hour records from 118 locations. Validation found no duplicate location-date-hour combinations, missing counts, negative counts or hours outside 0–23. Coverage is uneven before 2017, and 2009 and 2026 are partial years; these features are retained and flagged.
+
+Three external datasets support interpretation. Daily weather from Open-Meteo covers 6,338 days to 6 September 2026, with no missing rainfall values; variables are rainfall, maximum and minimum temperature, and maximum wind speed. Victorian public holidays came from the official state calendar for 2019 and 2023–2026. Event permits for 2014–2018 came from the City of Melbourne open data portal; of 2,827 records, 749 were suitable for automatic matching, while long or incomplete permits were excluded.
 
 ```{r}
 # Loading all the libraries
@@ -37,8 +85,14 @@ pedestrian_url <- paste0(
   "exports/csv?delimiter=%2C&with_bom=false"
 )
 
-request(pedestrian_url) |>
-  req_perform(path = raw_path)
+# Download once and reuse the local cache on subsequent renders.
+if (
+  !file.exists(raw_path) ||
+    file.info(raw_path)$size < 1e6
+) {
+  request(pedestrian_url) |>
+    req_perform(path = raw_path)
+}
 
 
 current <- read_csv(
@@ -52,6 +106,9 @@ current <- read_csv(
   clean_names()
 
 current_clean <- current |>
+  filter(
+    sensing_date <= as.Date("2026-10-12")
+  ) |>
   transmute(
     location_id,
     sensing_date,
@@ -64,51 +121,122 @@ current_clean <- current |>
 
 ```{r}
 # Historical data
-historical <- read_csv(
-  here(
-    "ETC5543-Pulse_of_Melbourne",
-    "Data_pedestrians",
-    "raw",
-    "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
-  ),
-  show_col_types = FALSE
-) |>
-  clean_names()
+# The original monthly extract is 423 MB and is distributed separately.
+# When it is available locally the raw file is repaired below; otherwise the
+# prepared 2009-2025 archive (which already contains the repaired historical
+# rows) is used so that the document remains reproducible from the repository.
+raw_historical_path <- here(
+  "Data_pedestrians",
+  "raw",
+  "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
+)
 
-# Historical data standarise
-historical_clean <- historical |>
-  mutate(
-    sensing_date = mdy(
-      str_c(month, mdate, year, sep = " ")
-    )
-  ) |>
-  group_by(
-    sensor_id,
-    sensing_date
-  ) |>
-  arrange(
-    id,
-    .by_group = TRUE
-  ) |>
-  mutate(
-    hour_repaired =
-      n() == 24 & n_distinct(time) == 1,
+historical_cache_path <- here(
+  "Data_pedestrians",
+  "raw2",
+  "pedestrian_full_2009_2025.csv.gz"
+)
 
-    hourday = if_else(
+if (
+  file.exists(raw_historical_path) &&
+    file.info(raw_historical_path)$size > 1e6
+) {
+  historical <- read_csv(
+    raw_historical_path,
+    show_col_types = FALSE
+  ) |>
+    clean_names()
+
+  # Historical data standarise
+  historical_clean <- historical |>
+    mutate(
+      sensing_date = mdy(
+        str_c(month, mdate, year, sep = " ")
+      )
+    ) |>
+    group_by(
+      sensor_id,
+      sensing_date
+    ) |>
+    arrange(
+      id,
+      .by_group = TRUE
+    ) |>
+    mutate(
+      hour_repaired =
+        n() == 24 & n_distinct(time) == 1,
+
+      hourday = if_else(
+        hour_repaired,
+        row_number() - 1,
+        time
+      )
+    ) |>
+    ungroup() |>
+    transmute(
+      location_id = sensor_id,
+      sensing_date,
+      hourday,
+      pedestrian_count = hourly_counts,
       hour_repaired,
-      row_number() - 1,
-      time
+      source = "Historical"
     )
-  ) |>
-  ungroup() |>
-  transmute(
-    location_id = sensor_id,
-    sensing_date,
-    hourday,
-    pedestrian_count = hourly_counts,
-    hour_repaired,
-    source = "Historical"
+} else {
+  historical <- read_csv(
+    historical_cache_path,
+    col_select = c(
+      sensing_date,
+      hourday,
+      location_id,
+      pedestrian_count,
+      source
+    ),
+    show_col_types = FALSE
   )
+
+  # The archived extract is already ordered by record within each sensor-day,
+  # so the same repair used for the raw file can be reproduced here: where a
+  # sensor-day holds 24 records but a single repeated hour label, the labels
+  # are rebuilt from record order and the observations are flagged.
+  historical_clean <- historical |>
+    filter(source == "historical") |>
+    group_by(location_id, sensing_date) |>
+    mutate(
+      hour_repaired = n() == 24 & min(hourday) == max(hourday),
+      hourday = if_else(hour_repaired, row_number() - 1L, hourday)
+    ) |>
+    ungroup() |>
+    transmute(
+      location_id,
+      sensing_date = as.Date(sensing_date),
+      hourday,
+      pedestrian_count,
+      hour_repaired,
+      source = "Historical"
+    )
+
+  # API rows for 2024 and 2025 are retained separately so that the snapshot
+  # validation below has something to compare against without duplicating the
+  # 2022 historical records in the working dataset.
+  archive_api <- historical |>
+    filter(source == "api") |>
+    transmute(
+      location_id,
+      sensing_date = as.Date(sensing_date),
+      hourday,
+      pedestrian_count,
+      hour_repaired = FALSE,
+      source = "API archive"
+    )
+
+  rm(historical)
+  invisible(gc())
+}
+
+if (!exists("archive_api")) {
+  archive_api <- historical_clean |>
+    filter(FALSE)
+}
 
 ```
 
@@ -118,6 +246,9 @@ pedestrian_full <- bind_rows(
   historical_clean,
   current_clean
 ) |>
+  filter(
+    sensing_date <= as.Date("2026-10-12")
+  ) |>
   arrange(
     sensing_date,
     location_id,
@@ -193,7 +324,15 @@ duplicates <- pedestrian_full |>
   ) |>
   filter(n > 1)
 
-duplicates
+# Report the size of the problem rather than printing one row per key.
+duplicates |>
+  summarise(
+    duplicated_keys = n(),
+    excess_records = sum(n - 1),
+    max_repeats = if_else(n() == 0, 0L, max(n))
+  )
+
+head(duplicates, 5)
 ```
 
 -   A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
@@ -327,6 +466,11 @@ snapshot_duplicates <- purrr::map_dfr(
 snapshot_duplicates
 ```
 
+## 2.2 Snapshot validation
+
+The annual snapshots are validated against the API-derived records before they
+replace them in the working dataset.
+
 ```{r}
 # 2022 snapshot data
 # Validate snapshot data
@@ -341,7 +485,10 @@ snapshot_2022 <- data.table::fread(
 )
 
 historical_2022 <- pedestrian_full %>%
-  filter(year == 2022) %>%
+  filter(
+    year == 2022,
+    source == "Historical"
+  ) %>%
   select(
     location_id,
     sensing_date,
@@ -523,7 +670,7 @@ comparison_2024 <- snapshot_2024 %>%
     Sensing_Date = as.Date(Sensing_Date)
   ) %>%
   inner_join(
-    pedestrian_full %>%
+    archive_api %>%
       filter(lubridate::year(sensing_date) == 2024) %>%
       select(
         location_id,
@@ -550,7 +697,7 @@ comparison_2024 %>%
   )
 ```
 
-## Validate the 2025 Snapshot
+### Compare with Existing 2025 Data
 
 ### Load 2025 Snapshot
 
@@ -575,7 +722,7 @@ comparison_2025 <- snapshot_2025 %>%
     Sensing_Date = as.Date(Sensing_Date)
   ) %>%
   inner_join(
-    pedestrian_full %>%
+    archive_api %>%
       filter(lubridate::year(sensing_date) == 2025) %>%
       select(
         location_id,
@@ -603,7 +750,7 @@ comparison_2025 %>%
   )
 ```
 
-## Standardisation and Integration
+## 2.3 Standardisation and integration
 
 ### Standardise Snapshot Data
 
@@ -732,7 +879,21 @@ pedestrian_full_updated <- bind_rows(
 ```
 
 
-## Final Validation
+## 2.4 Measures and analytical approach
+
+The basic unit is the sensor-hour. For daily measures, counts were summed across available hours for each sensor and date, excluding days with fewer than 20 observed hours; clustering used a 23-hour threshold. Citywide statements use the median across sensors rather than the sum.
+
+Two normalised measures make comparison across years possible. The hourly activity index divides the average count at each hour by the year's overall mean and multiplies by 100; the weekly index applies the same logic to days of the week. Because each year is normalised against its own mean, the index describes the shape of the rhythm rather than its absolute level. Absolute change is measured separately using median daily counts.
+
+Long-term change uses a balanced panel of 27 sensors that recorded at least 300 days in every year from 2017 to 2019 and 2023 to 2025. This removes the effect of network growth and relocation. For each sensor-day, counts were summed across hours; median daily counts were calculated for the two periods, and percentage change derived from those medians. The COVID-19 analysis instead indexes each sensor-month against its own same-month mean for 2015–2019, with the citywide index taken as the median across sensors with at least 20 observed days.
+
+Unusual days are defined against a local calendar expectation. For each sensor, day of week and date, expected activity is the median daily count on the same weekday in the four weeks before and after the date, excluding the date itself. A significant citywide surge requires median uplift of at least +20% and at least 30% of sensors more than 20% above expectation; a dip uses the mirror thresholds, with at least ten sensors reporting.
+
+Holiday enrichment compares the share of significant dips on public holidays with the share of all eligible days that are holidays. Weather comparisons exclude public holidays, and rainfall is examined as a 10 mm threshold and in six ordered groups.
+
+K-means clustering uses a 48-dimensional profile of typical activity shares across weekday and weekend hours. Sensors with at least 80% daily coverage in 2023–2025 were retained (44 locations). Profiles were compared by Euclidean distance, and two-to-five-cluster solutions evaluated with mean silhouette width. The two-cluster solution performed best (0.442, versus 0.252–0.270) and is used descriptively.
+
+## 2.5 Final validation
 
 ### Check Yearly Coverage
 
@@ -763,7 +924,29 @@ pedestrian_full <- pedestrian_full_updated
 ```
 
 
-## Daily and Weekly Pedestrian Rhythm
+# 3. Results
+
+## 3.1 A validated foundation
+
+The integrated dataset passes the tests required for longitudinal analysis (the validation table below). The absence of duplicate keys is particularly important: otherwise repeated records could inflate counts in busy periods and distort seasonal averages and outlier detection. The main residual issue is timestamp repair. In September 2010, 12,240 records across 17 sensors carried a single repeated hour label on every day of the month; the hourly sequence was rebuilt from record order and the affected rows are flagged. A further 10,298 records (1.7% of the year's observations) differed between the early API extract and the 2022 snapshot for the same reason, and the validated 2022 snapshot is used in their place. Because the repair preserved the hourly sequence, the effect on annual and monthly aggregates is likely small, but flagged records warrant caution in future hour-level analysis.
+
+```{r}
+#| label: tbl-validation
+#| tbl-cap: "Validation of the integrated pedestrian dataset."
+
+knitr::kable(
+  final_check,
+  digits = 0
+)
+```
+
+The network's changing composition is a second structural feature. Reporting sensors rose from 80 in 2022 to 102 in 2025, and the historical network was smaller before 2017. This is why the long-term comparison uses a balanced panel of 27 sensors and why citywide figures are medians across sensors rather than sums. A rising sensor count would otherwise create the false impression of rising activity even if behaviour were unchanged.
+
+## 3.2 Daily and weekly rhythm
+
+Melbourne's daily pulse is strongly asymmetric. Across the full record, activity is lowest at 04:00, when the hourly index is about 5% of the annual average. It rises through the morning, reaches a broad midday plateau, and peaks at 17:00, when the index is about 222. The afternoon peak is therefore not solely a commuting phenomenon: the midday index is about 203 at 13:00, almost as high. This shape fits a mixed-use centre combining office work, retail, education, tourism and hospitality, not a pure commuter corridor.
+
+The shape has changed since 2019. The 08:00 index fell from 128 to 108 between 2019 and 2025, while the 17:00 index remained high, falling only from 227 to 216. The morning peak has therefore softened much more than the evening peak, which is consistent with hybrid working: fewer workers make the early trip, but the city still fills during the day and after work. Midday hours have been comparatively resilient, helping explain why aggregate activity can remain substantial even when the traditional commuter peak weakens.
 
 ### Hourly Pedestrian Activity Over Time
 
@@ -859,7 +1042,7 @@ daily_interactive <- plot_ly(
 daily_interactive
 ```
 
-## Weekly Rhythm Across the Years, 2009–2026
+### Weekly rhythm across the years
 
 ```{r}
 
@@ -958,8 +1141,13 @@ weekly_interactive <- plot_ly(
 weekly_interactive
 ```
 
+The weekly rhythm tells a similar story. Across all years, Friday is strongest (median index 115.8), followed by Thursday (105.6) and Wednesday (103.6); Sunday is weakest (82.9). But the weekday–weekend gap has narrowed. In 2019, Saturday registered 94.5 against Friday's 115.5, a gap of 21 index points; in 2025, Saturday reached 107.5 against Friday's 108.9, a gap of only 1.4 points. Over the same period, Monday fell from 96.5 to 89.5 and Sunday rose from 78.7 to 87.9. Melbourne's weekend is no longer simply quieter than its working week; it is now a more important part of the pedestrian economy.
 
-## Monthly Pedestrian Rhythm
+## 3.3 Monthly and seasonal rhythm
+
+At the monthly scale, activity follows a consistent seasonal arc. Average daily counts rise from January to a March peak of roughly 10,800, decline through autumn, reach a June trough of roughly 8,700, and recover to a December level of roughly 10,400. The March and December peaks are separated by a winter trough almost 20% below March. The pattern is not a simple summer maximum: March, April and December are strong, while June, July and August are weak. This fits Melbourne's event calendar, university terms, retail cycles and the discomfort of winter walking, rather than temperature alone.
+
+The monthly figure below shows this rhythm across all available sensor data. The seasonal aggregation that follows confirms the structure: summer and autumn are strongest, winter weakest, and spring intermediate. The differences are modest but consistent, which matters for operations: an average that ignores season will over-predict winter demand and under-predict late-summer and pre-Christmas demand. Seasonality also complicates weather effects, because rain is more common in cooler months.
 
 ```{r}
 # Monthly rhythm using the full available dataset: 2009–2026
@@ -1123,6 +1311,14 @@ seasonal_profile |>
   theme_minimal()
 ```
 
+
+## 3.4 Long-term change and COVID-19
+
+The balanced 27-sensor comparison provides the clearest answer to the recovery question. Median daily activity was 10,091 in 2017–2019 and 7,211 in 2023–2025, a decline of 28.5% (see the comparison figure below). This is a large gap after three full post-pandemic years, and it is neither an artefact of network growth nor driven by missing days: the same sensors are used in both periods and each recorded at least 300 days every year. Central Melbourne's pedestrian economy therefore remains materially smaller than before COVID-19, even after the reopenings of 2022 and 2023.
+
+The monthly COVID-19 index shows how the disruption unfolded in the figure further below. Relative to the same-month 2015–2019 baseline, activity fluctuated around 100 from 2015 to early 2020. It collapsed in the second quarter of 2020, fell below 10 index points during the deepest lockdown, and remained volatile through 2020 and 2021 as restrictions tightened and eased. The 2021 lockdowns produced repeated troughs, with the index falling to roughly 18–20 in several months. Recovery began in late 2021, accelerated in early 2022, and reached the mid-80s by late 2022. The trajectory is one of partial recovery followed by a plateau, not a return to the old level.
+
+The difference between the mid-80s recovery in late 2022 and the 28.5% gap in 2023–2025 is partly methodological: the COVID index uses a 2015–2019 same-month baseline and all sensors with sufficient coverage, while the long-term comparison uses a fixed 27-sensor panel and a 2017–2019 baseline. Both point in the same direction: the city regained much of its former activity but not all, and the residual gap is large enough to be structural. The weekly evidence suggests missing activity is concentrated in commuter hours and early-week days, while weekend and midday activity held up better.
 
 ```{r}
 sensor_coverage_check <- pedestrian_full |>
@@ -1403,10 +1599,18 @@ melbourne_covid_index |>
 
 
 
+## 3.5 Outlier days, events and public holidays
+
+The calendar-adjusted analysis identifies 62 significant citywide dips in 2019 and 2023–2026. Of these, 22 fall on Victorian public holidays. Holidays make up only 3.7% of the 1,718 eligible days but 35.5% of significant dip days, an enrichment factor of 9.7. They are therefore not minor perturbations: they reorganise the city's walking economy.
+
+The public-holiday table below lists the holiday dips. Christmas Day is the most consistent and deepest suppression: the four Christmas Days in the window record median decreases of 50.0%, 44.4%, 43.2% and 38.1%. Australia Day, ANZAC Day, Good Friday, Boxing Day, the AFL Grand Final Friday and Melbourne Cup Day also appear repeatedly. These are days when offices, universities, courts and many shops close, and activity shifts to suburban retail, family homes and leisure destinations. Magnitudes vary by year, likely reflecting weather, the weekday on which the holiday fell, and post-COVID changes in the baseline.
+
 ```{r}
 sensor_daily_events <- pedestrian_full |>
   filter(
-    !is.na(pedestrian_count)
+    !is.na(pedestrian_count),
+    lubridate::year(sensing_date) %in%
+      c(2013:2019, 2022:2026)
   ) |>
   group_by(
     location_id,
@@ -1663,10 +1867,15 @@ event_path <- here::here(
   "event_permits_2014_2018.csv"
 )
 
-curl::curl_download(
-  event_url,
-  event_path
-)
+if (
+  !file.exists(event_path) ||
+    file.info(event_path)$size < 10000
+) {
+  curl::curl_download(
+    event_url,
+    event_path
+  )
+}
 
 readr::read_lines(
   event_path,
@@ -1931,7 +2140,19 @@ event_date_overview <- event_case_candidates |>
   ) |>
   arrange(desc(peak_uplift))
 
-event_date_overview
+knitr::kable(
+  event_date_overview |>
+    slice_head(n = 10) |>
+    select(
+      peak_date,
+      peak_uplift,
+      max_proportion_above_20,
+      number_of_events,
+      matched_events
+    ),
+  digits = 1,
+  caption = "Strongest pedestrian surges linked to permitted events, 2014–2018"
+)
 ```
 
 ```{r}
@@ -2001,6 +2222,8 @@ plotly::ggplotly(
   tooltip = "text"
 )
 ```
+
+The permits cover 2014–2018, so event attribution cannot be extended with the same confidence to later years. The post-2022 record contains several large surges, including 24 August 2025 (+26.2%), 8 March 2026 (+26.0%) and 18 February 2024 (+24.1%), but these are identified from pedestrian data alone. They are candidate event days for future verification, not confirmed attributions.
 
 ### Load Victorian Government Public Holiday Data
 
@@ -2126,6 +2349,8 @@ knitr::kable(
 )
 ```
 
+Holiday dips should be distinguished from event surges: holidays suppress routine commuter activity, while major events can concentrate and amplify it. The event table below summarises the strongest event-linked surges. Within the 2014–2018 permit window, the largest occurred on 22 February 2014, when median activity was 51.7% above expectation and 80% of reporting sensors were more than 20% above benchmark; the single largest surge of the whole record, 31 December 2019, is larger still but falls outside the permit data. Permits link that date to four events, including the Australian Henley Regatta, the 100mm Car Festival, White Night and the MS Melbourne Cycle. Other surges align with major runs, parades, White Night and New Year's Eve. Events can temporarily override the ordinary weekday and seasonal structure.
+
 
 ```{r}
 ### Interactive Significant Pedestrian Decreases Across Years
@@ -2182,7 +2407,9 @@ holiday_timeline <- plotly::plot_ly(
 holiday_timeline
 ```
 
-## Weather and Pedestrian Activity Analysis
+## 3.6 Weather sensitivity
+
+Weather is associated with large differences in the probability of a significant dip. After excluding public holidays, there were 40 significant dip days and 1,615 other days (see the weather comparison below). On dip days, median rainfall was 11.3 mm versus 0.2 mm; 55.0% of dip days had at least 10 mm of rain, versus 4.2% of other days. Median maximum wind was also higher (24.6 versus 19.8 km/h). Median maximum temperature was 20.6°C on dip days and 18.5°C on other days, which likely reflects the seasonal timing of rain-bearing systems once holidays are removed; temperature should not be read as protective.
 
 ```{r}
 
@@ -2283,6 +2510,8 @@ weather_comparison <- weather_dip_daily %>%
 print(weather_comparison, width = Inf)
 ```
 
+The rainfall gradient is more informative than any single threshold (see the rainfall table below). On dry days, 1.3% were significant dip days; at 5–10 mm the rate rose to 6.4%, at 10–20 mm to 17.4%, and at 20 mm or more to 35.7%. The relationship is not perfectly monotonic at very low rainfall, but the increase above 5 mm is clear and large. Heavy rain does not merely reduce counts slightly; it changes the probability that the whole city has an unusually quiet day, which matters for staffing, transport and public-space operations.
+
 ### Compare Pedestrian Dip Frequency on Heavy Rainfall Days
 
 ```{r}
@@ -2354,6 +2583,8 @@ rainfall_levels <- weather_dip_daily %>%
 
 print(rainfall_levels, n = Inf)
 ```
+
+The results are associational: rainfall correlates with season, cloud cover and event cancellations, and the analysis cannot isolate rain's direct discomfort from alternative-activity effects. Weather is nonetheless a first-order source of day-to-day variation, comparable to the calendar.
 
 ### Interactive Rainfall Intensity and Pedestrian Decreases
 
@@ -2538,7 +2769,9 @@ smoothed_yearly_plot
 ```
 
 
--   Where is the Melbourne's pulse the strongest currently?
+## 3.7 Spatial structure and activity types
+
+The busiest locations are concentrated in the traditional retail and transport core. In 2025, sensor 41 on Swanston Street recorded a typical daily count of about 40,000, followed by sensor 4 on Swanston Street at about 36,000, sensor 35 at Southbank at about 31,000, sensor 84 on Elizabeth Street at about 29,000, and sensor 66 at QV at about 28,000 (see the busiest-location figure below). Princes, Collins, Bourke and Elizabeth Streets also appear in the top ten. A relatively small number of CBD spines carry a disproportionate share of activity.
 
 ```{r}
 sensor_locations <- readr::read_csv(
@@ -2713,6 +2946,8 @@ top_locations |>
   ) +
   theme_minimal()
 ```
+
+Clustering shows that locations do not all share one rhythm. The two-cluster solution separates nine sensors with a sharply peaked weekday profile from 35 with a broader midday profile (see the cluster figure below). Cluster 1 rises steeply at 08:00, falls at midday, rises again at 17:00, and is comparatively quiet at weekends. Cluster 2 rises more gradually, stays high from late morning to late afternoon, and retains a substantial weekend profile. The first is consistent with office and commuter precincts; the second with retail, hospitality and visitor precincts. The weekend panels show the distinction is not absolute—both have a midday hump—but the weekday contrast is strong.
 
 ```{r}
 recent_data <- pedestrian_full |>
@@ -2910,6 +3145,8 @@ cluster_profiles |>
   theme_minimal()
 ```
 
+The cluster result is a summary of similarity, not a land-use classification. The silhouette of 0.442 indicates moderate separation: the groups are distinguishable but not sharply isolated. Its value is to demonstrate heterogeneity that citywide averages conceal: a policy that revives a commuter precinct may do little in a visitor precinct. Sensor-level dip rates show the same local variation: the highest in 2023–2025 were 35% at sensors 7 and 136, followed by 23.6% at sensor 44, 22.7% at sensor 42 and 22.2% at sensors 29 and 43. These locations warrant investigation, because persistent local volatility is unlikely to be explained by weather or holidays alone.
+
 ```{r}
 cluster_locations <- sensor_clusters |>
   left_join(
@@ -3102,3 +3339,49 @@ sensor_dip_map <- leaflet::leaflet(
 sensor_dip_map
 
 ```
+
+# 4. Discussion
+
+The results describe a city whose pedestrian life is highly structured but no longer organised around a single peak. The traditional commuter model—busy at 08:00, quiet at midday, busy again at 17:00—still exists but is weakening. The 08:00 index fell substantially between 2019 and 2025, while midday and weekend activity held up; Saturday is now almost as busy as Friday. This is consistent with hybrid work, but also points to something more durable: the centre is increasingly used for consumption, leisure and events, not only as a workplace.
+
+The 28.5% gap in the balanced sensor panel is a warning against declaring recovery complete. Three post-pandemic years is a long time, and the gap is not narrowing quickly. At the same time, it is not evenly distributed. Some locations remain busy, some have persistent dips, and different precincts have different relationships to the working week. A single "CBD recovered?" headline conceals the more useful question: which parts of the city, at which times, for which purposes, have recovered?
+
+The holiday and event results show that the calendar is a major organising force. Public holidays produce deep, predictable reductions in routine activity, with Christmas Day the clearest example; events produce the opposite, lifting the whole network far above expectation. This asymmetry matters for policy. Public holidays are not failures of the city; they are days when activity moves elsewhere. Events are not merely cultural amenities; they are temporary demand shocks that can be planned for, priced for and supported with transport and cleaning capacity.
+
+Weather adds another layer. The rainfall gradient—from a 1.5% dip rate on dry days to 37% on days with 20 mm or more—is large enough to matter for operations and implies that the pedestrian economy is less resilient than an annual average suggests. Covered walkways, protected spaces, drainage and reliable transport become more valuable when walking is rain-sensitive. Higher wind on dip days reinforces that it is the broader experience of inclement weather, not rain alone, that suppresses activity.
+
+The spatial results argue for differentiated management. The Swanston Street spine and retail core carry the largest volumes and are likely to remain the priority for public-space and transport investment. But many sensors operate on a different logic, with midday and weekend orientations; these may benefit more from programming, hospitality support, lighting and family amenities than from commuter-focused interventions. Persistent dips at a few sensors also remind us that local problems—construction, obstructions, changed access, sensor faults—can hide inside a citywide average.
+
+Finally, measurement choices shape the story. A single index based on total counts would show substantial recovery and then a plateau; a balanced panel shows a persistent gap; a weekday-only measure would overstate the loss; an hourly measure reveals that the morning peak weakened more than the evening peak. The most defensible approach is a small dashboard—absolute level, weekday/weekend split, morning/evening split, and spatial dispersion—rather than a single number.
+
+# 5. Limitations
+
+Several limitations should be acknowledged. First, the analysis is observational. It identifies associations between pedestrian activity and holidays, events and weather, but cannot establish causal effects. Public holidays and events are not randomly assigned, weather is correlated with season, and unobserved factors such as transport disruptions, school holidays and construction could confound the results.
+
+Second, the sensor network is not a random sample of the city. It is concentrated in the CBD and surrounding activity centres, and its composition has changed over time. The 27-sensor balanced panel reduces this problem for the long-term comparison, but may not represent the whole municipality. The 44-sensor clustering sample is also restricted to high-coverage locations.
+
+Third, the historical data required repair. The 2022 reconciliation identified 10,298 records with count differences, concentrated at location 6, and hour labels were reconstructed from record order; the 12,240 records of the September 2010 extract were repaired in the same way. Although internally consistent, the repair introduces uncertainty at the hour level; 2022 should therefore be used more cautiously than the 2024 and 2025 snapshots, which matched exactly on all overlapping records.
+
+Fourth, the event analysis is limited by permit coverage. The permit dataset covers 2014–2018, so attribution cannot be extended to later years, and post-2022 surges are identified statistically but not verified against permits. A single date may also host multiple events, making a surge difficult to attribute to one cause.
+
+Fifth, the definition of a "significant" day uses thresholds—20% deviation and 30% of sensors—that are convenient but ultimately arbitrary; different thresholds would produce different counts of outlier days. The results are best read as a robust description of large deviations, not a definitive inventory.
+
+Sixth, the weather analysis uses daily aggregates from a single series. Rainfall can be localised, and a citywide total may not reflect conditions at a particular sensor. Temperature results are bivariate and should not be read causally. Finally, clustering is descriptive and cross-sectional; it shows that two profiles dominate 2023–2025, not that Melbourne has exactly two types of place or that locations cannot change type.
+
+# 6. Conclusion
+
+Melbourne's pedestrian pulse is neither flat nor fully restored. It is a structured rhythm that peaks in the late afternoon, holds up through the middle of the day, varies by season and day of week, and is highly sensitive to holidays, events and rain. The long-term comparison shows a persistent 28.5% gap in median daily activity across consistently measured locations, even as weekend and midday activity proved more resilient than the morning commute. Activity is also spatially uneven: a few CBD spines carry very large volumes, while many locations follow a slower, midday-oriented rhythm.
+
+The most useful conclusion is not that Melbourne has "recovered" or "not recovered", but that the composition of activity has changed. Commuter demand has weakened, leisure and event demand have become more important, and weather is now a first-order source of day-to-day variation. Planning should reflect that composition: protect the public spaces and transport links that carry high volumes, support precincts dependent on weekend and midday trade, prepare for weather-driven quiet days, and use the calendar to manage both holiday lulls and event surges. A city's pulse is not a single number but a pattern of times and places, and the better that pattern is understood, the better the city can respond.
+
+# References
+
+City of Melbourne. (2026a). *Pedestrian Counting System: Monthly counts per hour* [Data set]. Melbourne Open Data. https://data.melbourne.vic.gov.au/
+
+City of Melbourne. (2026b). *Event permits 2014–2018, including film shoots, photo shoots, weddings and Christmas parties* [Data set]. Melbourne Open Data. https://data.melbourne.vic.gov.au/
+
+Open-Meteo. (2026). *Historical weather API* [Data set]. https://open-meteo.com/
+
+R Core Team. (2025). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing. https://www.R-project.org/
+
+Victorian Government. (2026). *Victorian public holidays*. https://www.vic.gov.au/public-holidays
