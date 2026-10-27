@@ -48,6 +48,7 @@ request(pedestrian_url) |>
 #Historical data
 historical <- read_csv(
   here(
+    "ETC5543-Pulse_of_Melbourne",
     "Data_pedestrians",
     "raw",
     "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
@@ -195,8 +196,6 @@ duplicates
 
 -   A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
 
-<<<<<<< HEAD
-
 
 
 ## EDA of City of Melbourne Snapshot Data
@@ -211,6 +210,7 @@ library(lubridate)
 
 ```{r}
 snapshot_dir <- here::here(
+  "ETC5543-Pulse_of_Melbourne",
   "Data_pedestrians",
   "raw",
   "data_pedestrian"
@@ -868,8 +868,6 @@ pedestrian_full_updated %>%
 pedestrian_full <- pedestrian_full_updated
 ```
 
-=======
->>>>>>> origin/main
 ```{r}
 #Download  the sensors location dataset
 
@@ -966,6 +964,7 @@ year_coverage |>
 -   When were the currently documented sensors installed? How many new sensors were installed in each year?
 
 ```{r}
+
 sensor_installations <- sensor_locations |>
   filter(!is.na(installation_date)) |>
   mutate(
@@ -976,7 +975,6 @@ sensor_installations <- sensor_locations |>
     name = "new_sensors"
   )
 
-sensor_installation_plot <- sensor_installations |>
 sensor_installations |>
   ggplot(
     aes(
@@ -984,7 +982,6 @@ sensor_installations |>
       y = new_sensors
     )
   ) +
-  geom_col(fill = "#147D73") +
   geom_col() +
   labs(
     title = "Expansion of Melbourne's pedestrian sensor network",
@@ -993,16 +990,7 @@ sensor_installations |>
   ) +
   theme_minimal()
 
-ggsave(
-  "../Presentation/figures/sensor_installations.png",
-ggsave(
-  "Presentation/figures/sensor_installations.png",
-  plot = sensor_installation_plot,
-  width = 10,
-  height = 4.5,
-  dpi = 300,
-  bg = "white"
-))
+
 ```
 
 -   Is there a monthly or seasonal rhythm?
@@ -1085,6 +1073,7 @@ monthly_profile |>
 -   seasons
 
 ```{r}
+
 seasonal_profile <- pedestrian_full |>
   
   # Step 1: Daily total for each sensor
@@ -1220,6 +1209,7 @@ sensor_monthly <- covid_daily |>
 ```
 
 ```{r}
+
 pre_covid_baseline <- sensor_monthly |>
   filter(
     year(month_date) >= 2015,
@@ -1258,6 +1248,7 @@ covid_index <- sensor_monthly |>
 ```
 
 ```{r}
+
 melbourne_covid_index <- covid_index |>
   group_by(month_date) |>
   summarise(
@@ -1297,6 +1288,7 @@ melbourne_covid_index |>
 
 - Where is the Melbourne's pulse the strongest currently?
 ```{r}
+
 location_metadata <- sensor_locations |>
   mutate(
     relocation_flag = str_detect(
@@ -1344,6 +1336,7 @@ sensor_daily_spatial <- pedestrian_full |>
 ```
 
 ```{r}
+
 recent_strength <- sensor_daily_spatial |>
   filter(
     year == 2025
@@ -1399,6 +1392,7 @@ ggplotly(
 )
 ```
 ```{r}
+
 top_locations <- recent_strength |>
   slice_max(
     typical_daily_count,
@@ -1459,6 +1453,7 @@ sensor_daily_change <- pedestrian_full |>
 ```
 
 ```{r}
+
 sensor_monthly_change <- sensor_daily_change |>
   mutate(
     month_date = floor_date(
@@ -1509,6 +1504,7 @@ pre_covid_location_baseline <- sensor_monthly_change |>
 ```
 
 ```{r}
+
 recent_location_change <- sensor_monthly_change |>
   filter(
     year >= 2024,
@@ -1573,6 +1569,7 @@ location_recovery_robust |>
 ```
 
 ```{r}
+
 location_recovery_final <- location_recovery_robust |>
   inner_join(
     location_metadata,
@@ -1710,6 +1707,7 @@ flinders_metadata
 ```
 
 ```{r}
+
 flinders_monthly <- pedestrian_full |>
   filter(location_id == 6) |>
   group_by(
@@ -1773,6 +1771,7 @@ flinders_monthly |>
 ```
 
 ```{r}
+
 # Inspecting the period around the upgrade
 flinders_monthly |>
   filter(
@@ -1815,6 +1814,7 @@ flinders_source_summary
 ```
 
 ```{r}
+
 # Check whether the result is driven by this one sensor
 spatial_with_flinders <- location_recovery_final |>
   summarise(
@@ -1918,6 +1918,7 @@ sensor_daily_events <- pedestrian_full |>
 ```
 
 ```{r}
+
 busiest_observed_dates <- sensor_daily_events |>
   group_by(sensing_date) |>
   summarise(
@@ -1970,7 +1971,9 @@ top_busiest_dates |>
   ) +
   theme_minimal()
 ```
+
 ```{r}
+
 sensor_event_index <- sensor_daily_events |>
   arrange(
     location_id,
@@ -2036,6 +2039,7 @@ event_day_summary <- sensor_event_index |>
 ```
 
 ```{r}
+
 event_day_summary_non_covid <- event_day_summary |>
   filter(
     year(sensing_date) <= 2019 |
@@ -2068,6 +2072,7 @@ strong_event_candidates_non_covid |>
 ```
 
 ```{r}
+
 event_candidates_episode <- strong_event_candidates_non_covid |>
   arrange(sensing_date) |>
   mutate(
@@ -2110,6 +2115,7 @@ event_episode_candidates |>
 ```
 
 ```{r}
+
 # Downloading the event permits dataset from COM
 event_url <- paste0(
   "https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/",
@@ -2147,6 +2153,7 @@ event_permits |>
   glimpse()
 ```
 ```{r}
+
 event_permits |>
   count(
     category_1,
@@ -2260,6 +2267,7 @@ event_permits_relevant <- event_permits |>
 ```
 
 ```{r}
+
 event_permits_relevant |>
   count(
     event_type,
@@ -2270,7 +2278,10 @@ event_permits_relevant |>
 event_permits_relevant |>
   glimpse()
 ```
+
 ```{r}
+
+
 # Checking for missing dates and unusally long permits
 
 event_permits_qc <- event_permits_relevant |>
@@ -2341,6 +2352,7 @@ event_permits_qc |>
 ```
 
 ```{r}
+
 event_permits_auto <- event_permits_qc |>
   filter(
     permit_match_class ==
@@ -2384,6 +2396,7 @@ event_episode_matches <-
 ```
 
 ```{r}
+
 event_episode_matches_checked <- event_episode_matches |>
   mutate(
     date_match_quality = case_when(
@@ -2439,6 +2452,7 @@ peak_event_summary
 
 
 ```{r}
+
 event_case_candidates <- event_matches_temporally_plausible |>
   filter(
     peak_uplift >= 20,
@@ -2492,6 +2506,7 @@ event_date_overview
 ```
 
 ```{r}
+
 event_date_overview <- event_date_overview |>
   mutate(
     date_label = format(
@@ -2560,69 +2575,43 @@ event_date_overview |>
 ```
 
 ```{r}
-event_plot_data <- event_date_overview |>
+
+event_bar_plot <- event_plot_data |>
   mutate(
-    date_label = format(
-      peak_date,
-      "%d %b %Y"
-    ),
-
-    hover_text = stringr::str_c(
-      "<b>Date:</b> ", date_label,
-      "<br><b>Pedestrian uplift:</b> ",
-      round(peak_uplift, 1), "%",
-      "<br><b>Sensors >20% above expected:</b> ",
-      scales::percent(
-        max_proportion_above_20,
-        accuracy = 1
-      ),
-      "<br><b>Matched events:</b> ",
-      matched_events
+    date_label = forcats::fct_reorder(
+      date_label,
+      peak_uplift
     )
-  )
-
-event_plot <- event_plot_data |>
+  ) |>
   ggplot(
     aes(
       x = peak_uplift,
-      y = forcats::fct_reorder(
-        date_label,
-        peak_uplift
-      ),
+      y = date_label,
       text = hover_text
     )
   ) +
-  geom_segment(
-    aes(
-      x = 0,
-      xend = peak_uplift,
-      yend = forcats::fct_reorder(
-        date_label,
-        peak_uplift
-      )
-    ),
-    linewidth = 0.6
+  geom_col(
+    fill = "#3274A1",
+    width = 0.7
   ) +
-  geom_point(
-    aes(
-      size = max_proportion_above_20
-    )
+  geom_text(
+    aes(label = paste0(round(peak_uplift, 1), "%")),
+    hjust = -0.15,
+    size = 3.5
   ) +
-  scale_size_continuous(
-    labels = scales::percent,
-    range = c(3, 7)
+  scale_x_continuous(
+    limits = c(0, max(event_plot_data$peak_uplift) * 1.18)
   ) +
   labs(
-    title = "Major pedestrian surges coincided with permitted Melbourne events",
-    subtitle = "Hover to see the matched events for each date",
+    title = "Major pedestrian surges and matched events",
+    subtitle = "Median increase above expected activity on each date",
     x = "Median pedestrian uplift (%)",
-    y = NULL,
-    size = "Sensors with\n>20% uplift"
+    y = NULL
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 12)
 
 plotly::ggplotly(
-  event_plot,
+  event_bar_plot,
   tooltip = "text"
 )
 ```
@@ -2653,6 +2642,7 @@ common_sensors <- pedestrian_full |>
 ```
 
 ```{r}
+
 period_daily <- pedestrian_full |>
   filter(
     year %in% c(2017:2019, 2023:2025)
@@ -2697,6 +2687,7 @@ period_summary
 
 
 ```{r}
+
 sensor_coverage_check <- pedestrian_full |>
   filter(year %in% c(2017:2019, 2023:2025)) |>
   group_by(location_id, year) |>
@@ -2722,6 +2713,7 @@ sensor_coverage_check |>
 ```
 
 ```{r}
+
 consistent_sensors <- sensor_coverage_check |>
   filter(days_observed >= 300) |>
   group_by(location_id) |>
@@ -2744,6 +2736,7 @@ consistent_sensors |>
 ```
 
 ```{r}
+
 pedestrian_consistent <- pedestrian_full |>
   semi_join(
     consistent_sensors,
@@ -2822,7 +2815,7 @@ period_summary_consistent |>
   ) +
   labs(
     title = "Has Melbourne's pedestrian activity changed?",
-    subtitle = "Typical daily activity across 27 consistently measured locations",
+    subtitle = "Typical activity measured across 27 consistently measured locations"
     x = NULL,
     y = "Median daily pedestrian count"
   ) +
@@ -2830,6 +2823,7 @@ period_summary_consistent |>
 ```
 
 ```{r}
+
 hourly_period_consistent <- pedestrian_consistent |>
   mutate(
     period = case_when(
@@ -2867,7 +2861,6 @@ hourly_period_consistent |>
   ) +
   labs(
     title = "Has Melbourne's daily pedestrian rhythm changed?",
-    subtitle = "Comparison across 27 consistently measured locations",
     x = "Hour of day",
     y = "Median hourly pedestrian count",
     linetype = NULL
@@ -2876,6 +2869,7 @@ hourly_period_consistent |>
 ```
 
 ```{r}
+
 period_change <- period_summary_consistent |>
   pivot_wider(
     names_from = period,
@@ -2905,6 +2899,7 @@ pedestrian_full |>
 ```
 
 ```{r}
+
 recent_data <- pedestrian_full |>
   filter(
     year %in% 2023:2025,
@@ -2964,7 +2959,6 @@ hourly_profiles <- recent_data |>
   mutate(
     day_type = if_else(
       lubridate::wday(sensing_date, week_start = 1) <= 5,
-      wday(sensing_date, week_start = 1) <= 5,
       "Weekday",
       "Weekend"
     )
@@ -2986,6 +2980,7 @@ hourly_profiles <- recent_data |>
 ```
 
 ```{r}
+
 # One row per sensor, with 48 profile measurements
 cluster_features <- hourly_profiles |>
   mutate(
@@ -3089,8 +3084,8 @@ cluster_profiles |>
   geom_line(linewidth = 1) +
   scale_colour_manual(
   values = c(
-    "Cluster 1" = "#F8766D",
-    "Cluster 2" = "#00BFC4"
+    "Cluster 1" = "#00B4D8",
+    "Cluster 2" = "#FF4D4D"
   )
 ) +
   facet_wrap(~day_type) +
@@ -3108,6 +3103,7 @@ cluster_profiles |>
 ```
 
 ```{r}
+  
 cluster_locations <- sensor_clusters |>
   left_join(
     location_metadata |>
@@ -3133,7 +3129,7 @@ cluster_locations <- sensor_clusters |>
 ```
 
 ```{r}
-plotly::plot_ly(
+cluster_map_plot <- plotly::plot_ly(
   data = cluster_locations,
   type = "scattermapbox",
   mode = "markers",
@@ -3141,8 +3137,8 @@ plotly::plot_ly(
   lon = ~longitude,
  color = ~cluster,
 colors = c(
-  "Cluster 1" = "#F8766D",
-  "Cluster 2" = "#00BFC4"
+  "Cluster 1" = "#00B4D8",
+  "Cluster 2" = "#FF4D4D"
 ),
   text = ~hover_text,
   hoverinfo = "text",

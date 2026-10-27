@@ -28,19 +28,17 @@ How does Melbourne move, and what changes its rhythm?
 
 ::: {.cover-details}
 
-<div style="font-size: 42px; font-weight: 700;">
-  ETC5543 — Pulse of Melbourne
+ETC5543 · EBS-Business Analytics Project
 
-<div style="font-size: 40px; margin-top: 30px;">
-  Richa Anghan · Nishtha Bollavaram · Zhuo Zhang
-</div>
+Richa Anghan · Zhuo Zhang · Nishta Bollavaram
+
 :::
 
 :::
 
 ::: {.column width="53%"}
 
-![](figures/pedestrian_image.png){width="85%"}
+![](figures/pedestrian_image.png){.cover-image fig-alt="Pedestrians and trams in central Melbourne"}
 
 ::: {.cover-credit}
 

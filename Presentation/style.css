@@ -591,15 +591,3 @@
   margin: 0;
 }
 
-/* First slide only */
-.reveal .quarto-title-block .title {
-  font-size: 3.5em !important;
-}
-
-.reveal .quarto-title-block .subtitle {
-  font-size: 2.2em !important;
-}
-
-.reveal .quarto-title-block .quarto-title-authors {
-  font-size: 2.2em !important;
-}

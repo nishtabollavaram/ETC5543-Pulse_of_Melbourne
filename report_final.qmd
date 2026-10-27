@@ -1,7 +1,24 @@
 ---
 title: "Pulse of Melbourne - EBS Project"
-format: html
+author:
+  - Richa Anghan
+  - Zhuo Zhang
+  - Nishta Bollavaram
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-location: left
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    fig-responsive: true
 editor: visual
+execute:
+  message: false
+  warning: false
+  echo: false
 ---
 
 ```{r}
@@ -2896,6 +2913,12 @@ cluster_profiles |>
     )
   ) +
   geom_line(linewidth = 1) +
+  scale_colour_manual(
+  values = c(
+    "Cluster 1" = "#F8766D",
+    "Cluster 2" = "#00BFC4"
+  )
+) +
   facet_wrap(~day_type) +
   scale_x_continuous(
     breaks = seq(0, 23, by = 2)
@@ -2943,7 +2966,10 @@ plotly::plot_ly(
   lat = ~latitude,
   lon = ~longitude,
   color = ~cluster,
-  colors = "Set2",
+colors = c(
+  "Cluster 1" = "#F8766D",
+  "Cluster 2" = "#00BFC4"
+),
   text = ~hover_text,
   hoverinfo = "text",
   marker = list(
