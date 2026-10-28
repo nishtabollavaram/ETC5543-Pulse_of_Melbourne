@@ -1,5 +1,4 @@
 ---
-<<<<<<< HEAD
 title: "Pulse of Melbourne - EBS Project"
 author:
   - Richa Anghan
@@ -15,26 +14,6 @@ format:
     code-fold: true
     code-tools: true
     fig-responsive: true
-=======
-title: "Pulse of Melbourne"
-subtitle: "A reproducible analysis of pedestrian activity, 2009–2026"
-format:
-  html:
-    toc: true
-    toc-depth: 2
-    toc-location: left
-    toc-title: "Contents"
-    code-fold: true
-    code-summary: "Show code"
-    code-tools: true
-    theme: cosmo
-    fig-width: 9
-    fig-height: 5.5
-    fig-align: center
-execute:
-  warning: false
-  message: false
->>>>>>> c156328b4bac8f453e3483ebe162ac0e9bf68aa5
 editor: visual
 execute:
   message: false
@@ -42,43 +21,10 @@ execute:
   echo: false
 ---
 
-# Executive summary
-
-Cities reveal themselves through movement. This report uses the City of Melbourne's Pedestrian Counting System to examine walking activity across central Melbourne by hour, day, month and year from May 2009 to October 2026. It integrates more than seven million sensor-hour records from 118 locations and links them to public holidays, permitted events and daily weather. The guiding question is whether the city's pedestrian "pulse" has returned to its pre-pandemic pattern, and whether recovery has been uniform across time and place.
-
-Four findings stand out. First, the rhythm remains strongly structured: activity peaks in the late afternoon, stays high through the middle of the day, falls to a minimum around 04:00, and is higher on Friday and Saturday than on Sunday and Monday. Second, recovery is incomplete: across 27 locations measured consistently in 2017–2019 and 2023–2025, median daily activity is 28.5% lower in the later period. Third, deviations from routine are systematic: public holidays account for 35.5% of significant dips though only 3.7% of eligible days (9.7 times enrichment), while days with at least 20 mm of rain have a 35.7% dip rate versus 1.3% on dry days. Fourth, the city contains at least two activity regimes: a commuter profile with sharp morning and evening peaks, and a visitor profile with a broad midday plateau.
-
-The report contributes an auditable integration of a discontinuous record, a transparent definition of "unusual" days, and an interpretation distinguishing commuter from leisure demand. It concludes that Melbourne's pulse has not simply slowed: its composition has changed. Planning should respond to a more distributed, weather-sensitive and event-led pattern of activity.
-
-# 1. Introduction
-
-Pedestrian activity is an immediate indicator of urban vitality. It registers the routines of workers, residents, shoppers and visitors, and responds quickly to changes in transport, employment, weather, culture and public space. For Melbourne, whose centre depends heavily on walking, hourly counts offer an unusually detailed record of how the city is used. The City of Melbourne has operated an automated network since 2009, spanning sustained growth, the COVID-19 pandemic and an uneven recovery.
-
-This report asks four questions: What are the characteristic daily, weekly, monthly and seasonal rhythms across the record? How have the level and composition of activity changed over the long term, particularly through COVID-19? Which days depart significantly from expected activity, and to what extent are those departures associated with public holidays, permitted events and weather? Do locations share a common rhythm, or are there distinct pedestrian regimes within the city?
-
-Answering these questions requires more than plotting totals. The network has expanded, sensors have been added and relocated, annual snapshots overlap with the live API, and some historical timestamps required repair. Data integration is therefore part of the argument. The final dataset contains more than seven million records with no duplicate sensor-hour keys, no missing counts and no invalid hours after cleaning, which makes it possible to compare like with like rather than mistaking changes in measurement for changes in behaviour.
-
-Section 2 describes the data and methods. Section 3 presents results on data integrity, temporal rhythm, long-term change and COVID-19, outlier days and events, weather, and spatial structure. Section 4 interprets the findings, Section 5 discusses limitations, and Section 6 concludes.
-
-# 2. Data and methods
-
-## 2.1 Data sources and integration
-
-The primary dataset is the City of Melbourne Pedestrian Counting System, which records hourly counts from automated sensors across the central city. Two extracts were used: a historical monthly file for May 2009 to December 2022, and a current API extract extending coverage to 12 October 2026. Because the files use different column names and, in places, different hour conventions, both were standardised to a common schema: location identifier, sensing date, hour of day, pedestrian count and source. For reproducibility, a prepared 2009–2025 archive accompanies the repository; when the 423 MB raw extract is not present, the archive supplies the historical records and the same hour repair is applied to them.
-
-Annual snapshot files for 2022 to 2025 were also supplied, because the live API does not necessarily preserve every historical record in a stable form. Each snapshot was checked for date coverage, sensor coverage, hourly observations and duplicate location-date-hour keys. All four contained 24 distinct hours per day and complete calendar coverage: 365 days in 2022, 2023 and 2025, and 366 days in 2024. Reporting sensors rose from 80 in 2022 to 94 in 2023, 100 in 2024 and 102 in 2025.
-
-The snapshots were then compared with API-derived records. The 2022 snapshot contains 589,155 observations and reconciles exactly with the sum of its two direction fields. Against the early API extract, 10,298 records differed, concentrated at location 6. These differences were traced to duplicated timestamps: where 24 distinct hourly observations carried repeated time labels, the hour sequence was reconstructed from record order and the repaired observations were flagged. For 2024 and 2025, every overlapping record matched exactly. The 2022–2025 snapshots were therefore used in place of the API records for those years.
-
-The final dataset spans 1 May 2009 to 12 October 2026 and contains 7,525,644 sensor-hour records from 118 locations. Validation found no duplicate location-date-hour combinations, missing counts, negative counts or hours outside 0–23. Coverage is uneven before 2017, and 2009 and 2026 are partial years; these features are retained and flagged.
-
-Three external datasets support interpretation. Daily weather from Open-Meteo covers 6,338 days to 6 September 2026, with no missing rainfall values; variables are rainfall, maximum and minimum temperature, and maximum wind speed. Victorian public holidays came from the official state calendar for 2019 and 2023–2026. Event permits for 2014–2018 came from the City of Melbourne open data portal; of 2,827 records, 749 were suitable for automatic matching, while long or incomplete permits were excluded.
-
 ```{r}
+#| label: setup
+#| include: false
 # Loading all the libraries
-#| message: false
-#| warning: false
-
 library(tidyverse)
 library(lubridate)
 library(janitor)
@@ -94,6 +40,115 @@ library(cluster)
 library(data.table)
 ```
 
+
+
+
+# Abstract
+
+Melbourne's pedestrian activity reflects the city's daily routines, spatial differences and responses to major disruptions. This project investigates how pedestrian movement varies across time and location, how these patterns have evolved, and which circumstances are associated with unusually high or low activity.
+
+Using approximately 7.52 million hourly observations from the City of Melbourne's pedestrian counting system, covering May 2009 to October 2026, we examined recurring daily, weekly, monthly and seasonal rhythms, long-term changes, geographical differences and exceptional activity. The analysis combined descriptive visualisation, consistent-sensor comparisons, K-means clustering and comparisons against expected pedestrian activity.
+
+Results revealed recurring temporal patterns alongside substantial changes over time. Across 27 consistently monitored locations, typical daily pedestrian activity was 28.5% lower during 2023–2025 than during 2017–2019, although the overall hourly pattern remained broadly similar. K-means clustering of 44 reliably observed locations identified two activity profiles: one characterised by pronounced weekday peaks and another showing broader daytime activity and relatively stronger weekend patterns. The analysis also identified unusual pedestrian surges, including a median uplift of 51.7% on 22 February 2014, which was subsequently investigated alongside permitted city events.
+
+These findings demonstrate that Melbourne's pedestrian activity varies not only in volume but also in timing and location. They highlight the importance of accounting for sensor coverage, data quality and location-specific patterns when interpreting long-term changes and unusual activity. The results provide useful insights for understanding urban movement and informing transport, public-space and event planning.
+
+
+# 1. Introduction
+
+## 1.1 Understanding Melbourne's Pedestrian Pulse
+
+On 22 February 2014, pedestrian activity near Flinders Street and Elizabeth Street showed an unusual pattern. Compared with other Saturdays in February, pedestrian counts remained noticeably higher, particularly into the evening. What would normally have been a relatively quiet period instead recorded sustained activity. This observation raised a broader question: was this an isolated occurrence at one location, or part of a larger change in how people were moving through Melbourne?
+
+Melbourne's streets serve different purposes throughout the day. Morning activity often reflects commuting, while shopping, leisure and other activities contribute to movement during the afternoon, evenings and weekends. These patterns can also vary across locations, seasons and years. Major disruptions, public events and weather conditions may further influence how frequently and when people move through the city.
+
+Understanding these variations is important for urban planning and decision-making. Information about pedestrian activity can help identify busy periods and locations, support transport and infrastructure planning, and inform how public spaces are managed during major events. However, identifying meaningful changes requires more than simply comparing pedestrian counts. Activity recorded at a particular location may vary because of changes in travel behaviour, but also because of differences in sensor coverage, installation dates or data availability.
+
+The City of Melbourne's pedestrian counting system provides an opportunity to investigate these patterns using observations collected over an extended period. By examining both the timing and geographical distribution of pedestrian activity, this project explores how Melbourne's movement follows familiar rhythms, how these rhythms have evolved, and when they depart from their usual patterns.
+
+## 1.2 Research Aim and Objectives
+
+The primary aim of this project is to investigate **how pedestrian activity across Melbourne varies over time and space, how it has changed over the years, and which circumstances are associated with unusually high or low activity**.
+
+In line with the original project brief, the analysis addresses four related questions:
+
+1. **What are Melbourne's typical pedestrian rhythms?** We investigate hourly, daily, weekly, monthly and seasonal variations to identify recurring patterns in pedestrian activity.
+
+2. **How has pedestrian activity changed over time?** We examine long-term trends, the disruption associated with COVID-19, and differences between pre-pandemic and more recent periods.
+
+3. **How does pedestrian activity vary across locations?** We investigate differences in pedestrian volumes and whether locations exhibit similar patterns of activity throughout weekdays and weekends.
+
+4. **When does pedestrian activity depart from its usual patterns?** We identify unusually busy and quiet days and examine their associations with major events, rainfall and public holidays.
+
+Together, these questions allow the project to move beyond identifying where and when pedestrian counts are highest. They provide a framework for understanding how the city's movement patterns differ, how they have evolved, and what may be associated with substantial changes.
+
+## 1.3 Analytical Approach and Contributions
+
+This project draws on the City of Melbourne's pedestrian counting records, covering May 2009 to October 2026. Historical records were combined with more recent observations, including additional data obtained directly from the City of Melbourne, to create a consolidated dataset containing approximately 7.52 million hourly observations.
+
+The analysis begins by examining Melbourne's recurring temporal patterns before investigating longer-term changes. Because the pedestrian sensor network has expanded over time, comparisons between historical and recent periods use consistently monitored locations where appropriate. This helps distinguish changes in observed pedestrian activity from changes in the number of sensors contributing data.
+
+The project also considers geographical differences in pedestrian movement. Alongside identifying locations with high pedestrian activity, K-means clustering is used to group sensors according to their normalised hourly patterns. This allows locations with different pedestrian volumes to be compared based on the timing and relative distribution of activity, rather than their total counts alone.
+
+Finally, the analysis investigates departures from normal activity by comparing observed pedestrian counts with expected patterns. Unusually high or low periods are then examined alongside information about permitted events, rainfall and public holidays. These comparisons are treated as associations rather than evidence of direct causation.
+
+A central contribution of the project is the integration of temporal, spatial and event-related analyses into a single investigation of Melbourne's pedestrian activity. Equal attention is given to data preparation and measurement reliability, recognising that changes in sensor coverage and data quality can influence the conclusions drawn from long-term observations.
+
+By combining these approaches, the project aims to provide a clearer understanding of **when Melbourne is active, where different pedestrian rhythms occur, how these patterns have changed, and what circumstances are associated with disruptions to the city's usual movement**.
+
+# 2. Data Sources and Preparation
+
+## 2.1 Data Sources
+
+The primary dataset for this project was obtained from the City of Melbourne's Pedestrian Counting System, which records hourly pedestrian activity at monitoring locations across the city. The system provides an extensive record of pedestrian movement, allowing activity to be examined at different temporal scales and geographical locations.
+
+The dataset was assembled from historical pedestrian records and more recent observations available through the City of Melbourne's open data platform. Additional records covering 2022–2025 were provided directly by a City of Melbourne data operations manager via the email to address gaps in the publicly accessible data.
+
+After integration and cleaning, the consolidated dataset contained **7,523,688 hourly observations**, covering **May 2009 to October 2026**. Each observation represents a pedestrian count recorded for a particular sensor, date and hour.
+
+Sensor-location metadata were also used to identify monitoring locations and their geographical coordinates. This information supported the spatial analysis and helped assess changes in the sensor network over time.
+
+Because monitoring locations were introduced at different times and did not always report continuously, the number of available observations varied across sensors and years. These differences were considered when selecting data for the subsequent analyses.
+
+## 2.2 Data Integration and Cleaning
+
+The pedestrian data were obtained from multiple sources covering different periods, so the records needed to be standardised before they could be combined. The historical dataset provided observations from 2009 to 2022, while more recent data were obtained through the City of Melbourne's open data platform and additional files supplied directly by the City of Melbourne.
+
+The preparation process focused on creating a consistent hourly dataset while addressing differences in column names, date formats, overlapping records and historical timestamp issues.
+
+### 2.2.1 Standardising the Data
+
+The historical and recent datasets were first brought into a common structure. The main variables retained were the sensor's location identifier (`location_id`), observation date (`sensing_date`), hour of the day (`hourday`) and recorded pedestrian count (`pedestrian_count`).
+
+Date fields were converted into a consistent format, and the hourly observations were organised using the combination of sensor, date and hour. This combination was used as the observation key throughout the cleaning process.
+
+Sensor identifiers were used instead of sensor names to link observations across different periods. This was important because some sensor descriptions had changed over time, even when the monitoring location remained the same.
+
+### 2.2.2 Resolving Overlapping Records
+
+Some years were represented in more than one data source, particularly between 2022 and 2025. These overlapping periods required additional checks to avoid counting the same sensor-hour observation more than once.
+
+A comparison of the overlapping 2022 records identified 464,481 matching sensor-date-hour keys, of which 10,298 contained different pedestrian counts between the two sources. This showed that matching observations were not always identical and that simply appending the datasets could introduce inconsistencies.
+
+To resolve these overlaps, the integration process prioritised the more recent supplied records for 2022–2025 and used the historical records for periods outside that range. This established a consistent source-selection rule and prevented overlapping observations from being retained twice.
+
+### 2.2.3 Correcting Historical Hour Labels
+
+A further issue was identified in the historical records, where some sensor-day groups contained 24 observations but only one distinct hour label. This made the recorded hour values unsuitable for analysing activity throughout the day.
+
+A total of 510 sensor-day groups showed this issue, representing 12,240 observations. For these groups, the hour labels were reconstructed from 0 to 23 using the order of the original record identifiers. The affected records were also flagged during processing.
+
+This correction assumed that the original record order followed the chronological sequence of hourly observations. Although it allowed the affected records to be represented consistently, the reconstructed hours could not be independently confirmed from the repeated hour labels alone. This uncertainty is therefore relevant when interpreting hourly patterns in the affected historical observations.
+
+### 2.2.4 Combining the Cleaned Records
+
+After standardising the variables and addressing the identified inconsistencies, the cleaned historical and recent records were combined into a consolidated dataset named `pedestrian_full`.
+
+The dataset retained hourly pedestrian observations with consistent variable names and a common observation key. This provided the foundation for the subsequent temporal, spatial and event-related analyses.
+
+Further checks of duplicate records, missing values and sensor coverage were used to assess the quality and completeness of the consolidated data. These checks are presented in the following section.
+
+
 ```{r}
 # Current data through API
 dir_create("Data_pedestrians/raw2")
@@ -107,14 +162,8 @@ pedestrian_url <- paste0(
   "exports/csv?delimiter=%2C&with_bom=false"
 )
 
-# Download once and reuse the local cache on subsequent renders.
-if (
-  !file.exists(raw_path) ||
-    file.info(raw_path)$size < 1e6
-) {
-  request(pedestrian_url) |>
-    req_perform(path = raw_path)
-}
+request(pedestrian_url) |>
+  req_perform(path = raw_path)
 
 
 current <- read_csv(
@@ -128,9 +177,6 @@ current <- read_csv(
   clean_names()
 
 current_clean <- current |>
-  filter(
-    sensing_date <= as.Date("2026-10-12")
-  ) |>
   transmute(
     location_id,
     sensing_date,
@@ -143,122 +189,83 @@ current_clean <- current |>
 
 ```{r}
 # Historical data
-# The original monthly extract is 423 MB and is distributed separately.
-# When it is available locally the raw file is repaired below; otherwise the
-# prepared 2009-2025 archive (which already contains the repaired historical
-# rows) is used so that the document remains reproducible from the repository.
-raw_historical_path <- here(
-  "Data_pedestrians",
-  "raw",
-  "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
-)
+historical <- read_csv(
+  here(
+    "ETC5543-Pulse_of_Melbourne",
+    "Data_pedestrians",
+    "raw",
+    "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
+  ),
+  show_col_types = FALSE
+) |>
+  clean_names()
 
-historical_cache_path <- here(
-  "Data_pedestrians",
-  "raw2",
-  "pedestrian_full_2009_2025.csv.gz"
-)
 
-if (
-  file.exists(raw_historical_path) &&
-    file.info(raw_historical_path)$size > 1e6
-) {
-  historical <- read_csv(
-    raw_historical_path,
-    show_col_types = FALSE
-  ) |>
-    clean_names()
 
-  # Historical data standarise
-  historical_clean <- historical |>
-    mutate(
-      sensing_date = mdy(
-        str_c(month, mdate, year, sep = " ")
-      )
-    ) |>
-    group_by(
-      sensor_id,
-      sensing_date
-    ) |>
-    arrange(
-      id,
-      .by_group = TRUE
-    ) |>
-    mutate(
-      hour_repaired =
-        n() == 24 & n_distinct(time) == 1,
-
-      hourday = if_else(
-        hour_repaired,
-        row_number() - 1,
-        time
-      )
-    ) |>
-    ungroup() |>
-    transmute(
-      location_id = sensor_id,
-      sensing_date,
-      hourday,
-      pedestrian_count = hourly_counts,
-      hour_repaired,
-      source = "Historical"
+historical_hour_issues <- historical |>
+  mutate(
+    sensing_date = lubridate::mdy(
+      stringr::str_c(month, mdate, year, sep = " ")
     )
-} else {
-  historical <- read_csv(
-    historical_cache_path,
-    col_select = c(
-      sensing_date,
-      hourday,
-      location_id,
-      pedestrian_count,
-      source
-    ),
-    show_col_types = FALSE
+  ) |>
+  group_by(sensor_id, sensing_date) |>
+  summarise(
+    records = n(),
+    distinct_hours = n_distinct(time),
+    .groups = "drop"
+  ) |>
+  filter(
+    records == 24,
+    distinct_hours == 1
   )
 
-  # The archived extract is already ordered by record within each sensor-day,
-  # so the same repair used for the raw file can be reproduced here: where a
-  # sensor-day holds 24 records but a single repeated hour label, the labels
-  # are rebuilt from record order and the observations are flagged.
-  historical_clean <- historical |>
-    filter(source == "historical") |>
-    group_by(location_id, sensing_date) |>
-    mutate(
-      hour_repaired = n() == 24 & min(hourday) == max(hourday),
-      hourday = if_else(hour_repaired, row_number() - 1L, hourday)
-    ) |>
-    ungroup() |>
-    transmute(
-      location_id,
-      sensing_date = as.Date(sensing_date),
-      hourday,
-      pedestrian_count,
+historical_hour_issues
+
+
+```
+
+```{r}
+historical_hour_issues |>
+  summarise(
+    affected_sensor_days = n(),
+    affected_sensors = n_distinct(sensor_id)
+  )
+```
+
+```{r}
+historical_clean <- historical |>
+  mutate(
+    sensing_date = mdy(
+      str_c(month, mdate, year, sep = " ")
+    )
+  ) |>
+  group_by(
+    sensor_id,
+    sensing_date
+  ) |>
+  arrange(
+    id,
+    .by_group = TRUE
+  ) |>
+  mutate(
+    hour_repaired =
+      n() == 24 & n_distinct(time) == 1,
+
+    hourday = if_else(
       hour_repaired,
-      source = "Historical"
+      row_number() - 1,
+      time
     )
-
-  # API rows for 2024 and 2025 are retained separately so that the snapshot
-  # validation below has something to compare against without duplicating the
-  # 2022 historical records in the working dataset.
-  archive_api <- historical |>
-    filter(source == "api") |>
-    transmute(
-      location_id,
-      sensing_date = as.Date(sensing_date),
-      hourday,
-      pedestrian_count,
-      hour_repaired = FALSE,
-      source = "API archive"
-    )
-
-  rm(historical)
-  invisible(gc())
-}
-
-if (!exists("archive_api")) {
-  archive_api <- historical_clean |>
-    filter(FALSE)
-}
+  ) |>
+  ungroup() |>
+  transmute(
+    location_id = sensor_id,
+    sensing_date,
+    hourday,
+    pedestrian_count = hourly_counts,
+    hour_repaired,
+    source = "Historical"
+  )
 
 ```
 
@@ -268,9 +275,6 @@ pedestrian_full <- bind_rows(
   historical_clean,
   current_clean
 ) |>
-  filter(
-    sensing_date <= as.Date("2026-10-12")
-  ) |>
   arrange(
     sensing_date,
     location_id,
