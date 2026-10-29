@@ -1760,9 +1760,9 @@ Overall, the results highlight the importance of comparing consistently monitore
 
 ## 3.5 Outlier days, events and public holidays
 
-The calendar-adjusted analysis identifies 62 significant citywide dips in 2019 and 2023–2026. Of these, 22 fall on Victorian public holidays. Holidays make up only 3.7% of the 1,718 eligible days but 35.5% of significant dip days, an enrichment factor of 9.7. They are therefore not minor perturbations: they reorganise the city's walking economy.
+The calendar-adjusted analysis identified 62 significant citywide pedestrian declines across 2019 and 2023–2026, of which 22 coincided with Victorian public holidays. Among the 1,718 eligible days, 63 were public holidays (3.7%), and 22 of these 63 holidays (34.9%) experienced significant pedestrian declines. Public holidays also accounted for 35.5% of all significant dip days, approximately 9.7 times their share of the eligible calendar days.
 
-The public-holiday table below lists the holiday dips. Christmas Day is the most consistent and deepest suppression: the four Christmas Days in the window record median decreases of 50.0%, 44.4%, 43.2% and 38.1%. Australia Day, ANZAC Day, Good Friday, Boxing Day, the AFL Grand Final Friday and Melbourne Cup Day also appear repeatedly. These are days when offices, universities, courts and many shops close, and activity shifts to suburban retail, family homes and leisure destinations. Magnitudes vary by year, likely reflecting weather, the weekday on which the holiday fell, and post-COVID changes in the baseline.
+Christmas Day showed particularly large declines, with median decreases of 50.0%, 44.4%, 43.2% and 38.1% across the four observed Christmas Days. Other holidays, including Australia Day, ANZAC Day, Good Friday, Boxing Day and Melbourne Cup Day, also appeared among the significant dip dates. These findings suggest that public holidays are associated with reduced pedestrian activity at monitored locations, potentially reflecting changes in commuting, business operations and everyday travel routines. However, the results demonstrate an association rather than establishing public holidays as the sole cause of these declines.
 
 ```{r}
 sensor_daily_events <- pedestrian_full |>
@@ -2566,6 +2566,14 @@ holiday_timeline <- plotly::plot_ly(
 holiday_timeline
 ```
 
+The results indicate a strong association between Victorian public holidays and unusually low pedestrian activity in Melbourne. Although public holidays represent a relatively small proportion of the observed calendar days, they account for a considerably larger share of significant pedestrian declines.
+
+Christmas Day consistently recorded some of the largest reductions, highlighting how changes in regular working, shopping and commuting routines may influence pedestrian movement. Similar declines were observed on several other major public holidays, although the magnitude varied across dates.
+
+However, not every public holiday experienced a significant decline, and pedestrian activity may also be influenced by rainfall, local events and differences between sensor locations. Therefore, these findings should be interpreted as observational associations rather than evidence of direct causation.
+
+Overall, the analysis demonstrates that calendar-related factors are important when interpreting unusual pedestrian patterns. Recognising these effects helps distinguish expected reductions in routine activity from other unexpected changes in Melbourne's pedestrian movement.
+
 ## 3.6 Weather sensitivity
 
 Weather is associated with large differences in the probability of a significant dip. After excluding public holidays, there were 40 significant dip days and 1,615 other days (see the weather comparison below). On dip days, median rainfall was 11.3 mm versus 0.2 mm; 55.0% of dip days had at least 10 mm of rain, versus 4.2% of other days. Median maximum wind was also higher (24.6 versus 19.8 km/h). Median maximum temperature was 20.6°C on dip days and 18.5°C on other days, which likely reflects the seasonal timing of rain-bearing systems once holidays are removed; temperature should not be read as protective.
@@ -2784,6 +2792,14 @@ rainfall_interactive <- plotly::layout(
 rainfall_interactive
 ```
 
+The rainfall analysis indicates a clear association between rainfall intensity and significant decreases in Melbourne's pedestrian activity. After excluding public holidays, approximately 24.7% of days with at least 10 mm of rainfall experienced a significant pedestrian decline, compared with approximately 1.3% of days with less than 10 mm of rainfall. This suggests that unusually quiet pedestrian days are considerably more common during heavy rainfall.
+
+The analysis across rainfall categories provides further insight. The proportion of significant pedestrian declines generally increases as rainfall becomes heavier, with particularly noticeable differences once daily rainfall exceeds 5 mm. This pattern suggests that weather conditions are an important factor in understanding short-term changes in pedestrian activity.
+
+However, rainfall should not be interpreted as the sole cause of these decreases. Other factors, including seasonal variation, public events and changes in regular commuting or recreational activities, may also influence pedestrian movement. As this is an observational analysis, the findings demonstrate an association rather than a causal relationship.
+
+Overall, rainfall adds another dimension to Melbourne's pedestrian patterns. Considering weather alongside calendar effects can help city planners and businesses better anticipate periods of reduced pedestrian activity.
+
 ```{r}
 #| label: prepare-yearly-weather-holiday-data
 
@@ -2829,7 +2845,6 @@ weather_holiday_yearly <- weather_dip_daily %>%
   ) %>%
   arrange(year_label, plot_date)
 ```
-
 
 
 ```{r}
@@ -2904,7 +2919,7 @@ smoothed_yearly_plot <- plotly::layout(
   smoothed_yearly_plot,
   title = list(
   text = paste0(
-    "Pedestrian Changes, Weather and Public Holidays by Year",
+    "Pedestrian Activity Changes and Significant Dip Days by Year",
     "<br><sup>Lines: 7-day rolling median | ",
     "Dots: actual significant pedestrian decreases</sup>"
   )
@@ -2927,6 +2942,12 @@ smoothed_yearly_plot <- plotly::layout(
 smoothed_yearly_plot
 ```
 
+
+The combined timeline illustrates how Melbourne's pedestrian activity fluctuates throughout the year and highlights days when pedestrian movement falls substantially below expected levels. Although the overall patterns vary between years, significant declines occur across several months, indicating that unusual reductions in activity are not restricted to a particular season.
+
+Public holidays account for some of the most pronounced declines, particularly towards the end of the year. However, significant decreases also occur on non-holiday dates, suggesting that factors beyond the public holiday calendar may contribute to unusually quiet days. Weather conditions, local disruptions and changes in everyday travel behaviour are possible explanations that require further investigation.
+
+Together, these patterns reinforce the importance of considering both recurring calendar effects and short-term external conditions when interpreting Melbourne's pedestrian activity.
 
 ## 3.7 Spatial structure and activity types
 
@@ -3510,17 +3531,17 @@ sensor_dip_map
 
 # 4. Discussion
 
-The results describe a city whose pedestrian life is highly structured but no longer organised around a single peak. The traditional commuter model—busy at 08:00, quiet at midday, busy again at 17:00—still exists but is weakening. The 08:00 index fell substantially between 2019 and 2025, while midday and weekend activity held up; Saturday is now almost as busy as Friday. This is consistent with hybrid work, but also points to something more durable: the centre is increasingly used for consumption, leisure and events, not only as a workplace.
+Melbourne's pedestrian activity follows a recognisable rhythm, shaped by the time of day, day of the week and season. Summer and autumn generally experience higher pedestrian counts, while winter records the lowest activity. However, these seasonal differences represent only one part of the story. Commuting routines, weekend activities, public events and changes in how people use the city also contribute to Melbourne's pedestrian patterns.
 
-The 28.5% gap in the balanced sensor panel is a warning against declaring recovery complete. Three post-pandemic years is a long time, and the gap is not narrowing quickly. At the same time, it is not evenly distributed. Some locations remain busy, some have persistent dips, and different precincts have different relationships to the working week. A single "CBD recovered?" headline conceals the more useful question: which parts of the city, at which times, for which purposes, have recovered?
+The long-term analysis reveals an important shift in this rhythm. Across 27 consistently monitored sensor locations, median daily pedestrian activity was 28.5% lower in 2023–2025 compared with 2017–2019. This suggests that activity at these locations had not fully returned to pre-pandemic levels. Nevertheless, the changes are not uniform across different locations or times of day. The findings highlight the importance of understanding not only whether pedestrian activity has recovered, but also how its distribution across Melbourne has changed.
 
-The holiday and event results show that the calendar is a major organising force. Public holidays produce deep, predictable reductions in routine activity, with Christmas Day the clearest example; events produce the opposite, lifting the whole network far above expectation. This asymmetry matters for policy. Public holidays are not failures of the city; they are days when activity moves elsewhere. Events are not merely cultural amenities; they are temporary demand shocks that can be planned for, priced for and supported with transport and cleaning capacity.
+Public holidays and major events introduce further variation. Christmas Day was associated with some of the largest pedestrian declines, reflecting how regular commuting and commercial activities may change during holidays. Conversely, several major events coincided with unusually high pedestrian activity. These observations demonstrate how the city's regular patterns can be disrupted by changes in the calendar, although the analysis does not establish direct causal relationships.
 
-Weather adds another layer. The rainfall gradient—from a 1.5% dip rate on dry days to 37% on days with 20 mm or more—is large enough to matter for operations and implies that the pedestrian economy is less resilient than an annual average suggests. Covered walkways, protected spaces, drainage and reliable transport become more valuable when walking is rain-sensitive. Higher wind on dip days reinforces that it is the broader experience of inclement weather, not rain alone, that suppresses activity.
+Weather provides another explanation for short-term variation. Significant pedestrian declines were more frequent on days with heavier rainfall, indicating an association between weather conditions and reduced activity. Wind conditions also differed between significant dip days and other days. However, these relationships may be influenced by seasonal patterns and other external factors, meaning rainfall alone cannot explain every decline.
 
-The spatial results argue for differentiated management. The Swanston Street spine and retail core carry the largest volumes and are likely to remain the priority for public-space and transport investment. But many sensors operate on a different logic, with midday and weekend orientations; these may benefit more from programming, hospitality support, lighting and family amenities than from commuter-focused interventions. Persistent dips at a few sensors also remind us that local problems—construction, obstructions, changed access, sensor faults—can hide inside a citywide average.
+Spatial differences further demonstrate that Melbourne does not have a single pedestrian rhythm. Major retail and transport corridors, particularly around Swanston Street and the central business district, attract high pedestrian volumes, while other locations follow different weekday and weekend patterns. These differences suggest that urban planning strategies should reflect the characteristics of individual locations rather than relying entirely on citywide averages.
 
-Finally, measurement choices shape the story. A single index based on total counts would show substantial recovery and then a plateau; a balanced panel shows a persistent gap; a weekday-only measure would overstate the loss; an hourly measure reveals that the morning peak weakened more than the evening peak. The most defensible approach is a small dashboard—absolute level, weekday/weekend split, morning/evening split, and spatial dispersion—rather than a single number.
+Overall, the findings demonstrate that Melbourne's pedestrian activity is influenced by a combination of regular temporal patterns, longer-term changes and external conditions. For urban planners, transport providers and local businesses, understanding these patterns can support better decisions about infrastructure, staffing and public-space management. Rather than evaluating Melbourne through one overall pedestrian count, considering when, where and under what conditions activity changes provides a more complete picture of the city's movement.
 
 # 5. Limitations
 
@@ -3538,9 +3559,11 @@ Sixth, the weather analysis uses daily aggregates from a single series. Rainfall
 
 # 6. Conclusion
 
-Melbourne's pedestrian pulse is neither flat nor fully restored. It is a structured rhythm that peaks in the late afternoon, holds up through the middle of the day, varies by season and day of week, and is highly sensitive to holidays, events and rain. The long-term comparison shows a persistent 28.5% gap in median daily activity across consistently measured locations, even as weekend and midday activity proved more resilient than the morning commute. Activity is also spatially uneven: a few CBD spines carry very large volumes, while many locations follow a slower, midday-oriented rhythm.
+Melbourne's pedestrian pulse is neither constant nor fully restored to its pre-pandemic pattern. It follows a recognisable rhythm across different hours, weekdays and seasons, while also responding to public holidays, events and weather conditions. The long-term comparison identified a 28.5% reduction in median daily pedestrian activity across consistently monitored locations between 2017–2019 and 2023–2025. However, this change is not uniform across locations or times of day, highlighting how the nature of pedestrian movement has evolved.
 
-The most useful conclusion is not that Melbourne has "recovered" or "not recovered", but that the composition of activity has changed. Commuter demand has weakened, leisure and event demand have become more important, and weather is now a first-order source of day-to-day variation. Planning should reflect that composition: protect the public spaces and transport links that carry high volumes, support precincts dependent on weekend and midday trade, prepare for weather-driven quiet days, and use the calendar to manage both holiday lulls and event surges. A city's pulse is not a single number but a pattern of times and places, and the better that pattern is understood, the better the city can respond.
+The findings suggest that understanding Melbourne's pedestrian activity requires more than measuring overall foot traffic. Changes in commuting patterns, differences between precincts and the effects of external conditions all contribute to the city's movement. These insights can support more informed decisions about transport, public spaces, business operations and urban planning.
+
+Ultimately, the most useful question is not simply whether Melbourne has recovered, but how its pedestrian patterns have changed and what those changes mean for the future. A city's pulse is not a single number but a pattern of times and places, and the better that pattern is understood, the better the city can respond.
 
 # References
 
