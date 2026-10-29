@@ -188,35 +188,27 @@ current_clean <- current |>
 ```
 
 ```{r}
-# Historical data
 historical <- read_csv(
   here(
-    "ETC5543-Pulse_of_Melbourne",
     "Data_pedestrians",
     "raw",
-    "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
+    "pedestrians.csv"
   ),
   show_col_types = FALSE
 ) |>
   clean_names()
 
 
-
-historical_hour_issues <- historical |>
+# Match the historical data to the column names used in the report
+historical 
   mutate(
-    sensing_date = lubridate::mdy(
-      stringr::str_c(month, mdate, year, sep = " ")
-    )
-  ) |>
-  group_by(sensor_id, sensing_date) |>
-  summarise(
-    records = n(),
-    distinct_hours = n_distinct(time),
-    .groups = "drop"
-  ) |>
-  filter(
-    records == 24,
-    distinct_hours == 1
+    sensing_date = as.Date(sensing_date),
+    sensor_id = location_id,
+    month = lubridate::month(sensing_date),
+    mdate = lubridate::day(sensing_date),
+    year = lubridate::year(sensing_date),
+    time = as.integer(hour_day),
+    hourly_counts = total_of_directions
   )
 
 historical_hour_issues
@@ -1250,13 +1242,21 @@ monthly_profile |>
   )
 ```
 
+Melbourne's pedestrian activity follows a recurring annual rhythm, with noticeable differences between months and seasons. To understand these patterns, hourly pedestrian observations were aggregated into daily totals for each sensor, then summarised by calendar month across the available data from 2009 to 2026.
 
--   seasons
+The monthly analysis indicates that pedestrian activity generally increases towards March, reaching approximately 10,800 pedestrians per sensor-day, before declining towards June, when activity falls to approximately 8,700. Counts then recover gradually, with another relatively busy period in December. This suggests that pedestrian movement is influenced by more than temperature alone. University schedules, shopping activity and major events may contribute to the monthly variation, although the descriptive analysis does not establish these as direct causes.
+
+These recurring patterns are important when evaluating changes in Melbourne's pedestrian activity. A quieter winter month does not necessarily indicate an unusual decline, just as higher activity during March may reflect an established seasonal pattern. Understanding this annual rhythm therefore provides context for the subsequent analysis of long-term trends, COVID-19 disruptions and exceptional pedestrian activity.
+
+
+### Seasonal patterns in pedestrian activity
+
+To examine the broader seasonal cycle, pedestrian activity was grouped into summer, autumn, winter and spring. The seasonal comparison supports the monthly findings, showing generally stronger activity during summer and autumn, lower pedestrian volumes during winter, and a gradual recovery through spring.
+
+The results highlight why seasonal variation should be considered when planning public transport services, managing public spaces and interpreting changes in pedestrian demand. However, the seasonal averages are descriptive because sensor coverage changed over time and the first and final years of the dataset are incomplete.
 
 ```{r}
-seasonal_profile <- pedestrian_full |>
-  
-  # Step 1: Daily total for each sensor
+ seasonal_profile <- pedestrian_full |>
   group_by(
     location_id,
     year,
@@ -1264,57 +1264,28 @@ seasonal_profile <- pedestrian_full |>
     season
   ) |>
   summarise(
-    daily_count = sum(
-      pedestrian_count,
-      na.rm = TRUE
-    ),
+    daily_count = sum(pedestrian_count, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  
-  # Step 2: Typical activity for each sensor in each season/year
-  group_by(
-    location_id,
-    year,
-    season
-  ) |>
+  group_by(location_id, year, season) |>
   summarise(
-    sensor_season_mean = mean(
-      daily_count,
-      na.rm = TRUE
-    ),
+    sensor_season_mean = mean(daily_count, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  
-  # Step 3: Typical city activity within each year and season
-  group_by(
-    year,
-    season
-  ) |>
+  group_by(year, season) |>
   summarise(
-    yearly_season_mean = mean(
-      sensor_season_mean,
-      na.rm = TRUE
-    ),
+    yearly_season_mean = mean(sensor_season_mean, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  
-  # Step 4: Average seasonal pattern across all available years
   group_by(season) |>
   summarise(
-    mean_daily_count = mean(
-      yearly_season_mean,
-      na.rm = TRUE
-    ),
+    mean_daily_count = mean(yearly_season_mean, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  
   mutate(
-    season = fct_relevel(
+    season = forcats::fct_relevel(
       season,
-      "Summer",
-      "Autumn",
-      "Winter",
-      "Spring"
+      "Summer", "Autumn", "Winter", "Spring"
     )
   )
 ```
@@ -1337,14 +1308,26 @@ seasonal_profile |>
   theme_minimal()
 ```
 
+The monthly and seasonal analyses reveal a recurring annual pattern in Melbourne's pedestrian activity. The monthly results indicate that pedestrian movement generally peaks around March, declines towards June, and gradually recovers towards the end of the year.
+
+The seasonal comparison supports these findings, with autumn and summer recording the highest average daily pedestrian counts, while winter experiences the lowest activity. Spring shows a moderate recovery, suggesting that pedestrian movement varies throughout the year rather than remaining constant.
+
+These variations may reflect a combination of weather conditions, university schedules, retail activity and major events. However, these factors cannot be identified as direct causes from the seasonal analysis alone.
+
+The findings are relevant to transport planning, public-space management and business operations, where understanding seasonal demand can support resource allocation. Nevertheless, the results should be interpreted cautiously because sensor coverage varies across years and the dataset includes partial years.
+
+Overall, the recurring monthly and seasonal patterns provide useful context for distinguishing normal fluctuations from the longer-term changes examined in the next section, particularly the disruption and recovery associated with COVID-19.
 
 ## 3.4 Long-term change and COVID-19
 
-The balanced 27-sensor comparison provides the clearest answer to the recovery question. Median daily activity was 10,091 in 2017–2019 and 7,211 in 2023–2025, a decline of 28.5% (see the comparison figure below). This is a large gap after three full post-pandemic years, and it is neither an artefact of network growth nor driven by missing days: the same sensors are used in both periods and each recorded at least 300 days every year. Central Melbourne's pedestrian economy therefore remains materially smaller than before COVID-19, even after the reopenings of 2022 and 2023.
+Melbourne's pedestrian activity has experienced substantial changes over time, particularly following the COVID-19 pandemic. While the previous section demonstrated recurring monthly and seasonal patterns, this section examines whether the overall level of pedestrian activity has changed and how far the city has recovered from the pandemic disruption.
 
-The monthly COVID-19 index shows how the disruption unfolded in the figure further below. Relative to the same-month 2015–2019 baseline, activity fluctuated around 100 from 2015 to early 2020. It collapsed in the second quarter of 2020, fell below 10 index points during the deepest lockdown, and remained volatile through 2020 and 2021 as restrictions tightened and eased. The 2021 lockdowns produced repeated troughs, with the index falling to roughly 18–20 in several months. Recovery began in late 2021, accelerated in early 2022, and reached the mid-80s by late 2022. The trajectory is one of partial recovery followed by a plateau, not a return to the old level.
+An important consideration is the expansion of Melbourne's pedestrian sensor network. Comparing total pedestrian counts across years could be misleading because the number of operational sensors has changed. To provide a more consistent comparison, 27 sensors with at least 300 days of observations in each of the selected pre-pandemic (2017–2019) and post-pandemic (2023–2025) years were identified.
 
-The difference between the mid-80s recovery in late 2022 and the 28.5% gap in 2023–2025 is partly methodological: the COVID index uses a 2015–2019 same-month baseline and all sensors with sufficient coverage, while the long-term comparison uses a fixed 27-sensor panel and a 2017–2019 baseline. Both point in the same direction: the city regained much of its former activity but not all, and the residual gap is large enough to be structural. The weekly evidence suggests missing activity is concentrated in commuter hours and early-week days, while weekend and midday activity held up better.
+Based on the existing analysis, median daily pedestrian activity declined from approximately 10,091 in 2017–2019 to 7,211 in 2023–2025, representing a decrease of 28.5%. This suggests that pedestrian activity at these consistently monitored locations remains below its pre-pandemic level, despite the reopening of Melbourne and the gradual return of activity.
+
+The analysis also examines the monthly disruption associated with COVID-19 using an index relative to the same-month 2015–2019 baseline. Together, the annual comparison and monthly index provide two perspectives: the longer-term change in pedestrian volumes and the timing of the pandemic-related decline and recovery.
+
 
 ```{r}
 sensor_coverage_check <- pedestrian_full |>
@@ -1392,6 +1375,68 @@ consistent_sensors |>
   )
 
 ```
+
+### Long-term Pedestrian Activity Over Time
+
+```{r}
+
+#| label: fig-long-term-activity
+#| echo: false
+#| warning: false
+#| message: false
+
+# Monthly hourly activity at consistently monitored locations
+long_term_monthly <- pedestrian_full |>
+  semi_join(consistent_sensors, by = "location_id") |>
+  filter(
+    !is.na(pedestrian_count),
+    pedestrian_count >= 0
+  ) |>
+  mutate(
+    month_date = lubridate::floor_date(sensing_date, "month")
+  ) |>
+  group_by(location_id, month_date) |>
+  summarise(
+    median_hourly_count = median(pedestrian_count),
+    days_observed = n_distinct(sensing_date),
+    .groups = "drop"
+  ) |>
+  filter(days_observed >= 15) |>
+  group_by(month_date) |>
+  summarise(
+    typical_activity = median(median_hourly_count),
+    sensors_reporting = n_distinct(location_id),
+    .groups = "drop"
+  )
+
+# Interactive long-term trend
+long_term_plot <- ggplot(
+  long_term_monthly,
+  aes(
+    x = month_date,
+    y = typical_activity
+  )
+) +
+  geom_line(colour = "black", linewidth = 0.8) +
+  labs(
+    title = "Melbourne's Pedestrian Activity Over Time",
+    subtitle = "Monthly median hourly activity across selected pedestrian sensors",
+    x = "Year",
+    y = "Median hourly pedestrian count"
+  ) +
+  theme_minimal()
+
+plotly::ggplotly(long_term_plot)
+
+```
+
+The long-term analysis examines how Melbourne's pedestrian activity has changed from 2009 to 2026. The monthly trend provides a broader historical perspective, showing variations in pedestrian movement over time and the pronounced disruption associated with the COVID-19 pandemic.
+
+The sharp decline during 2020–2021 represents a substantial departure from earlier activity levels. Although pedestrian movement subsequently recovered, the comparison suggests that activity has not consistently returned to its pre-pandemic level.
+
+These findings highlight the importance of considering both long-term trends and major disruptions when examining urban movement. Changes in sensor availability across the historical period should also be considered when interpreting the results.
+
+### Before and After COVID-19
 
 ```{r}
 pedestrian_consistent <- pedestrian_full |>
@@ -1498,7 +1543,89 @@ period_change <- period_summary_consistent |>
 period_change
 ```
 
--   Covid disruption
+```{r}
+
+
+#| label: fig-before-after-hourly
+#| fig-cap: "Comparison of hourly pedestrian activity before and after COVID-19."
+
+# Compare hourly activity across the same consistent sensors
+hourly_comparison <- pedestrian_consistent |>
+  filter(
+    !is.na(pedestrian_count),
+    between(hourday, 0, 23)
+  ) |>
+  mutate(
+    period = case_when(
+      year %in% 2017:2019 ~ "Previous: 2017–2019",
+      year %in% 2023:2025 ~ "Now: 2023–2025"
+    )
+  ) |>
+  group_by(period, hourday) |>
+  summarise(
+    median_hourly_count = median(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  mutate(
+    period = factor(
+      period,
+      levels = c(
+        "Previous: 2017–2019",
+        "Now: 2023–2025"
+      )
+    )
+  )
+
+# Plot the hourly comparison
+ggplot(
+  hourly_comparison,
+  aes(
+    x = hourday,
+    y = median_hourly_count,
+    linetype = period
+  )
+) +
+  geom_line(
+    colour = "black",
+    linewidth = 1
+  ) +
+  scale_linetype_manual(
+    values = c(
+      "Previous: 2017–2019" = "dashed",
+      "Now: 2023–2025" = "solid"
+    )
+  ) +
+  scale_x_continuous(breaks = 0:23) +
+  labs(
+    title = "Has Melbourne's daily pedestrian rhythm changed?",
+    x = "Hour of day",
+    y = "Median hourly pedestrian count",
+    linetype = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right"
+  )
+
+
+```
+
+### Changes in Hourly Pedestrian Activity
+
+The hourly comparison provides further insight into how Melbourne's pedestrian activity has changed since the pandemic. Both periods exhibit a recognisable daily rhythm, with low pedestrian activity overnight and stronger movement during the daytime.
+
+However, pedestrian volumes during 2023–2025 are generally lower than those recorded during 2017–2019, particularly during the busiest hours. This indicates that Melbourne has retained much of its traditional daily activity pattern, despite experiencing a substantial reduction in overall pedestrian volumes.
+
+The findings suggest that post-pandemic changes extend beyond the total number of pedestrians and may also reflect changes in commuting and city-centre activity. However, the observed differences cannot be attributed to any single behavioural factor without further analysis.
+
+### COVID-19 Disruption and Recovery
+
+The COVID-19 pandemic caused a major disruption to Melbourne's normal pedestrian activity. To examine the timing and extent of this change, monthly pedestrian activity was compared with the corresponding monthly average during 2015–2019, using an index where 100 represents the pre-pandemic baseline.
+
+The monthly index makes it possible to distinguish changes associated with the pandemic from Melbourne's recurring seasonal patterns. It also illustrates how pedestrian activity responded to different phases of restrictions, reopening and recovery.
 
 ```{r}
 
@@ -1623,7 +1750,13 @@ melbourne_covid_index |>
   theme_minimal()
 ```
 
+The long-term comparison indicates that Melbourne's pedestrian activity has not fully returned to its pre-pandemic level at consistently monitored locations. The estimated 28.5% decline between the selected pre-pandemic and post-pandemic periods demonstrates a substantial difference in typical daily pedestrian volumes.
 
+The COVID-19 activity index provides further context, showing a pronounced reduction during the pandemic and a gradual recovery as restrictions eased. However, the two comparisons use different baseline periods and sensor-selection methods, meaning their results should not be interpreted as directly equivalent measures.
+
+These findings suggest that Melbourne's pedestrian activity has changed beyond its usual daily and seasonal fluctuations. Possible influences include changes in commuting arrangements, working patterns, shopping behaviour and leisure activity, although the analysis cannot independently establish their effects.
+
+Overall, the results highlight the importance of comparing consistently monitored locations when evaluating long-term urban activity. They also provide a foundation for understanding how Melbourne's pedestrian patterns differ across locations and respond to other factors, including public holidays, major events and weather conditions.
 
 ## 3.5 Outlier days, events and public holidays
 
