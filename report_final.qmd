@@ -42,7 +42,7 @@ library(data.table)
 library(kableExtra)
 ```
 
-# Abstract
+# Abstract {.unnumbered}
 
 Melbourne's pedestrian activity reflects the city's daily routines, spatial differences and responses to major disruptions. This project investigates how pedestrian movement varies across time and location, how these patterns have evolved, and which circumstances are associated with unusually high or low activity.
 
@@ -106,6 +106,7 @@ Supplementary datasets were used to provide geographical and contextual informat
 
 Because the pedestrian sensor network expanded over time and individual sensors did not always report continuously, coverage varied across locations and years. These differences were considered during data preparation and when selecting observations for subsequent analyses.
 
+
 ## Data Integration and Preparation
 
 The datasets used in this project differed in their structure, coverage and level of detail. Before conducting the analysis, the pedestrian records were standardised and combined to create a consistent hourly dataset. Particular attention was given to differences between historical and recent records, repeated hour labels, overlapping observations and changes in sensor identification.
@@ -136,10 +137,14 @@ pedestrian_url <- paste0(
 
 httr2::request(pedestrian_url) |>
   httr2::req_perform(path = raw_path)
+```
 
+
+```{r}
+#| label: load-current-pedestrian-data
 
 current <- read_csv(
-  here(
+  here::here(
     "Data_pedestrians",
     "raw2",
     "pedestrian_counts_raw.csv"
@@ -147,8 +152,8 @@ current <- read_csv(
   show_col_types = FALSE
 ) |>
   clean_names()
-
 ```
+
 
 ```{r}
 #| label: load-historical-data
@@ -580,6 +585,44 @@ bind_rows(
 ```
 
 ```{r}
+
+comparison_summary <- bind_rows(
+  comparison_2022 |>
+    summarise(
+      year = 2022,
+      comparison = "Historical vs snapshot",
+      matched_rows = n(),
+      different_rows = sum(
+        count_difference != 0,
+        na.rm = TRUE
+      )
+    ),
+
+  comparison_2024 |>
+    summarise(
+      year = 2024,
+      comparison = "API vs snapshot",
+      matched_rows = n(),
+      different_rows = sum(
+        difference != 0,
+        na.rm = TRUE
+      )
+    ),
+
+  comparison_2025 |>
+    summarise(
+      year = 2025,
+      comparison = "API vs snapshot",
+      matched_rows = n(),
+      different_rows = sum(
+        difference != 0,
+        na.rm = TRUE
+      )
+    )
+)
+```
+
+```{r}
 #| label: source-comparison-summary
 #| echo: false
 
@@ -737,11 +780,10 @@ snapshot_quality <- snapshot_standardised |>
 
 snapshot_quality
 ```
+
 ```{r}
 #| label: final-data-validation
-#| include: false
-#| warning: false
-#| message: false
+#| echo: false
 
 final_check <- pedestrian_full |>
   summarise(
@@ -868,21 +910,325 @@ yearly_coverage |>
 ```
 
 
-### Preparing Supporting Datasets
+### Dataset Description
+
+After cleaning and combining the historical records, City-supplied snapshots and API data, the final dataset (`pedestrian_full`) contains approximately 7.52 million hourly observations from May 2009 to October 2026.
+
+Each row represents the pedestrian count recorded at a particular sensor on a specific date and hour. The main variables identify the sensor location, observation date, hour and number of pedestrians counted. Additional variables were created to identify the year, month, day of the week, weekend status and season, allowing pedestrian activity to be examined across different time periods.
+
+The dataset also retains information about the original data source and whether an hourly label was reconstructed during cleaning. The table below summarises the variables in the final dataset.
+
+
+```{r}
+#| label: final-dataset-variables
+#| echo: false
+
+variable_description <- tibble::tribble(
+  ~Variable, ~Description,
+  "location_id", "Unique identifier for each sensor location",
+  "sensing_date", "Date of the pedestrian observation",
+  "hourday", "Hour of the day (0–23)",
+  "pedestrian_count", "Number of pedestrians recorded during the hour",
+  "source", "Dataset from which the observation originated",
+  "hour_repaired", "Indicates whether the original hour label was reconstructed",
+  "year", "Year of observation",
+  "month", "Month of observation (1–12)",
+  "month_name", "Name of the month",
+  "day_name", "Day of the week",
+  "day_of_week", "Day of the week (Monday = 1, Sunday = 7)",
+  "is_weekend", "Indicates whether the observation occurred on a weekend",
+  "season", "Australian season (Summer, Autumn, Winter or Spring)"
+)
+
+variable_description |>
+  knitr::kable(
+    format = "html",
+    caption = "Variables in the consolidated pedestrian dataset",
+    align = c("l", "l")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 13
+  )
+```
+
+
+## Preparing Supporting Datasets
 
 Additional datasets were prepared to support specific parts of the investigation. Sensor-location records were used to associate pedestrian observations with geographical coordinates and installation information, while event permit data provided dates and contextual information for examining unusual activity.
 
-Historical weather observations and Victorian public-holiday records were also prepared for comparison with pedestrian activity. These sources provided contextual variables for investigating whether departures from typical patterns were associated with rainfall, other weather conditions or public holidays.
+Historical daily weather observations were also prepared, including maximum and minimum temperature, maximum wind speed and rainfall. These records were converted to a common date format and restricted to the study period. Victorian public-holiday records were filtered to retain official public holidays, with duplicate dates removed.
 
-The methods used to calculate typical pedestrian activity, select comparable sensors, identify anomalies and examine these associations are explained in the Methodology section.
+These supporting datasets were used to provide context for pedestrian activity, particularly when examining unusual changes in daily counts. The methods used to calculate typical pedestrian activity, identify anomalies and examine their relationships with weather conditions and public holidays are explained in the Methodology section.
 
-## 2.4 Measures and analytical approach
+```{r}
+#| label: download-sensor-locations
+#| eval: false
+
+sensor_locations <- read_csv(
+  paste0(
+    "https://data.melbourne.vic.gov.au/",
+    "api/explore/v2.1/catalog/datasets/",
+    "pedestrian-counting-system-sensor-locations/",
+    "exports/csv?delimiter=%2C"
+  ),
+  show_col_types = FALSE
+) |>
+  clean_names()
+
+readr::write_csv(
+  sensor_locations,
+  here::here("Data_pedestrians", "raw2", "sensor_locations.csv")
+)
+
+```
+
+
+```{r}
+#| label: load-sensor-locations
+
+sensor_locations <- read_csv(
+  here::here("Data_pedestrians", "raw2", "sensor_locations.csv"),
+  show_col_types = FALSE
+) |>
+  clean_names()
+```
+
+
+```{r}
+#| label: download-event-permits
+#| eval: false
+
+event_url <- paste0(
+  "https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/",
+  "event-permits-2014-2018-including-film-shoots-photo-shoots-weddings-christmas-pa/",
+  "exports/csv"
+)
+
+event_path <- here::here(
+  "Data_pedestrians",
+  "raw2",
+  "event_permits_2014_2018.csv"
+)
+
+curl::curl_download(
+  event_url,
+  event_path
+)
+
+```
+
+
+```{r}
+#| label: load-event-permits
+
+event_path <- here::here(
+  "Data_pedestrians",
+  "raw2",
+  "event_permits_2014_2018.csv"
+)
+
+event_permits <- readr::read_delim(
+  event_path,
+  delim = ";",
+  show_col_types = FALSE
+) |>
+  clean_names()
+```
+
+
+```{r}
+#| label: inspect-event-categories
+#| include: false
+
+event_permits |>
+  count(category_1, sort = TRUE)
+
+event_permits |>
+  count(category_2, sort = TRUE)
+```
+
+
+```{r}
+#| label: clean-event-categories
+
+# Standardise event categories
+event_permits_relevant <- event_permits |>
+  mutate(
+    category_1_clean = category_1 |>
+      str_to_lower() |>
+      str_squish() |>
+      str_replace_all(
+        "non\\s*-?\\s*ticketed",
+        "non-ticketed"
+      ) |>
+      str_replace_all(
+        "run\\s*/?\\s*walk",
+        "run/walk"
+      ),
+
+    event_type = case_when(
+      str_detect(category_1_clean, "^public event") &
+        str_detect(category_1_clean, "non-ticketed") ~
+        "Non-ticketed public event",
+
+      str_detect(category_1_clean, "^public event") &
+        str_detect(category_1_clean, "ticketed") ~
+        "Ticketed public event",
+
+      str_detect(category_1_clean, "^public event") &
+        str_detect(category_1_clean, "run/walk") ~
+        "Run/Walk",
+
+      str_detect(category_1_clean, "^public event") &
+        str_detect(category_1_clean, "music") ~
+        "Music event",
+
+      str_detect(category_1_clean, "^public event") &
+        str_detect(category_1_clean, "cycling") ~
+        "Cycling event",
+
+      str_detect(category_1_clean, "^public event") &
+        str_detect(category_1_clean, "parade") ~
+        "Parade",
+
+      str_detect(category_1_clean, "^public event") &
+        str_detect(category_1_clean, "memorial") ~
+        "Memorial",
+
+      category_1_clean == "public event" ~
+        "Other public event",
+
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(!is.na(event_type))
+```
+
+```{r}
+#| label: check-event-types
+#| include: false
+
+event_permits_relevant |>
+  count(event_type, sort = TRUE)
+```
+
+```{r}
+#| label: classify-event-permits
+
+event_permits_qc <- event_permits_relevant |>
+  mutate(
+    duration_days =
+      as.numeric(event_end - event_start) + 1,
+
+   permit_match_class = case_when(
+  is.na(event_start) | is.na(event_end) ~
+    "Missing date",
+  event_end < event_start ~
+    "Invalid date range",
+  duration_days <= 7 ~
+    "Suitable for automatic matching",
+  duration_days <= 30 ~
+    "Extended permit - inspect manually",
+  TRUE ~
+    "Long permit window - do not auto-match"
+)
+  )
+```
+
+
+```{r}
+#| label: event-permit-quality-summary
+#| echo: false
+
+event_permits_qc |>
+  count(permit_match_class, name = "Permits") |>
+  knitr::kable(
+    format = "html",
+    col.names = c("Permit classification", "Number of permits"),
+    caption = "Event permits grouped by suitability for date matching",
+    align = c("l", "r")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 13
+  )
+```
+
+```{r}
+#| label: select-event-permits
+
+event_permits_auto <- event_permits_qc |>
+  filter(
+    permit_match_class ==
+      "Suitable for automatic matching"
+  )
+
+event_permits_extended <- event_permits_qc |>
+  filter(
+    permit_match_class !=
+      "Suitable for automatic matching"
+  )
+```
+
+- The event permit records also required some cleaning because category names were not always consistent and permit durations varied. Event categories were standardised, and permits were grouped according to their duration. Permits lasting seven days or fewer were retained for automatic date matching, while longer permits were kept separately for further examination.
+
+
+```{r}
+#| label: prepare-weather-data
+
+weather_daily <- readr::read_csv(
+  here::here("ETC5543-Pulse_of_Melbourne", "Data_pedestrians", "raw2", "melbourne_weather_daily.csv"),
+  skip = 3,
+  show_col_types = FALSE
+) %>%
+  transmute(
+    sensing_date = as.Date(time),
+    max_temperature_c = `temperature_2m_max (°C)`,
+    min_temperature_c = `temperature_2m_min (°C)`,
+    max_wind_kmh = `wind_speed_10m_max (km/h)`,
+    rainfall_mm = `precipitation_sum (mm)`
+  ) %>%
+  filter(
+    sensing_date >= as.Date("2009-05-01"),
+    sensing_date <= as.Date("2026-09-06")
+  )
+```
+
+```{r}
+#| label: prepare-public-holidays
+
+holiday_calendar_official <- readr::read_csv(
+  here::here("ETC5543-Pulse_of_Melbourne", "Data_pedestrians", "raw2", "important_dates_august_2026.csv"),
+  show_col_types = FALSE
+) %>%
+  filter(dateType == "PUBLIC_HOLIDAY") %>%
+  transmute(
+    holiday_date = lubridate::dmy(important_date),
+    holiday = name,
+    publisher,
+    source
+  ) %>%
+  filter(
+    holiday_date >= as.Date("2019-01-01"),
+    holiday_date <= as.Date("2026-09-06")
+  ) %>%
+  distinct(holiday_date, .keep_all = TRUE) %>%
+  arrange(holiday_date)
+```
+
+
+# Analytical Methodology 
 
 The basic unit is the sensor-hour. For daily measures, counts were summed across available hours for each sensor and date, excluding days with fewer than 20 observed hours; clustering used a 23-hour threshold. Citywide statements use the median across sensors rather than the sum.
 
 Two normalised measures make comparison across years possible. The hourly activity index divides the average count at each hour by the year's overall mean and multiplies by 100; the weekly index applies the same logic to days of the week. Because each year is normalised against its own mean, the index describes the shape of the rhythm rather than its absolute level. Absolute change is measured separately using median daily counts.
 
-Long-term change uses a balanced panel of 27 sensors that recorded at least 300 days in every year from 2017 to 2019 and 2023 to 2025. This removes the effect of network growth and relocation. For each sensor-day, counts were summed across hours; median daily counts were calculated for the two periods, and percentage change derived from those medians. The COVID-19 analysis instead indexes each sensor-month against its own same-month mean for 2015–2019, with the citywide index taken as the median across sensors with at least 20 observed days.
+Long-term change uses a balanced panel of 27 sensors that recorded at least 300 days in every year from 2017 to 2019 and 2023 to 2025. This reduces the influence of changes in sensor coverage when comparing pedestrian activity across periods. For each sensor-day, counts were summed across hours; median daily counts were calculated for the two periods, and percentage change derived from those medians. The COVID-19 analysis instead indexes each sensor-month against its own same-month mean for 2015–2019, with the citywide index taken as the median across sensors with at least 20 observed days.
 
 Unusual days are defined against a local calendar expectation. For each sensor, day of week and date, expected activity is the median daily count on the same weekday in the four weeks before and after the date, excluding the date itself. A significant citywide surge requires median uplift of at least +20% and at least 30% of sensors more than 20% above expectation; a dip uses the mirror thresholds, with at least ten sensors reporting.
 
@@ -890,53 +1236,8 @@ Holiday enrichment compares the share of significant dips on public holidays wit
 
 K-means clustering uses a 48-dimensional profile of typical activity shares across weekday and weekend hours. Sensors with at least 80% daily coverage in 2023–2025 were retained (44 locations). Profiles were compared by Euclidean distance, and two-to-five-cluster solutions evaluated with mean silhouette width. The two-cluster solution performed best (0.442, versus 0.252–0.270) and is used descriptively.
 
-## 2.5 Final validation
 
-### Check Yearly Coverage
-
-```{r}
-final_check <- pedestrian_full_updated %>%
-  summarise(
-    total_rows = n(),
-    unique_sensor_hour_records =
-      n_distinct(location_id, sensing_date, hourday),
-    duplicate_rows =
-      n() - n_distinct(location_id, sensing_date, hourday),
-    missing_counts =
-      sum(is.na(pedestrian_count)),
-    first_date = min(sensing_date),
-    last_date = max(sensing_date)
-  )
-
-final_check
-```
-
-```{r}
-pedestrian_full_updated %>%
-  count(year)
-```
-
-```{r}
-pedestrian_full <- pedestrian_full_updated
-```
-
-# 3. Results
-
-## 3.1 A validated foundation
-
-The integrated dataset passes the tests required for longitudinal analysis (the validation table below). The absence of duplicate keys is particularly important: otherwise repeated records could inflate counts in busy periods and distort seasonal averages and outlier detection. The main residual issue is timestamp repair. In September 2010, 12,240 records across 17 sensors carried a single repeated hour label on every day of the month; the hourly sequence was rebuilt from record order and the affected rows are flagged. A further 10,298 records (1.7% of the year's observations) differed between the early API extract and the 2022 snapshot for the same reason, and the validated 2022 snapshot is used in their place. Because the repair preserved the hourly sequence, the effect on annual and monthly aggregates is likely small, but flagged records warrant caution in future hour-level analysis.
-
-```{r}
-#| label: tbl-validation
-#| tbl-cap: "Validation of the integrated pedestrian dataset."
-
-knitr::kable(
-  final_check,
-  digits = 0
-)
-```
-
-The network's changing composition is a second structural feature. Reporting sensors rose from 80 in 2022 to 102 in 2025, and the historical network was smaller before 2017. This is why the long-term comparison uses a balanced panel of 27 sensors and why citywide figures are medians across sensors rather than sums. A rising sensor count would otherwise create the false impression of rising activity even if behaviour were unchanged.
+# Results and Findings
 
 ## 3.2 Daily and weekly rhythm
 
