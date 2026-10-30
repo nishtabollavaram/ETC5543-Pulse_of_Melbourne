@@ -14,11 +14,12 @@ format:
     code-fold: true
     code-tools: true
     fig-responsive: true
+    number-sections: true
 editor: visual
 execute:
   message: false
   warning: false
-  echo: false
+  echo: true
 ---
 
 ```{r}
@@ -38,10 +39,8 @@ library(leaflet)
 library(slider)
 library(cluster)
 library(data.table)
+library(kableExtra)
 ```
-
-
-
 
 # Abstract
 
@@ -53,10 +52,9 @@ Results revealed recurring temporal patterns alongside substantial changes over 
 
 These findings demonstrate that Melbourne's pedestrian activity varies not only in volume but also in timing and location. They highlight the importance of accounting for sensor coverage, data quality and location-specific patterns when interpreting long-term changes and unusual activity. The results provide useful insights for understanding urban movement and informing transport, public-space and event planning.
 
+# Introduction
 
-# 1. Introduction
-
-## 1.1 Understanding Melbourne's Pedestrian Pulse
+## Understanding Melbourne's Pedestrian Pulse
 
 On 22 February 2014, pedestrian activity near Flinders Street and Elizabeth Street showed an unusual pattern. Compared with other Saturdays in February, pedestrian counts remained noticeably higher, particularly into the evening. What would normally have been a relatively quiet period instead recorded sustained activity. This observation raised a broader question: was this an isolated occurrence at one location, or part of a larger change in how people were moving through Melbourne?
 
@@ -66,23 +64,23 @@ Understanding these variations is important for urban planning and decision-maki
 
 The City of Melbourne's pedestrian counting system provides an opportunity to investigate these patterns using observations collected over an extended period. By examining both the timing and geographical distribution of pedestrian activity, this project explores how Melbourne's movement follows familiar rhythms, how these rhythms have evolved, and when they depart from their usual patterns.
 
-## 1.2 Research Aim and Objectives
+## Research Aim and Objectives
 
 The primary aim of this project is to investigate **how pedestrian activity across Melbourne varies over time and space, how it has changed over the years, and which circumstances are associated with unusually high or low activity**.
 
 In line with the original project brief, the analysis addresses four related questions:
 
-1. **What are Melbourne's typical pedestrian rhythms?** We investigate hourly, daily, weekly, monthly and seasonal variations to identify recurring patterns in pedestrian activity.
+1.  **What are Melbourne's typical pedestrian rhythms?** We investigate hourly, daily, weekly, monthly and seasonal variations to identify recurring patterns in pedestrian activity.
 
-2. **How has pedestrian activity changed over time?** We examine long-term trends, the disruption associated with COVID-19, and differences between pre-pandemic and more recent periods.
+2.  **How has pedestrian activity changed over time?** We examine long-term trends, the disruption associated with COVID-19, and differences between pre-pandemic and more recent periods.
 
-3. **How does pedestrian activity vary across locations?** We investigate differences in pedestrian volumes and whether locations exhibit similar patterns of activity throughout weekdays and weekends.
+3.  **How does pedestrian activity vary across locations?** We investigate differences in pedestrian volumes and whether locations exhibit similar patterns of activity throughout weekdays and weekends.
 
-4. **When does pedestrian activity depart from its usual patterns?** We identify unusually busy and quiet days and examine their associations with major events, rainfall and public holidays.
+4.  **When does pedestrian activity depart from its usual patterns?** We identify unusually busy and quiet days and examine their associations with major events, rainfall and public holidays.
 
 Together, these questions allow the project to move beyond identifying where and when pedestrian counts are highest. They provide a framework for understanding how the city's movement patterns differ, how they have evolved, and what may be associated with substantial changes.
 
-## 1.3 Analytical Approach and Contributions
+## Analytical Approach and Contributions
 
 This project draws on the City of Melbourne's pedestrian counting records, covering May 2009 to October 2026. Historical records were combined with more recent observations, including additional data obtained directly from the City of Melbourne, to create a consolidated dataset containing approximately 7.52 million hourly observations.
 
@@ -96,62 +94,36 @@ A central contribution of the project is the integration of temporal, spatial an
 
 By combining these approaches, the project aims to provide a clearer understanding of **when Melbourne is active, where different pedestrian rhythms occur, how these patterns have changed, and what circumstances are associated with disruptions to the city's usual movement**.
 
-# 2. Data Sources and Preparation
+# Data Sources and Preparation
 
-## 2.1 Data Sources
+## Data Sources
 
-The primary dataset for this project was obtained from the City of Melbourne's Pedestrian Counting System, which records hourly pedestrian activity at monitoring locations across the city. The system provides an extensive record of pedestrian movement, allowing activity to be examined at different temporal scales and geographical locations.
+This project uses the City of Melbourne's Pedestrian Counting System as its primary dataset, supplemented by sensor-location records, event permits, historical weather observations and Victorian public-holiday information. Together, these sources support the investigation of Melbourne's pedestrian activity across time and space, including changes associated with major disruptions and unusual activity.
 
-The dataset was assembled from historical pedestrian records and more recent observations available through the City of Melbourne's open data platform. Additional records covering 2022–2025 were provided directly by a City of Melbourne data operations manager via the email to address gaps in the publicly accessible data.
+The pedestrian data consist of hourly observations obtained through historical CSV files and the City of Melbourne's open data API [@melbourne_hourly]. Additional records covering 2022–2025 were obtained directly from the City of Melbourne through email correspondence to address gaps in publicly accessible records. Following integration and cleaning, the consolidated dataset contained **7,523,688 hourly observations**, covering **May 2009 to October 2026**.
 
-After integration and cleaning, the consolidated dataset contained **7,523,688 hourly observations**, covering **May 2009 to October 2026**. Each observation represents a pedestrian count recorded for a particular sensor, date and hour.
+Supplementary datasets were used to provide geographical and contextual information. The City of Melbourne's sensor-location dataset provided coordinates and installation information for spatial analysis [@melbourne_locations]. Event permit records from the City of Melbourne were used to investigate whether unusual pedestrian activity coincided with permitted events. Historical weather data from Open-Meteo provided rainfall and other weather observations [@openmeteo], while Victorian public-holiday information published by Business Victoria was used to identify public holidays [@victorian_holidays].
 
-Sensor-location metadata were also used to identify monitoring locations and their geographical coordinates. This information supported the spatial analysis and helped assess changes in the sensor network over time.
+Because the pedestrian sensor network expanded over time and individual sensors did not always report continuously, coverage varied across locations and years. These differences were considered during data preparation and when selecting observations for subsequent analyses.
 
-Because monitoring locations were introduced at different times and did not always report continuously, the number of available observations varied across sensors and years. These differences were considered when selecting data for the subsequent analyses.
+## Data Integration and Preparation
 
-## 2.2 Data Integration and Cleaning
+The datasets used in this project differed in their structure, coverage and level of detail. Before conducting the analysis, the pedestrian records were standardised and combined to create a consistent hourly dataset. Particular attention was given to differences between historical and recent records, repeated hour labels, overlapping observations and changes in sensor identification.
 
-The pedestrian data were obtained from multiple sources covering different periods, so the records needed to be standardised before they could be combined. The historical dataset provided observations from 2009 to 2022, while more recent data were obtained through the City of Melbourne's open data platform and additional files supplied directly by the City of Melbourne.
+### Standardising the Pedestrian Records
 
-The preparation process focused on creating a consistent hourly dataset while addressing differences in column names, date formats, overlapping records and historical timestamp issues.
+The historical pedestrian records and more recent datasets were initially stored in different formats. To allow them to be combined, the main variables were standardised to a common structure containing the sensor identifier (`location_id`), observation date (`sensing_date`), hour of the day (`hourday`) and pedestrian count (`pedestrian_count`).
 
-### 2.2.1 Standardising the Data
+Dates were converted to a consistent format, and sensor identifiers were used to link records across periods. This was particularly important because some sensor descriptions changed over time, meaning that the same monitoring location could appear under different names.
 
-The historical and recent datasets were first brought into a common structure. The main variables retained were the sensor's location identifier (`location_id`), observation date (`sensing_date`), hour of the day (`hourday`) and recorded pedestrian count (`pedestrian_count`).
-
-Date fields were converted into a consistent format, and the hourly observations were organised using the combination of sensor, date and hour. This combination was used as the observation key throughout the cleaning process.
-
-Sensor identifiers were used instead of sensor names to link observations across different periods. This was important because some sensor descriptions had changed over time, even when the monitoring location remained the same.
-
-### 2.2.2 Resolving Overlapping Records
-
-Some years were represented in more than one data source, particularly between 2022 and 2025. These overlapping periods required additional checks to avoid counting the same sensor-hour observation more than once.
-
-A comparison of the overlapping 2022 records identified 464,481 matching sensor-date-hour keys, of which 10,298 contained different pedestrian counts between the two sources. This showed that matching observations were not always identical and that simply appending the datasets could introduce inconsistencies.
-
-To resolve these overlaps, the integration process prioritised the more recent supplied records for 2022–2025 and used the historical records for periods outside that range. This established a consistent source-selection rule and prevented overlapping observations from being retained twice.
-
-### 2.2.3 Correcting Historical Hour Labels
-
-A further issue was identified in the historical records, where some sensor-day groups contained 24 observations but only one distinct hour label. This made the recorded hour values unsuitable for analysing activity throughout the day.
-
-A total of 510 sensor-day groups showed this issue, representing 12,240 observations. For these groups, the hour labels were reconstructed from 0 to 23 using the order of the original record identifiers. The affected records were also flagged during processing.
-
-This correction assumed that the original record order followed the chronological sequence of hourly observations. Although it allowed the affected records to be represented consistently, the reconstructed hours could not be independently confirmed from the repeated hour labels alone. This uncertainty is therefore relevant when interpreting hourly patterns in the affected historical observations.
-
-### 2.2.4 Combining the Cleaned Records
-
-After standardising the variables and addressing the identified inconsistencies, the cleaned historical and recent records were combined into a consolidated dataset named `pedestrian_full`.
-
-The dataset retained hourly pedestrian observations with consistent variable names and a common observation key. This provided the foundation for the subsequent temporal, spatial and event-related analyses.
-
-Further checks of duplicate records, missing values and sensor coverage were used to assess the quality and completeness of the consolidated data. These checks are presented in the following section.
-
+The combination of sensor identifier, date and hour was subsequently used as the observation key. This provided a consistent basis for identifying overlapping records and checking for duplicates.
 
 ```{r}
+#| label: download-current-pedestrian-data
+#| eval: false
+
 # Current data through API
-dir_create("Data_pedestrians/raw2")
+fs::dir_create("Data_pedestrians/raw2")
 
 raw_path <- "Data_pedestrians/raw2/pedestrian_counts_raw.csv"
 
@@ -162,8 +134,8 @@ pedestrian_url <- paste0(
   "exports/csv?delimiter=%2C&with_bom=false"
 )
 
-request(pedestrian_url) |>
-  req_perform(path = raw_path)
+httr2::request(pedestrian_url) |>
+  httr2::req_perform(path = raw_path)
 
 
 current <- read_csv(
@@ -176,108 +148,537 @@ current <- read_csv(
 ) |>
   clean_names()
 
-current_clean <- current |>
-  transmute(
-    location_id,
-    sensing_date,
-    hourday,
-    pedestrian_count = pedestriancount,
-    source = "Current API"
-  )
-
 ```
 
 ```{r}
+#| label: load-historical-data
+# Historical data
 historical <- read_csv(
   here(
+    "ETC5543-Pulse_of_Melbourne",
     "Data_pedestrians",
     "raw",
-    "pedestrians.csv"
+    "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
   ),
   show_col_types = FALSE
 ) |>
   clean_names()
 
-
-# Match the historical data to the column names used in the report
-historical 
-  mutate(
-    sensing_date = as.Date(sensing_date),
-    sensor_id = location_id,
-    month = lubridate::month(sensing_date),
-    mdate = lubridate::day(sensing_date),
-    year = lubridate::year(sensing_date),
-    time = as.integer(hour_day),
-    hourly_counts = total_of_directions
-  )
-
-historical_hour_issues
-
-
 ```
 
 ```{r}
-historical_hour_issues |>
-  summarise(
-    affected_sensor_days = n(),
-    affected_sensors = n_distinct(sensor_id)
-  )
-```
+#| label: standardise-pedestrian-records
 
-```{r}
-historical_clean <- historical |>
-  mutate(
+# Historical data
+historical_standardised <- historical |>
+  transmute(
+    id,
+    location_id = as.numeric(sensor_id),
     sensing_date = mdy(
       str_c(month, mdate, year, sep = " ")
+    ),
+    hourday = as.numeric(time),
+    pedestrian_count = as.numeric(hourly_counts),
+    source = "Historical"
+  )
+
+
+# Current API data
+current_clean <- current |>
+  transmute(
+    location_id = as.numeric(location_id),
+    sensing_date = as.Date(sensing_date),
+    hourday = as.numeric(hourday),
+    pedestrian_count = as.numeric(pedestriancount),
+    source = "Current API"
+  )
+```
+
+```{r}
+#| label: locate-snapshot-files
+
+snapshot_dir <- here::here(
+  "ETC5543-Pulse_of_Melbourne",
+  "Data_pedestrians",
+  "raw",
+  "data_pedestrian"
+)
+  
+```
+
+```{r}
+#| label: standardise-snapshot-records
+
+snapshot_files <- list.files(
+  snapshot_dir,
+  pattern = "\\.csv$",
+  full.names = TRUE
+)
+
+# Inspect snapshot file structure 
+snapshot_schema <- purrr::map_dfr(
+  snapshot_files,
+  function(f) {
+    
+    x <- data.table::fread(
+      file = f,
+      nrows = 5
     )
+    
+    tibble::tibble(
+      file = basename(f),
+      n_columns = ncol(x),
+      columns = paste(names(x), collapse = " | ")
+    )
+  }
+)
+
+snapshot_standardised <- purrr::map_dfr(
+  snapshot_files,
+  function(f) {
+
+    x <- data.table::fread(file = f) |>
+      as_tibble()
+
+    x |>
+      transmute(
+        location_id = as.numeric(Location_ID),
+        sensing_date = as.Date(Sensing_Date),
+        hourday = as.numeric(HourDay),
+        pedestrian_count = as.numeric(PedestrianCount),
+        hour_repaired = FALSE,
+        source = paste0(
+          "city_snapshot_",
+          substr(basename(f), 1, 4)
+        )
+      )
+  }
+)
+```
+
+### Identifying and Correcting Data Inconsistencies
+
+During data preparation, inconsistencies were identified in the historical hourly records. In particular, some sensor-day groups contained 24 observations but only one distinct hour label, preventing the observations from being directly assigned to their correct hours.
+
+A total of 510 sensor-day groups exhibited this issue, representing 12,240 records. For these groups, hourly labels were reconstructed from 0 to 23 using the order of the original record identifiers. The affected observations were flagged during processing.
+
+This correction relied on the assumption that record identifiers preserved the chronological order of observations. Because the original hour labels could not independently confirm this ordering, the reconstructed timestamps remain a source of uncertainty for analyses involving these records.
+
+Overlapping observations from different sources were also examined. A comparison of historical records and the 2022 City-supplied snapshot was conducted using matching sensor-date-hour keys. Differences in recorded pedestrian counts were investigated before selecting the records to retain in the final dataset.
+
+```{r}
+#| label: correct-historical-hour-labels
+
+# Identify historical sensor-day groups with repeated hour labels
+hour_issues <- historical_standardised |>
+  group_by(location_id, sensing_date) |>
+  summarise(
+    observations = n(),
+    distinct_hours = n_distinct(hourday),
+    .groups = "drop"
   ) |>
-  group_by(
-    sensor_id,
-    sensing_date
-  ) |>
-  arrange(
-    id,
-    .by_group = TRUE
-  ) |>
+  filter(
+    observations == 24,
+    distinct_hours == 1
+  )
+
+# Summarise the affected observations
+hour_issues |>
+  summarise(
+    affected_sensor_days = n(),
+    affected_records = sum(observations)
+  )
+
+# Repair historical hour labels
+historical_clean <- historical_standardised |>
+  group_by(location_id, sensing_date) |>
+  arrange(id, .by_group = TRUE) |>
   mutate(
     hour_repaired =
-      n() == 24 & n_distinct(time) == 1,
+      n() == 24 & n_distinct(hourday) == 1,
 
     hourday = if_else(
       hour_repaired,
       row_number() - 1,
-      time
+      hourday
     )
   ) |>
   ungroup() |>
-  transmute(
-    location_id = sensor_id,
-    sensing_date,
-    hourday,
-    pedestrian_count = hourly_counts,
-    hour_repaired,
-    source = "Historical"
-  )
-
+  select(-id)
 ```
 
 ```{r}
-# Combine
-pedestrian_full <- bind_rows(
+#| label: check-source-duplicates
+
+source_duplicates <- bind_rows(
   historical_clean,
-  current_clean
+  current_clean,
+  snapshot_standardised
+) |>
+  group_by(source) |>
+  summarise(
+    total_records = n(),
+    unique_records = n_distinct(
+      location_id, sensing_date, hourday
+    ),
+    duplicate_records = total_records - unique_records,
+    .groups = "drop"
+  )
+
+knitr::kable(
+  source_duplicates,
+  caption = "Duplicate checks across the original data sources"
+)
+```
+
+
+
+```{r}
+#| label: compare-2022-records
+
+# Historical records for 2022
+historical_2022 <- historical_clean |>
+  filter(year(sensing_date) == 2022) |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count
+  )
+
+# City-supplied 2022 snapshot
+snapshot_2022 <- snapshot_standardised |>
+  filter(source == "city_snapshot_2022") |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count
+  )
+
+# Check duplicate sensor-date-hour records
+historical_duplicates <- historical_2022 |>
+  count(location_id, sensing_date, hourday) |>
+  filter(n > 1)
+
+snapshot_duplicates <- snapshot_2022 |>
+  count(location_id, sensing_date, hourday) |>
+  filter(n > 1)
+
+historical_duplicates
+snapshot_duplicates
+
+# Compare matching records
+comparison_2022 <- snapshot_2022 |>
+  inner_join(
+    historical_2022,
+    by = c("location_id", "sensing_date", "hourday"),
+    suffix = c("_snapshot", "_historical")
+  ) |>
+  mutate(
+    count_difference =
+      pedestrian_count_snapshot - pedestrian_count_historical
+  )
+
+# Summarise differences
+comparison_2022 |>
+  summarise(
+    matched_rows = n(),
+    different_rows = sum(count_difference != 0, na.rm = TRUE),
+    max_difference = max(abs(count_difference), na.rm = TRUE)
+  )
+```
+
+```{r}
+#| label: investigate-2022-differences
+#| include: false
+
+# Examine differences by month
+comparison_2022 |>
+  filter(count_difference != 0) |>
+  mutate(
+    month = floor_date(sensing_date, "month")
+  ) |>
+  count(month, sort = TRUE)
+
+
+# Examine differences by sensor
+comparison_2022 |>
+  filter(count_difference != 0) |>
+  count(location_id, sort = TRUE)
+
+
+# Inspect largest differences
+comparison_2022 |>
+  filter(count_difference != 0) |>
+  arrange(desc(abs(count_difference))) |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count_snapshot,
+    pedestrian_count_historical,
+    count_difference
+  ) |>
+  head(20)
+
+
+# Investigate Location 6
+comparison_2022 |>
+  filter(location_id == 6, count_difference != 0) |>
+  summarise(
+    n = n(),
+    mean_difference = mean(count_difference),
+    median_difference = median(count_difference),
+    min_difference = min(count_difference),
+    max_difference = max(count_difference)
+  )
+
+
+# Location 6 differences by month
+comparison_2022 |>
+  filter(location_id == 6, count_difference != 0) |>
+  mutate(
+    month = floor_date(sensing_date, "month")
+  ) |>
+  group_by(month) |>
+  summarise(
+    different_records = n(),
+    mean_difference = mean(count_difference),
+    median_difference = median(count_difference),
+    .groups = "drop"
+  )
+
+
+# Direction of differences for Location 6
+comparison_2022 |>
+  filter(location_id == 6, count_difference != 0) |>
+  count(
+    direction = case_when(
+      count_difference > 0 ~ "Snapshot higher",
+      count_difference < 0 ~ "Snapshot lower",
+      TRUE ~ "Same"
+    )
+  )
+```
+
+```{r}
+#| label: validate-2022-direction-totals
+#| include: false
+
+snapshot_2022_full <- data.table::fread(
+  file.path(snapshot_dir, "2022_Pedestrian_Data.csv")
+) |>
+  as_tibble()
+
+snapshot_2022_full |>
+  mutate(
+    direction_total = Direction_1 + Direction_2,
+    difference = PedestrianCount - direction_total
+  ) |>
+  summarise(
+    rows = n(),
+    exact_match = sum(difference == 0, na.rm = TRUE),
+    different = sum(difference != 0, na.rm = TRUE),
+    max_difference = max(abs(difference), na.rm = TRUE)
+  )
+
+snapshot_2022_full |>
+  filter(Location_ID == 6) |>
+  summarise(
+    mean_pedestrian_count = mean(PedestrianCount, na.rm = TRUE),
+    mean_direction_total = mean(
+      Direction_1 + Direction_2,
+      na.rm = TRUE
+    ),
+    mean_difference = mean(
+      PedestrianCount - (Direction_1 + Direction_2),
+      na.rm = TRUE
+    )
+  )
+```
+
+```{r}
+#| label: compare-2024-and-2025-records
+
+# Current API data for 2024
+current_2024 <- current_clean |>
+  filter(year(sensing_date) == 2024) |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count
+  )
+
+# City-supplied 2024 snapshot
+snapshot_2024 <- snapshot_standardised |>
+  filter(source == "city_snapshot_2024") |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count
+  )
+
+# Compare 2024 records
+comparison_2024 <- snapshot_2024 |>
+  inner_join(
+    current_2024,
+    by = c("location_id", "sensing_date", "hourday"),
+    suffix = c("_snapshot", "_api")
+  ) |>
+  mutate(
+    difference = pedestrian_count_snapshot -
+      pedestrian_count_api
+  )
+
+
+# Current API data for 2025
+current_2025 <- current_clean |>
+  filter(year(sensing_date) == 2025) |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count
+  )
+
+# City-supplied 2025 snapshot
+snapshot_2025 <- snapshot_standardised |>
+  filter(source == "city_snapshot_2025") |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count
+  )
+
+# Compare 2025 records
+comparison_2025 <- snapshot_2025 |>
+  inner_join(
+    current_2025,
+    by = c("location_id", "sensing_date", "hourday"),
+    suffix = c("_snapshot", "_api")
+  ) |>
+  mutate(
+    difference = pedestrian_count_snapshot -
+      pedestrian_count_api
+  )
+
+# Check for repeated keys in the comparison sources
+bind_rows(
+  historical_2022 |> mutate(dataset = "Historical 2022"),
+  snapshot_2022 |> mutate(dataset = "Snapshot 2022"),
+  current_2024 |> mutate(dataset = "API 2024"),
+  snapshot_2024 |> mutate(dataset = "Snapshot 2024"),
+  current_2025 |> mutate(dataset = "API 2025"),
+  snapshot_2025 |> mutate(dataset = "Snapshot 2025")
+) |>
+  count(dataset, location_id, sensing_date, hourday) |>
+  filter(n > 1)
+```
+
+```{r}
+#| label: source-comparison-summary
+#| echo: false
+
+comparison_summary |>
+  mutate(
+    matched_rows = scales::comma(matched_rows),
+    different_rows = scales::comma(different_rows)
+  ) |>
+  knitr::kable(
+    format = "html",
+    col.names = c(
+      "Year",
+      "Sources compared",
+      "Matched records",
+      "Conflicting counts"
+    ),
+    caption = "Comparison of overlapping pedestrian records across data sources",
+    align = c("c", "l", "r", "r"),
+    escape = TRUE
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 14
+  )
+```
+
+
+### Combining Historical and Recent Records
+
+Following standardisation and validation, the pedestrian records were combined into a consolidated hourly dataset. The historical records were retained for observations before 2022, while the City of Melbourne's annual snapshot files were used for 2022–2025. More recent observations outside the snapshot period were retained from the API dataset.
+
+This approach avoided retaining overlapping records from multiple sources for the same sensor, date and hour. The resulting dataset was then organised chronologically, and additional variables were created to support the temporal analyses, including year, month, day of the week, weekend status and season.
+
+```{r}
+#| label: combine-cleaned-records
+
+# Keep historical data before 2022
+historical_data <- historical_clean |>
+  filter(year(sensing_date) < 2022) |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count,
+    source,
+    hour_repaired
+  )
+
+
+# Keep current API data after 2025
+current_data <- current_clean |>
+  filter(year(sensing_date) > 2025) |>
+  mutate(
+    hour_repaired = FALSE
+  ) |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count,
+    source,
+    hour_repaired
+  )
+
+
+# Prepare 2022–2025 snapshots
+snapshot_data <- snapshot_standardised |>
+  select(
+    location_id,
+    sensing_date,
+    hourday,
+    pedestrian_count,
+    source,
+    hour_repaired
+  )
+
+
+# Combine the selected sources
+pedestrian_full <- bind_rows(
+  historical_data,
+  snapshot_data,
+  current_data
 ) |>
   arrange(
     sensing_date,
-    location_id,
-    hourday
+    hourday,
+    location_id
   )
 ```
 
 ```{r}
+#| label: create-time-variables
+
 pedestrian_full <- pedestrian_full |>
   mutate(
     year = lubridate::year(sensing_date),
+
     month = lubridate::month(sensing_date),
 
     month_name = lubridate::month(
@@ -306,596 +707,174 @@ pedestrian_full <- pedestrian_full |>
       month %in% c(6, 7, 8) ~ "Winter",
       month %in% c(9, 10, 11) ~ "Spring"
     )
-  )
-```
-
-
-```{r}
-# Check for missing values
-pedestrian_full |>
-  summarise(
-    observations = n(),
-    locations = n_distinct(location_id),
-    first_date = min(sensing_date, na.rm = TRUE),
-    last_date = max(sensing_date, na.rm = TRUE),
-    missing_dates = sum(is.na(sensing_date)),
-    missing_hours = sum(is.na(hourday)),
-    missing_counts = sum(is.na(pedestrian_count))
-  )
-
-pedestrian_full |>
-  summarise(
-    negative_counts = sum(pedestrian_count < 0, na.rm = TRUE),
-    invalid_hours = sum(
-      hourday < 0 | hourday > 23,
-      na.rm = TRUE
-    )
-  )
-
-# Check for duplicates
-duplicates <- pedestrian_full |>
-  count(
-    location_id,
-    sensing_date,
-    hourday,
-    name = "n"
   ) |>
-  filter(n > 1)
-
-# Report the size of the problem rather than printing one row per key.
-duplicates |>
-  summarise(
-    duplicated_keys = n(),
-    excess_records = sum(n - 1),
-    max_repeats = if_else(n() == 0, 0L, max(n))
-  )
-
-head(duplicates, 5)
-```
-
--   A small number of historical sensor-day groups contained 24 distinct hourly count observations but duplicated timestamps; where the record ordering clearly preserved the hourly sequence, hour labels were reconstructed from record order, with repaired observations flagged.
-
--   Recieved this data on 29/09/2026 from data operations manager at city of melbourne on personal mail.
-
-```{r}
-# Snapshot data
-snapshot_dir <- here::here(
-  "Data_pedestrians",
-  "raw",
-  "data_pedestrian"
-)
-
-snapshot_files <- list.files(
-  snapshot_dir,
-  pattern = "\\.csv$",
-  full.names = TRUE
-)
-
-snapshot_files
-
-# Inspect snapshot file structure 
-snapshot_schema <- purrr::map_dfr(
-  snapshot_files,
-  function(f) {
-    
-    x <- data.table::fread(
-      file = f,
-      nrows = 5
-    )
-    
-    tibble::tibble(
-      file = basename(f),
-      n_columns = ncol(x),
-      columns = paste(names(x), collapse = " | ")
-    )
-  }
-)
-
-snapshot_schema
-
-# Check snapshot data coverage
-snapshot_coverage <- purrr::map_dfr(
-  snapshot_files,
-  function(f) {
-    
-    x <- data.table::fread(
-      file = f,
-      select = c(
-        "Location_ID",
-        "Sensing_Date",
-        "HourDay",
-        "PedestrianCount"
-      )
-    )
-    
-    data.frame(
-      file = basename(f),
-      first_date = min(as.Date(x$Sensing_Date)),
-      last_date = max(as.Date(x$Sensing_Date)),
-      days = data.table::uniqueN(x$Sensing_Date),
-      sensors = data.table::uniqueN(x$Location_ID),
-      observations = nrow(x),
-      hours = data.table::uniqueN(x$HourDay)
-    )
-  }
-)
-
-snapshot_coverage
-
-# Check daily coverage
-snapshot_daily_coverage <- purrr::map_dfr(
-  snapshot_files,
-  function(f) {
-    
-    x <- data.table::fread(
-      file = f,
-      select = c("Sensing_Date")
-    )
-    
-    dates <- as.Date(x$Sensing_Date)
-    
-    data.frame(
-      file = basename(f),
-      days_observed = data.table::uniqueN(dates),
-      expected_days = ifelse(
-        lubridate::leap_year(min(dates)),
-        366,
-        365
-      ),
-      missing_days = ifelse(
-        lubridate::leap_year(min(dates)),
-        366,
-        365
-      ) - data.table::uniqueN(dates)
-    )
-  }
-)
-
-snapshot_daily_coverage
-
-# Check for duplicates
-snapshot_duplicates <- purrr::map_dfr(
-  snapshot_files,
-  function(f) {
-    
-    x <- data.table::fread(
-      file = f,
-      select = c(
-        "Location_ID",
-        "Sensing_Date",
-        "HourDay"
-      )
-    )
-    
-    dup <- x[
-      ,
-      .N,
-      by = .(Location_ID, Sensing_Date, HourDay)
-    ][N > 1]
-    
-    data.frame(
-      file = basename(f),
-      duplicate_groups = nrow(dup),
-      duplicated_rows = sum(dup$N - 1)
-    )
-  }
-)
-
-snapshot_duplicates
-```
-
-## 2.2 Snapshot validation
-
-The annual snapshots are validated against the API-derived records before they
-replace them in the working dataset.
-
-```{r}
-# 2022 snapshot data
-# Validate snapshot data
-snapshot_2022 <- data.table::fread(
-  file.path(snapshot_dir, "2022_Pedestrian_Data.csv"),
-  select = c(
-    "Location_ID",
-    "Sensing_Date",
-    "HourDay",
-    "PedestrianCount"
-  )
-)
-
-historical_2022 <- pedestrian_full %>%
-  filter(
-    year == 2022,
-    source == "Historical"
-  ) %>%
-  select(
-    location_id,
-    sensing_date,
-    hourday,
-    pedestrian_count
-  )
-
-# Comparing the snapshot data with the above pedestrian_full data
-comparison_2022 <- snapshot_2022 %>%
-  as_tibble() %>%
-  mutate(
-    Sensing_Date = as.Date(Sensing_Date)
-  ) %>%
-  inner_join(
-    historical_2022,
-    by = c(
-      "Location_ID" = "location_id",
-      "Sensing_Date" = "sensing_date",
-      "HourDay" = "hourday"
-    )
-  ) %>%
-  mutate(
-    count_difference = PedestrianCount - pedestrian_count
-  )
-
-summary(comparison_2022$count_difference)
-
-# Summary difference 
-comparison_2022 %>%
-  summarise(
-    matched_rows = n(),
-    different_rows = sum(count_difference != 0, na.rm = TRUE),
-    max_difference = max(abs(count_difference), na.rm = TRUE)
-  )
-
-# Examine different records
-comparison_2022 %>%
-  filter(count_difference != 0) %>%
-  summarise(
-    different_rows = n(),
-    mean_difference = mean(count_difference),
-    median_difference = median(count_difference),
-    mean_absolute_difference = mean(abs(count_difference)),
-    median_absolute_difference = median(abs(count_difference)),
-    max_absolute_difference = max(abs(count_difference))
-  )
-
-# Examine differences by month
-comparison_2022 %>%
-  filter(count_difference != 0) %>%
-  mutate(
-    month = lubridate::floor_date(Sensing_Date, "month")
-  ) %>%
-  count(month, sort = TRUE)
-
-# Examine differences by sensors
-comparison_2022 %>%
-  filter(count_difference != 0) %>%
-  count(Location_ID, sort = TRUE)
-
-# Inspect largest differences 
-comparison_2022 %>%
-  filter(count_difference != 0) %>%
-  arrange(desc(abs(count_difference))) %>%
-  select(
-    Location_ID,
-    Sensing_Date,
-    HourDay,
-    PedestrianCount,
-    pedestrian_count,
-    count_difference
-  ) %>%
-  head(20)
-```
-
-```{r}
-# Investigate location 6
-comparison_2022 %>%
-  filter(Location_ID == 6, count_difference != 0) %>%
-  summarise(
-    n = n(),
-    mean_difference = mean(count_difference),
-    median_difference = median(count_difference),
-    min_difference = min(count_difference),
-    max_difference = max(count_difference)
-  )
-
-# Location 6 differences by month
-comparison_2022 %>%
-  filter(Location_ID == 6, count_difference != 0) %>%
-  mutate(
-    month = lubridate::floor_date(Sensing_Date, "month")
-  ) %>%
-  group_by(month) %>%
-  summarise(
-    different_records = n(),
-    mean_difference = mean(count_difference),
-    median_difference = median(count_difference),
-    .groups = "drop"
-  )
-
-# Direction of differences
-comparison_2022 %>%
-  filter(Location_ID == 6, count_difference != 0) %>%
-  count(
-    direction = case_when(
-      count_difference > 0 ~ "Snapshot higher",
-      count_difference < 0 ~ "Snapshot lower",
-      TRUE ~ "Same"
-    )
-  )
-
-# Validate directions total
-comparison_2022 %>%
-  filter(Location_ID == 6, count_difference != 0) %>%
-  arrange(desc(abs(count_difference))) %>%
-  select(
-    Location_ID,
-    Sensing_Date,
-    HourDay,
-    PedestrianCount,
-    pedestrian_count,
-    count_difference
-  ) %>%
-  head(20)
-```
-
-```{r}
-snapshot_2022_full <- data.table::fread(
-  file.path(snapshot_dir, "2022_Pedestrian_Data.csv")
-)
-
-snapshot_2022_full %>%
-  mutate(
-    direction_total = Direction_1 + Direction_2,
-    difference = PedestrianCount - direction_total
-  ) %>%
-  summarise(
-    rows = n(),
-    exact_match = sum(difference == 0, na.rm = TRUE),
-    different = sum(difference != 0, na.rm = TRUE),
-    max_difference = max(abs(difference), na.rm = TRUE)
-  )
-
-snapshot_2022_full %>%
-  filter(Location_ID == 6) %>%
-  summarise(
-    mean_pedestrian_count = mean(PedestrianCount, na.rm = TRUE),
-    mean_direction_total = mean(Direction_1 + Direction_2, na.rm = TRUE),
-    mean_difference = mean(
-      PedestrianCount - (Direction_1 + Direction_2),
-      na.rm = TRUE
-    )
-  )
-```
-
-```{r}
-# 2024 snapshot data
-## Validate the 2024 Snapshot
-### Load 2024 Snapshot
-
-snapshot_2024 <- data.table::fread(
-  file.path(snapshot_dir, "2024_Pedestrian_Data.csv"),
-  select = c(
-    "Location_ID",
-    "Sensing_Date",
-    "HourDay",
-    "PedestrianCount"
-  )
-)
-```
-
-### Compare with Existing 2024 Data
-
-```{r}
-comparison_2024 <- snapshot_2024 %>%
-  as_tibble() %>%
-  mutate(
-    Sensing_Date = as.Date(Sensing_Date)
-  ) %>%
-  inner_join(
-    archive_api %>%
-      filter(lubridate::year(sensing_date) == 2024) %>%
-      select(
-        location_id,
-        sensing_date,
-        hourday,
-        pedestrian_count
-      ),
-    by = c(
-      "Location_ID" = "location_id",
-      "Sensing_Date" = "sensing_date",
-      "HourDay" = "hourday"
-    )
-  ) %>%
-  mutate(
-    difference = PedestrianCount - pedestrian_count
-  )
-
-comparison_2024 %>%
-  summarise(
-    matched_rows = n(),
-    different_rows = sum(difference != 0, na.rm = TRUE),
-    mean_difference = mean(difference, na.rm = TRUE),
-    max_absolute_difference = max(abs(difference), na.rm = TRUE)
-  )
-```
-
-### Compare with Existing 2025 Data
-
-### Load 2025 Snapshot
-
-```{r}
-
-snapshot_2025 <- data.table::fread(
-  file.path(snapshot_dir, "2025_Pedestrian_Data.csv"),
-  select = c(
-    "Location_ID",
-    "Sensing_Date",
-    "HourDay",
-    "PedestrianCount"
-  )
-)
-```
-
-
-```{r}
-comparison_2025 <- snapshot_2025 %>%
-  as_tibble() %>%
-  mutate(
-    Sensing_Date = as.Date(Sensing_Date)
-  ) %>%
-  inner_join(
-    archive_api %>%
-      filter(lubridate::year(sensing_date) == 2025) %>%
-      select(
-        location_id,
-        sensing_date,
-        hourday,
-        pedestrian_count
-      ),
-    by = c(
-      "Location_ID" = "location_id",
-      "Sensing_Date" = "sensing_date",
-      "HourDay" = "hourday"
-    )
-  ) %>%
-  mutate(
-    difference = PedestrianCount - pedestrian_count
-  )
-
-
-comparison_2025 %>%
-  summarise(
-    matched_rows = n(),
-    different_rows = sum(difference != 0, na.rm = TRUE),
-    mean_difference = mean(difference, na.rm = TRUE),
-    max_absolute_difference = max(abs(difference), na.rm = TRUE)
-  )
-```
-
-## 2.3 Standardisation and integration
-
-### Standardise Snapshot Data
-
-```{r}
-snapshot_standardised <- purrr::map_dfr(
-  snapshot_files,
-  function(f) {
-    
-    
-    x <- data.table::fread(file = f) %>%
-      as_tibble()
-    
-    x %>%
-      transmute(
-        location_id = as.numeric(Location_ID),
-        sensing_date = as.Date(Sensing_Date),
-        hourday = as.numeric(HourDay),
-        pedestrian_count = as.numeric(PedestrianCount),
-        hour_repaired = FALSE,
-        source = paste0("city_snapshot_", substr(basename(f), 1, 4))
-      )
-  }
-) %>%
-  mutate(
-    year = lubridate::year(sensing_date),
-    month = lubridate::month(sensing_date),
-    month_name = lubridate::month(sensing_date, label = TRUE),
-    day_name = lubridate::wday(sensing_date, label = TRUE),
-    day_of_week = lubridate::wday(sensing_date, week_start = 1),
-    is_weekend = day_of_week >= 6,
-    season = case_when(
-      month %in% c(12, 1, 2) ~ "Summer",
-      month %in% c(3, 4, 5) ~ "Autumn",
-      month %in% c(6, 7, 8) ~ "Winter",
-      month %in% c(9, 10, 11) ~ "Spring"
-    )
-  )
-```
-
-
-### Replace 2022–2025 with Validated Snapshots
-
-```{r}
-
-
-## Rebuild final pedestrian dataset
-
-### Keep historical data before 2022
-
-historical_data <- pedestrian_full %>%
-  filter(!year %in% c(2022, 2023, 2024, 2025)) %>%
-  select(
-    location_id,
-    sensing_date,
-    hourday,
-    pedestrian_count,
-    source,
-    any_of("hour_repaired")
-  )
-
-# If the historical dataset does not contain hour_repaired,
-# create it as FALSE.
-if (!"hour_repaired" %in% names(historical_data)) {
-  historical_data$hour_repaired <- FALSE
-}
-
-
-### Prepare validated 2022–2025 snapshots
-
-snapshot_data <- snapshot_standardised %>%
-  select(
-    location_id,
-    sensing_date,
-    hourday,
-    pedestrian_count,
-    source
-  ) %>%
-  mutate(
-    hour_repaired = FALSE
-  )
-
-
-### Combine historical and validated data
-
-pedestrian_full_updated <- bind_rows(
-  historical_data,
-  snapshot_data
-) %>%
-  mutate(
-    year = lubridate::year(sensing_date),
-
-    month = lubridate::month(sensing_date),
-
-    month_name = lubridate::month(
-      sensing_date,
-      label = TRUE,
-      abbr = FALSE
-    ),
-
-    day_name = lubridate::wday(
-      sensing_date,
-      label = TRUE,
-      abbr = FALSE
-    ),
-
-    day_of_week = lubridate::wday(
-      sensing_date,
-      week_start = 1
-    ),
-
-    is_weekend = day_of_week >= 6,
-
-    season = case_when(
-      month %in% c(12, 1, 2) ~ "Summer",
-      month %in% c(3, 4, 5) ~ "Autumn",
-      month %in% c(6, 7, 8) ~ "Winter",
-      month %in% c(9, 10, 11) ~ "Spring"
-    )
-  ) %>%
   arrange(
     sensing_date,
     hourday,
     location_id
-)
+  )
 
 ```
 
+```{r}
+# Final checks
+#| label: snapshot-quality-check
+#| include: false
+
+snapshot_quality <- snapshot_standardised |>
+  group_by(source) |>
+  summarise(
+    observations = n(),
+    first_date = min(sensing_date, na.rm = TRUE),
+    last_date = max(sensing_date, na.rm = TRUE),
+    days_recorded = n_distinct(sensing_date),
+    sensors = n_distinct(location_id),
+    duplicate_keys = n() -
+      n_distinct(location_id, sensing_date, hourday),
+    missing_counts = sum(is.na(pedestrian_count)),
+    .groups = "drop"
+  )
+
+snapshot_quality
+```
+```{r}
+#| label: final-data-validation
+#| include: false
+#| warning: false
+#| message: false
+
+final_check <- pedestrian_full |>
+  summarise(
+    total_rows = n(),
+    sensors = n_distinct(location_id),
+    first_date = min(sensing_date, na.rm = TRUE),
+    last_date = max(sensing_date, na.rm = TRUE),
+
+    duplicate_keys = n() -
+      n_distinct(location_id, sensing_date, hourday),
+
+    missing_sensor_ids = sum(is.na(location_id)),
+    missing_dates = sum(is.na(sensing_date)),
+    missing_hours = sum(is.na(hourday)),
+    missing_counts = sum(is.na(pedestrian_count)),
+
+    invalid_hours = sum(
+      !between(hourday, 0, 23),
+      na.rm = TRUE
+    ),
+
+    negative_counts = sum(
+      pedestrian_count < 0,
+      na.rm = TRUE
+    )
+  )
+
+validation_table <- tibble(
+  Check = c(
+    "Total hourly observations",
+    "Monitoring locations",
+    "First observation",
+    "Last observation",
+    "Duplicate sensor-date-hour keys",
+    "Missing sensor identifiers",
+    "Missing dates",
+    "Missing hours",
+    "Missing pedestrian counts",
+    "Invalid hour values",
+    "Negative pedestrian counts"
+  ),
+  Result = c(
+    scales::comma(final_check$total_rows),
+    scales::comma(final_check$sensors),
+    as.character(final_check$first_date),
+    as.character(final_check$last_date),
+    scales::comma(final_check$duplicate_keys),
+    scales::comma(final_check$missing_sensor_ids),
+    scales::comma(final_check$missing_dates),
+    scales::comma(final_check$missing_hours),
+    scales::comma(final_check$missing_counts),
+    scales::comma(final_check$invalid_hours),
+    scales::comma(final_check$negative_counts)
+  )
+)
+
+validation_table |>
+  knitr::kable(
+    format = "html",
+    caption = "Summary of data quality checks for the consolidated dataset",
+    align = c("l", "r")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 14
+  )
+```
+
+
+```{r}
+#| label: yearly-data-coverage
+#| echo: false
+
+yearly_coverage <- pedestrian_full |>
+  group_by(year) |>
+  summarise(
+    first_date = min(sensing_date),
+    last_date = max(sensing_date),
+    days_recorded = n_distinct(sensing_date),
+    sensors = n_distinct(location_id),
+    observations = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    calendar_days = 365 +
+      as.integer(lubridate::leap_year(year))
+  )
+
+yearly_coverage |>
+  select(
+    year,
+    observations,
+    sensors,
+    days_recorded,
+    calendar_days,
+    first_date,
+    last_date
+  ) |>
+  mutate(
+    observations = scales::comma(observations)
+  ) |>
+  knitr::kable(
+    format = "html",
+    col.names = c(
+      "Year",
+      "Observations",
+      "Sensors",
+      "Days recorded",
+      "Calendar days",
+      "First date",
+      "Last date"
+    ),
+    caption = "Annual coverage of the consolidated pedestrian dataset",
+    align = c("c", "r", "r", "r", "r", "c", "c")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 12
+  )
+```
+
+
+### Preparing Supporting Datasets
+
+Additional datasets were prepared to support specific parts of the investigation. Sensor-location records were used to associate pedestrian observations with geographical coordinates and installation information, while event permit data provided dates and contextual information for examining unusual activity.
+
+Historical weather observations and Victorian public-holiday records were also prepared for comparison with pedestrian activity. These sources provided contextual variables for investigating whether departures from typical patterns were associated with rainfall, other weather conditions or public holidays.
+
+The methods used to calculate typical pedestrian activity, select comparable sensors, identify anomalies and examine these associations are explained in the Methodology section.
 
 ## 2.4 Measures and analytical approach
 
@@ -940,7 +919,6 @@ pedestrian_full_updated %>%
 ```{r}
 pedestrian_full <- pedestrian_full_updated
 ```
-
 
 # 3. Results
 
@@ -1005,7 +983,6 @@ hourly_summary <- hourly_index %>%
     .groups = "drop"
   )
 ```
-
 
 ```{r}
 daily_interactive_data <- hourly_index %>%
@@ -1248,7 +1225,6 @@ The monthly analysis indicates that pedestrian activity generally increases towa
 
 These recurring patterns are important when evaluating changes in Melbourne's pedestrian activity. A quieter winter month does not necessarily indicate an unusual decline, just as higher activity during March may reflect an established seasonal pattern. Understanding this annual rhythm therefore provides context for the subsequent analysis of long-term trends, COVID-19 disruptions and exceptional pedestrian activity.
 
-
 ### Seasonal patterns in pedestrian activity
 
 To examine the broader seasonal cycle, pedestrian activity was grouped into summer, autumn, winter and spring. The seasonal comparison supports the monthly findings, showing generally stronger activity during summer and autumn, lower pedestrian volumes during winter, and a gradual recovery through spring.
@@ -1327,7 +1303,6 @@ An important consideration is the expansion of Melbourne's pedestrian sensor net
 Based on the existing analysis, median daily pedestrian activity declined from approximately 10,091 in 2017–2019 to 7,211 in 2023–2025, representing a decrease of 28.5%. This suggests that pedestrian activity at these consistently monitored locations remains below its pre-pandemic level, despite the reopening of Melbourne and the gradual return of activity.
 
 The analysis also examines the monthly disruption associated with COVID-19 using an index relative to the same-month 2015–2019 baseline. Together, the annual comparison and monthly index provide two perspectives: the longer-term change in pedestrian volumes and the timing of the pandemic-related decline and recovery.
-
 
 ```{r}
 sensor_coverage_check <- pedestrian_full |>
@@ -1944,7 +1919,6 @@ event_episode_candidates |>
 
 ### Summarise pedestrian decreases across sensors
 
-
 ```{r}
 
 
@@ -2010,7 +1984,6 @@ decrease_non_covid <- decrease_candidates %>%
   )
 ```
 
-
 ```{r}
 # Downloading the event permits dataset from COM
 event_url <- paste0(
@@ -2053,7 +2026,6 @@ event_permits <- readr::read_delim(
 event_permits |>
   glimpse()
 ```
-
 
 ```{r}
 # Cleaning the inconsistency in the events dataset
@@ -2153,7 +2125,6 @@ event_permits_relevant <- event_permits |>
     !is.na(event_type)
   )
 ```
-
 
 ```{r}
 event_permits_qc <- event_permits_relevant |>
@@ -2410,8 +2381,6 @@ holiday_calendar_official %>%
   count(lubridate::year(holiday_date), name = "holidays")
 ```
 
-
-
 ```{r}
 
 decrease_holiday_test <- decrease_non_covid %>%
@@ -2467,7 +2436,6 @@ baseline_holiday <- eligible_days %>%
 baseline_holiday
 ```
 
-
 ```{r}
 ### Public holiday enrichment using official government data
 
@@ -2486,7 +2454,6 @@ holiday_enrichment <- tibble::tibble(
 
 holiday_enrichment
 ```
-
 
 ```{r}
 ### Identify Public Holidays Associated with Significant Decreases
@@ -2509,7 +2476,6 @@ knitr::kable(
 ```
 
 Holiday dips should be distinguished from event surges: holidays suppress routine commuter activity, while major events can concentrate and amplify it. The event table below summarises the strongest event-linked surges. Within the 2014–2018 permit window, the largest occurred on 22 February 2014, when median activity was 51.7% above expectation and 80% of reporting sensors were more than 20% above benchmark; the single largest surge of the whole record, 31 December 2019, is larger still but falls outside the permit data. Permits link that date to four events, including the Australian Henley Regatta, the 100mm Car Festival, White Night and the MS Melbourne Cycle. Other surges align with major runs, parades, White Night and New Year's Eve. Events can temporarily override the ordinary weekday and seasonal structure.
-
 
 ```{r}
 ### Interactive Significant Pedestrian Decreases Across Years
@@ -2645,7 +2611,6 @@ weather_dip_daily %>%
     duplicate_dates = n() - n_distinct(sensing_date)
   )
 ```
-
 
 ```{r}
 ### Compare Weather on Significant Dip Days and Other Days
@@ -2846,7 +2811,6 @@ weather_holiday_yearly <- weather_dip_daily %>%
   arrange(year_label, plot_date)
 ```
 
-
 ```{r}
 ### Smoothed Pedestrian Changes, Weather and Holidays by Year
 
@@ -2942,7 +2906,6 @@ smoothed_yearly_plot <- plotly::layout(
 smoothed_yearly_plot
 ```
 
-
 The combined timeline illustrates how Melbourne's pedestrian activity fluctuates throughout the year and highlights days when pedestrian movement falls substantially below expected levels. Although the overall patterns vary between years, significant declines occur across several months, indicating that unusual reductions in activity are not restricted to a particular season.
 
 Public holidays account for some of the most pronounced declines, particularly towards the end of the year. However, significant decreases also occur on non-holiday dates, suggesting that factors beyond the public holiday calendar may contribute to unusually quiet days. Weather conditions, local disruptions and changes in everyday travel behaviour are possible explanations that require further investigation.
@@ -2966,8 +2929,6 @@ sensor_locations <- readr::read_csv(
 ) %>%
   distinct(Location_ID, .keep_all = TRUE)
 ```
-
-
 
 ```{r}
 
@@ -3031,7 +2992,6 @@ sensor_daily_spatial <- pedestrian_full |>
   )
 ```
 
-
 ```{r}
 recent_strength <- sensor_daily_spatial |>
   filter(
@@ -3087,8 +3047,6 @@ ggplotly(
   tooltip = "text"
 )
 ```
-
-
 
 ```{r}
 top_locations <- recent_strength |>
@@ -3410,7 +3368,6 @@ here::here("Data_pedestrians", "raw", "data_pedestrian", "2025_Pedestrian_Data.c
   distinct(Location_ID, .keep_all = TRUE)
 ```
 
-
 ### Load Sensor Location Information
 
 ```{r}
@@ -3427,7 +3384,6 @@ sensor_lookup <- sensor_locations %>%
   rename(location_id = Location_ID)
 
 ```
-
 
 ```{r}
 sensor_overall_dips <- sensor_event_index %>%
@@ -3567,11 +3523,11 @@ Ultimately, the most useful question is not simply whether Melbourne has recover
 
 # References
 
-City of Melbourne. (2026a). *Pedestrian Counting System: Monthly counts per hour* [Data set]. Melbourne Open Data. https://data.melbourne.vic.gov.au/
+City of Melbourne. (2026a). *Pedestrian Counting System: Monthly counts per hour* \[Data set\]. Melbourne Open Data. https://data.melbourne.vic.gov.au/
 
-City of Melbourne. (2026b). *Event permits 2014–2018, including film shoots, photo shoots, weddings and Christmas parties* [Data set]. Melbourne Open Data. https://data.melbourne.vic.gov.au/
+City of Melbourne. (2026b). *Event permits 2014–2018, including film shoots, photo shoots, weddings and Christmas parties* \[Data set\]. Melbourne Open Data. https://data.melbourne.vic.gov.au/
 
-Open-Meteo. (2026). *Historical weather API* [Data set]. https://open-meteo.com/
+Open-Meteo. (2026). *Historical weather API* \[Data set\]. https://open-meteo.com/
 
 R Core Team. (2025). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing. https://www.R-project.org/
 
