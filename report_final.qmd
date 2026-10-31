@@ -1375,6 +1375,10 @@ Pedestrian activity in Melbourne varies throughout the day, across the week and 
 
 ### Daily Pedestrian Activity Over Time
 
+The hourly activity profiles reveal a consistent daily pattern across the observed years. Pedestrian activity is generally lowest overnight, increases sharply during the morning, and remains elevated throughout the middle of the day and late afternoon. The profiles show noticeable peaks during typical commuting periods, particularly in the morning and late afternoon, although their relative intensity varies between years.
+
+Despite differences in activity levels over time, the overall shape of the daily rhythm remains broadly recognisable. As the activity index is normalised against each year's average, the graph highlights differences in the timing and relative intensity of pedestrian movement rather than absolute changes in pedestrian volumes. These changes in overall activity are examined separately in Section 4.2.
+
 ```{r}
 #| label: daily-pedestrian-rhythm
 # Calculate hourly activity indices and visualise daily pedestrian patterns across years
@@ -1463,7 +1467,14 @@ daily_interactive <- plot_ly(
 daily_interactive
 ```
 
+
 ### Weekly rhythm across the years
+
+The weekly activity index shows clear differences in pedestrian movement across weekdays and weekends. Across the observed years, Friday generally records the highest relative activity, with a median index of 115.8, followed by Thursday (105.6) and Wednesday (103.6). Sunday records the lowest median index at 82.9.
+
+However, the relative difference between Friday and Saturday has narrowed. In 2019, Friday recorded an index of 115.5 compared with 94.5 on Saturday, a difference of 21.0 index points. By 2025, Friday and Saturday recorded indices of 108.9 and 107.5, respectively, reducing the gap to just 1.4 points. Over the same period, Monday's index decreased from 96.5 to 89.5, while Sunday's increased from 78.7 to 87.9.
+
+These findings suggest a shift in the distribution of pedestrian activity across the week, with Saturday becoming more comparable to Friday in relative terms.
 
 ```{r}
 #| label: weekly-pedestrian-rythm
@@ -1562,16 +1573,14 @@ weekly_interactive <- plot_ly(
 weekly_interactive
 ```
 
-The weekly rhythm tells a similar story. Across all years, Friday is strongest (median index 115.8), followed by Thursday (105.6) and Wednesday (103.6); Sunday is weakest (82.9). But the weekday–weekend gap has narrowed. In 2019, Saturday registered 94.5 against Friday's 115.5, a gap of 21 index points; in 2025, Saturday reached 107.5 against Friday's 108.9, a gap of only 1.4 points. Over the same period, Monday fell from 96.5 to 89.5 and Sunday rose from 78.7 to 87.9. Melbourne's weekend is no longer simply quieter than its working week; it is now a more important part of the pedestrian economy.
-
 
 ### Monthly Pedestrian Rhythm
 
 Melbourne's pedestrian activity shows a recurring pattern throughout the year. Hourly counts were aggregated into daily totals for each sensor, and average daily activity was then calculated for each calendar month using the available observations from 2009 to 2026.
 
-The monthly results show that pedestrian activity generally increases towards March, declines through the winter months and recovers towards the end of the year. March and December are relatively busy periods, while June records lower activity.
+TThe monthly results reveal a recurring pattern in pedestrian activity, with relatively high average daily counts during March and December and lower activity during the winter months. March records the highest average daily count, while June records the lowest, followed by a gradual recovery towards the end of the year.
 
-These patterns may reflect a combination of weather conditions, university schedules, retail activity and major events. However, the monthly averages alone cannot establish the influence of these factors. The results provide a useful picture of typical seasonal variation and help distinguish recurring fluctuations from unusual changes in pedestrian activity.
+These variations may be associated with seasonal weather conditions, university schedules, retail activity and major public events. However, the descriptive averages do not independently establish the influence of these factors.
 
 ```{r}
 #| label: monthly-pedestrian-rythm
@@ -1707,13 +1716,13 @@ seasonal_profile |>
 
 ## Long-term and Covid-19 changes
 
-Melbourne's pedestrian activity has experienced substantial changes over time, particularly following the COVID-19 pandemic. While the previous section demonstrated recurring monthly and seasonal patterns, this section examines whether the overall level of pedestrian activity has changed and how far the city has recovered from the pandemic disruption.
+Melbourne's pedestrian activity has undergone substantial changes over time, particularly during and after the COVID-19 pandemic. While the previous section examined recurring daily, weekly and seasonal patterns, this section investigates changes in the overall level of pedestrian activity and compares recent observations with pre-pandemic conditions.
 
-An important consideration is the expansion of Melbourne's pedestrian sensor network. Comparing total pedestrian counts across years could be misleading because the number of operational sensors has changed. To provide a more consistent comparison, 27 sensors with at least 300 days of observations in each of the selected pre-pandemic (2017–2019) and post-pandemic (2023–2025) years were identified.
+A key consideration is the expansion of Melbourne's pedestrian sensor network. Comparing total pedestrian counts across different years may be misleading because the number and composition of reporting locations have changed over time.
 
-Based on the existing analysis, median daily pedestrian activity declined from approximately 10,091 in 2017–2019 to 7,211 in 2023–2025, representing a decrease of 28.5%. This suggests that pedestrian activity at these consistently monitored locations remains below its pre-pandemic level, despite the reopening of Melbourne and the gradual return of activity.
+To improve comparability, the analysis identifies 27 sensor locations that recorded observations on at least 300 days in each of the six selected years: 2017–2019 and 2023–2025. Median daily activity across these consistently monitored locations is then compared between the two periods.
 
-The analysis also examines the monthly disruption associated with COVID-19 using an index relative to the same-month 2015–2019 baseline. Together, the annual comparison and monthly index provide two perspectives: the longer-term change in pedestrian volumes and the timing of the pandemic-related decline and recovery.
+This approach provides evidence of changes at selected monitoring locations while reducing the influence of sensor network expansion. A separate comparison of hourly activity patterns is also used to examine whether the timing of pedestrian movement has changed alongside overall volumes.
 
 ```{r}
 #| label: select-consistent-sensors
@@ -1760,7 +1769,11 @@ consistent_sensors |>
 
 ```
 
-### Long term pedestrian rythm
+### Long term pedestrian trends
+
+The long-term series shows substantial variation in pedestrian activity between 2009 and 2026. A particularly pronounced decline is visible during the COVID-19 period, followed by a recovery in subsequent years. Nevertheless, activity in the more recent period does not consistently reach the higher levels observed before the pandemic.
+
+The graph should be interpreted with caution because the number and composition of reporting sensors changed over time. Some of the variation, particularly in earlier years, may reflect differences in sensor coverage rather than changes in pedestrian activity alone. Consequently, this series provides a broad historical overview, while the comparison of 27 consistently monitored locations in the following section offers a more reliable assessment of changes between the selected pre-pandemic and recent periods.
 
 ```{r}
 #| label: long-term-activity
@@ -1800,7 +1813,7 @@ long_term_plot <- ggplot(
   geom_line(colour = "black", linewidth = 0.8) +
   labs(
     title = "Melbourne's Pedestrian Activity Over Time",
-    subtitle = "Monthly median hourly activity across selected pedestrian sensors",
+    subtitle = "Monthly median hourly activity across available pedestrian sensors",
     x = "Year",
     y = "Median hourly pedestrian count"
   ) +
@@ -1810,11 +1823,12 @@ plotly::ggplotly(long_term_plot)
 
 ```
 
-The monthly trend shows a sharp decline in pedestrian activity during the COVID-19 period, followed by a recovery in subsequent years. However, the activity recorded at these locations has not consistently returned to its earlier levels.
 
-The graph also provides a longer historical view of the selected locations, although sensor reporting varies across the period. These differences should be considered when interpreting the trend, particularly in the earlier years.
+### Pedestrian Activity Before and After Covid-19
 
-### Covid-19 changes (Before vs After)
+The comparison shows a substantial reduction in typical daily pedestrian activity across the 27 consistently monitored locations. Median daily counts declined from approximately 10,091 during 2017–2019 to 7,211 during 2023–2025, representing a decrease of 28.5%.
+
+Because the same locations were included in both periods, the comparison reduces the influence of sensor network expansion and provides a more consistent measure of long-term change. The findings indicate that pedestrian activity at these selected locations remained below its pre-pandemic level during 2023–2025.
 
 ```{r}
 #| label: then-vs-now-comparison
@@ -1877,7 +1891,6 @@ period_summary_consistent <- period_daily_consistent |>
     )
   )
 
-period_summary_consistent
 
 period_summary_consistent |>
   ggplot(
@@ -1899,6 +1912,12 @@ period_summary_consistent |>
 ```
 
 ### Changes in Hourly Pedestrian Activity
+
+The hourly comparison shows that the general shape of Melbourne's pedestrian activity remained recognisable between the two periods. Both 2017–2019 and 2023–2025 exhibit relatively low activity overnight, followed by increasing pedestrian movement during the morning and higher counts throughout the daytime.
+
+However, the 2023–2025 profile remains below the pre-pandemic profile across much of the day, with particularly noticeable differences around the main daytime peaks. This suggests that although the timing of pedestrian movement remained broadly similar, its intensity declined at the selected monitoring locations.
+
+The observed differences may be associated with changes in commuting, workplace attendance and city-centre activity. 
 
 ```{r}
 #| label: then-vs-now-hourly
@@ -1985,31 +2004,24 @@ ggplot(
 
 ```
 
-The hourly comparison provides further insight into how Melbourne's pedestrian activity has changed since the pandemic. Both periods exhibit a recognisable daily rhythm, with low pedestrian activity overnight and stronger movement during the daytime.
-
-However, pedestrian volumes during 2023–2025 are generally lower than those recorded during 2017–2019, particularly during the busiest hours. This indicates that Melbourne has retained much of its traditional daily activity pattern, despite experiencing a substantial reduction in overall pedestrian volumes.
-
-The findings suggest that post-pandemic changes extend beyond the total number of pedestrians and may also reflect changes in commuting and city-centre activity. However, the observed differences cannot be attributed to any single behavioural factor without further analysis.
-
 
 ## Outlier days, events and public holidays
 
-The calendar-adjusted analysis identified 62 significant citywide pedestrian declines across 2019 and 2023–2026, of which 22 coincided with Victorian public holidays. Among the 1,718 eligible days, 63 were public holidays (3.7%), and 22 of these 63 holidays (34.9%) experienced significant pedestrian declines. Public holidays also accounted for 35.5% of all significant dip days, approximately 9.7 times their share of the eligible calendar days.
+Pedestrian activity occasionally departs substantially from its usual daily and seasonal patterns. While some dates record unusually high pedestrian volumes, others experience widespread declines. Examining these deviations helps identify periods when movement across Melbourne's monitored locations differs from typical conditions.
 
-Christmas Day showed particularly large declines, with median decreases of 50.0%, 44.4%, 43.2% and 38.1% across the four observed Christmas Days. Other holidays, including Australia Day, ANZAC Day, Good Friday, Boxing Day and Melbourne Cup Day, also appeared among the significant dip dates. These findings suggest that public holidays are associated with reduced pedestrian activity at monitored locations, potentially reflecting changes in commuting, business operations and everyday travel routines. However, the results demonstrate an association rather than establishing public holidays as the sole cause of these declines.
-
+This section investigates two types of unusual activity. First, pedestrian surges are identified and compared with permitted events recorded by the City of Melbourne. Second, unusually quiet days are examined alongside Victorian public holidays and weather conditions, particularly rainfall. 
 
 ### Unusual Pedestrian Surges and Permitted Events
 
-Alongside the usual daily and seasonal patterns, Melbourne experiences days when pedestrian activity is considerably higher than expected. To identify these unusual increases, daily pedestrian counts were compared with typical activity at the same sensor on nearby dates.
+To identify unusually busy pedestrian days, daily counts were compared with expected activity at each sensor. Only sensor-days containing at least 20 distinct recorded hours were retained to reduce the influence of incomplete observations.
 
-For each sensor, the expected daily count was calculated using the median of the four previous and four following observations for the same day of the week. For example, a Saturday was compared with nearby Saturdays rather than weekdays. Only sensor-days with at least 20 recorded hours were included to reduce the influence of incomplete observations.
+Expected activity was estimated using the median daily count from the four preceding and four following available observations on the same day of the week, excluding the date being evaluated. This approach accounts for typical differences between weekdays and weekends. However, when observations are missing, the comparison window may extend beyond four calendar weeks.
 
-The percentage increase, referred to as pedestrian uplift, measures how much the observed count exceeded the expected count. For example, if a sensor recorded 1,500 pedestrians when its expected count was 1,000, the uplift would be 50%. The median uplift across reporting sensors was then calculated for each date to identify unusually busy days across multiple locations.
+For each sensor-day, pedestrian uplift was calculated as the percentage difference between the observed and expected daily count. For example, an observed count of 1,500 pedestrians compared with an expected count of 1,000 represents an uplift of 50%. The median percentage uplift across reporting sensors was then used to summarise activity for each date.
 
-Days were considered potential pedestrian surges when at least 10 sensors reported, the median uplift was at least 20%, and at least 30% of sensors recorded an increase of 20% or more. Consecutive qualifying dates were grouped into event episodes to avoid treating a multi-day surge as several unrelated events.
+A date was classified as a potential citywide pedestrian surge when at least 10 sensors reported valid comparisons, the median uplift reached at least 20%, and at least 30% of reporting sensors recorded an uplift of 20% or more. Consecutive qualifying dates were grouped into episodes to avoid treating related increases on adjacent dates as separate occurrences.
 
-These episodes were then compared with the City of Melbourne's permitted-event records for 2014–2018. Short-duration permits were matched using overlapping dates, and matches were retained when the episode's peak date fell within the permitted event period. This provides a way to identify events that may be associated with unusually high pedestrian activity. 
+The resulting episodes were compared with City of Melbourne event-permit records covering 2014–2018. Short-duration permits were matched using overlapping event and episode dates, and a match was retained when the episode's peak-uplift date fell within the permit period. 
 
 ```{r}
 #| label: non-covid-rises
@@ -2245,8 +2257,6 @@ event_episode_matches_checked <- event_episode_matches |>
 event_matches_temporally_plausible <- event_episode_matches_checked |>
   filter(peak_date_inside_event)
 
-event_matches_temporally_plausible
-
 event_case_candidates <- event_matches_temporally_plausible |>
   filter(
     peak_uplift >= 20,
@@ -2267,8 +2277,6 @@ event_case_candidates <- event_matches_temporally_plausible |>
   arrange(
     desc(peak_uplift)
   )
-
-event_case_candidates
 
 event_date_overview <- event_case_candidates |>
   group_by(peak_date) |>
@@ -2384,11 +2392,6 @@ plotly::ggplotly(
 )
 ```
 
-- The results show several notable increases in pedestrian activity between 2014 and 2018. The largest identified surge occurred on 22 February 2014, when the median pedestrian uplift reached 51.7%, and 80% of reporting sensors recorded increases of at least 20%. Four permitted events overlapped with this date, including White Night 2014.
-
-Other notable increases occurred on 22 February 2015 and 3 November 2014, with median uplifts of 32.2% and 27.7%, respectively. These dates also matched permitted events, suggesting that organised activities may have contributed to higher pedestrian movement.
-
-Overall, the findings show how event records can provide context for unusual increases in pedestrian activity and may help city planners and event organisers better understand periods of higher demand.
 
 ### Unusual pedestrian dips and it's causes
 
