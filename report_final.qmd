@@ -58,6 +58,101 @@ These findings demonstrate that Melbourne's pedestrian activity varies not only 
 
 On 22 February 2014, pedestrian activity near Flinders Street and Elizabeth Street showed an unusual pattern. Compared with other Saturdays in February, pedestrian counts remained noticeably higher, particularly into the evening. What would normally have been a relatively quiet period instead recorded sustained activity. This observation raised a broader question: was this an isolated occurrence at one location, or part of a larger change in how people were moving through Melbourne?
 
+```{r}
+#| label: fig-flinders-introduction
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-cap: "Hourly pedestrian activity at Flinders Street–Elizabeth Street (East), 22 February 2014 compared with other February Saturdays."
+
+# Compare the selected Saturday with typical February Saturday activity
+intro_ped <- data.table::fread(
+  here::here(
+    "Data_pedestrians",
+    "raw",
+    "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
+  ),
+  select = c(
+    "Year", "Month", "Mdate", "Day",
+    "Time", "Sensor_ID", "Sensor_Name", "Hourly_Counts"
+  )
+)
+
+intro_saturdays <- intro_ped[
+  Sensor_Name == "Flinders St-Elizabeth St (East)" &
+    Year == 2014 &
+    Month == "February" &
+    Day == "Saturday"
+]
+
+intro_special <- intro_saturdays[
+  Mdate == 22,
+  .(Time, Count = Hourly_Counts)
+]
+intro_special[, Series := "22 Feb 2014"]
+
+intro_typical <- intro_saturdays[
+  Mdate != 22,
+  .(Count = median(Hourly_Counts, na.rm = TRUE)),
+  by = Time
+]
+intro_typical[, Series := "Other February Saturdays (median)"]
+
+intro_plot_data <- data.table::rbindlist(
+  list(intro_special, intro_typical)
+)
+
+intro_plot <- ggplot(
+  intro_plot_data,
+  aes(x = Time, y = Count, colour = Series, linewidth = Series)
+) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, 23, by = 2)) +
+  scale_colour_manual(values = c(
+    "22 Feb 2014" = "#005EB8",
+    "Other February Saturdays (median)" = "#8A8A8A"
+  )) +
+  scale_linewidth_manual(values = c(
+    "22 Feb 2014" = 1.4,
+    "Other February Saturdays (median)" = 1
+  )) +
+  labs(
+    title = "Flinders Street came alive after dark",
+    subtitle = "Flinders St–Elizabeth St (East)",
+    x = "Hour of day",
+    y = "Pedestrians per hour",
+    colour = NULL,
+    linewidth = NULL
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank()
+  )
+
+plotly::ggplotly(
+  intro_plot,
+  width = 850,
+  height = 500,
+  tooltip = c("x", "y", "colour")
+) |>
+  plotly::layout(
+    hovermode = "x unified",
+    legend = list(
+      orientation = "h",
+      x = 0.5,
+      xanchor = "center",
+      y = -0.25
+    ),
+    margin = list(b = 110)
+  ) |>
+  plotly::config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+```
+
+
 Melbourne's streets serve different purposes throughout the day. Morning activity often reflects commuting, while shopping, leisure and other activities contribute to movement during the afternoon, evenings and weekends. These patterns can also vary across locations, seasons and years. Major disruptions, public events and weather conditions may further influence how frequently and when people move through the city.
 
 Understanding these variations is important for urban planning and decision-making. Information about pedestrian activity can help identify busy periods and locations, support transport and infrastructure planning, and inform how public spaces are managed during major events. However, identifying meaningful changes requires more than simply comparing pedestrian counts. Activity recorded at a particular location may vary because of changes in travel behaviour, but also because of differences in sensor coverage, installation dates or data availability.
@@ -3393,3 +3488,37 @@ Open-Meteo. (2026). *Historical weather API* \[Data set\]. https://open-meteo.co
 R Core Team. (2025). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing. https://www.R-project.org/
 
 Victorian Government. (2026). *Victorian public holidays*. https://www.vic.gov.au/public-holidays
+
+## R Package References
+
+Barrett, T., Dowle, M., Srinivasan, A., Gorecki, J., Chirico, M., Hocking, T., Schwendinger, B., & Krylov, I. (2025). *data.table: Extension of data.frame* (Version 1.17.8) [R package]. https://CRAN.R-project.org/package=data.table
+
+Cheng, J., Schloerke, B., Karambelkar, B., & Xie, Y. (2024). *leaflet: Create interactive web maps with the JavaScript Leaflet library* (Version 2.2.2) [R package]. https://CRAN.R-project.org/package=leaflet
+
+Firke, S. (2024). *janitor: Simple tools for examining and cleaning dirty data* (Version 2.2.1) [R package]. https://CRAN.R-project.org/package=janitor
+
+Grolemund, G., & Wickham, H. (2011). Dates and times made easy with lubridate. *Journal of Statistical Software, 40*(3), 1–25. https://www.jstatsoft.org/v40/i03/
+
+Hester, J., Wickham, H., & Csárdi, G. (2026). *fs: Cross-platform file system operations based on libuv* (Version 1.6.7) [R package]. https://CRAN.R-project.org/package=fs
+
+Maechler, M., Rousseeuw, P., Struyf, A., Hubert, M., & Hornik, K. (2026). *cluster: Cluster analysis basics and extensions* (Version 2.1.8.2) [R package]. https://CRAN.R-project.org/package=cluster
+
+Müller, K. (2025). *here: A simpler way to find your files* (Version 1.0.2) [R package]. https://CRAN.R-project.org/package=here
+
+Ooms, J. (2025). *curl: A modern and flexible web client for R* (Version 6.4.0) [R package]. https://CRAN.R-project.org/package=curl
+
+Richardson, N., Cook, I., Crane, N., Dunnington, D., François, R., Keane, J., Mecum, B., Moldovan-Grünfeld, D., Ooms, J., Wujciak-Jens, J., & Apache Arrow. (2026). *arrow: Integration to Apache Arrow* (Version 25.0.1) [R package]. https://CRAN.R-project.org/package=arrow
+
+Sievert, C. (2020). *Interactive web-based data visualization with R, plotly, and shiny*. Chapman and Hall/CRC. https://plotly-r.com/
+
+Slowikowski, K. (2024). *ggrepel: Automatically position non-overlapping text labels with ggplot2* (Version 0.9.6) [R package]. https://CRAN.R-project.org/package=ggrepel
+
+Vaughan, D. (2025). *slider: Sliding window functions* (Version 0.3.3) [R package]. https://CRAN.R-project.org/package=slider
+
+Wickham, H. (2025). *httr2: Perform HTTP requests and process the responses* (Version 1.2.1) [R package]. https://CRAN.R-project.org/package=httr2
+
+Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T. L., Miller, E., Bache, S. M., Müller, K., Ooms, J., Robinson, D., Seidel, D. P., Spinu, V., ... Yutani, H. (2019). Welcome to the tidyverse. *Journal of Open Source Software, 4*(43), 1686. https://doi.org/10.21105/joss.01686
+
+Xie, Y. (2025). *knitr: A general-purpose package for dynamic report generation in R* (Version 1.50) [R package]. https://yihui.org/knitr/
+
+Zhu, H. (2024). *kableExtra: Construct complex tables with kable and pipe syntax* (Version 1.4.0) [R package]. https://CRAN.R-project.org/package=kableExtra
