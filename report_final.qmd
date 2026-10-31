@@ -15,6 +15,7 @@ format:
     code-tools: true
     fig-responsive: true
 editor: visual
+bibliography: references.bib
 execute:
   message: false
   warning: false
@@ -175,19 +176,6 @@ In line with the original project brief, the analysis addresses four related que
 
 Together, these questions allow the project to move beyond identifying where and when pedestrian counts are highest. They provide a framework for understanding how the city's movement patterns differ, how they have evolved, and what may be associated with substantial changes.
 
-## Analytical Approach and Contributions
-
-This project draws on the City of Melbourne's pedestrian counting records, covering May 2009 to October 2026. Historical records were combined with more recent observations, including additional data obtained directly from the City of Melbourne, to create a consolidated dataset containing approximately 7.43 million hourly observations.
-
-The analysis begins by examining Melbourne's recurring temporal patterns before investigating longer-term changes. Because the pedestrian sensor network has expanded over time, comparisons between historical and recent periods use consistently monitored locations where appropriate. This helps distinguish changes in observed pedestrian activity from changes in the number of sensors contributing data.
-
-The project also considers geographical differences in pedestrian movement. Alongside identifying locations with high pedestrian activity, K-means clustering is used to group sensors according to their normalised hourly patterns. This allows locations with different pedestrian volumes to be compared based on the timing and relative distribution of activity, rather than their total counts alone.
-
-Finally, the analysis investigates departures from normal activity by comparing observed pedestrian counts with expected patterns. Unusually high or low periods are then examined alongside information about permitted events, rainfall and public holidays. These comparisons are treated as associations rather than evidence of direct causation.
-
-A central contribution of the project is the integration of temporal, spatial and event-related analyses into a single investigation of Melbourne's pedestrian activity. Equal attention is given to data preparation and measurement reliability, recognising that changes in sensor coverage and data quality can influence the conclusions drawn from long-term observations.
-
-By combining these approaches, the project aims to provide a clearer understanding of **when Melbourne is active, where different pedestrian rhythms occur, how these patterns have changed, and what circumstances are associated with disruptions to the city's usual movement**.
 
 # Data Sources and Preparation
 
@@ -1310,8 +1298,11 @@ event_permits_extended <- event_permits_qc |>
   )
 ```
 
-- The event permit records also required some cleaning because category names were not always consistent and permit durations varied. Event categories were standardised, and permits were grouped according to their duration. Permits lasting seven days or fewer were retained for automatic date matching, while longer permits were kept separately for further examination.
+The event permit records required additional preparation because event categories were not consistently labelled and permit durations varied considerably. Event categories were standardised, and permits were classified according to their suitability for date-based matching.
 
+Of the available permits, 749 were classified as suitable for automatic matching. Longer or otherwise unsuitable permit records were retained separately rather than being automatically linked to pedestrian surges. This approach reduced the risk of producing misleading matches simply because a permit covered an extended period.
+
+The subsequent event analysis focuses on temporal overlaps between permitted events and unusually busy pedestrian dates. 
 
 ```{r}
 #| label: prepare-weather-data
