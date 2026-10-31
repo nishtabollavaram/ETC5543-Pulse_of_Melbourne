@@ -3298,21 +3298,6 @@ The cluster map shows where these different activity patterns occur across Melbo
 
 Overall, the results show that citywide averages can hide important differences between locations. Understanding these patterns can help inform transport planning, pedestrian infrastructure and the management of public spaces in areas with different types of activity.
 
-
-# Discussion
-
-Melbourne's pedestrian activity follows a recognisable rhythm, shaped by the time of day, day of the week and season. Summer and autumn generally experience higher pedestrian counts, while winter records the lowest activity. However, these seasonal differences represent only one part of the story. Commuting routines, weekend activities, public events and changes in how people use the city also contribute to Melbourne's pedestrian patterns.
-
-The long-term analysis reveals an important shift in this rhythm. Across 27 consistently monitored sensor locations, median daily pedestrian activity was 28.5% lower in 2023–2025 compared with 2017–2019. This suggests that activity at these locations had not fully returned to pre-pandemic levels. Nevertheless, the changes are not uniform across different locations or times of day. The findings highlight the importance of understanding not only whether pedestrian activity has recovered, but also how its distribution across Melbourne has changed.
-
-Public holidays and major events introduce further variation. Christmas Day was associated with some of the largest pedestrian declines, reflecting how regular commuting and commercial activities may change during holidays. Conversely, several major events coincided with unusually high pedestrian activity. These observations demonstrate how the city's regular patterns can be disrupted by changes in the calendar, although the analysis does not establish direct causal relationships.
-
-Weather provides another explanation for short-term variation. Significant pedestrian declines were more frequent on days with heavier rainfall, indicating an association between weather conditions and reduced activity. Wind conditions also differed between significant dip days and other days. However, these relationships may be influenced by seasonal patterns and other external factors, meaning rainfall alone cannot explain every decline.
-
-Spatial differences further demonstrate that Melbourne does not have a single pedestrian rhythm. Major retail and transport corridors, particularly around Swanston Street and the central business district, attract high pedestrian volumes, while other locations follow different weekday and weekend patterns. These differences suggest that urban planning strategies should reflect the characteristics of individual locations rather than relying entirely on citywide averages.
-
-Overall, the findings demonstrate that Melbourne's pedestrian activity is influenced by a combination of regular temporal patterns, longer-term changes and external conditions. For urban planners, transport providers and local businesses, understanding these patterns can support better decisions about infrastructure, staffing and public-space management. Rather than evaluating Melbourne through one overall pedestrian count, considering when, where and under what conditions activity changes provides a more complete picture of the city's movement.
-
 # Limitations
 
 Several limitations should be acknowledged. First, the analysis is observational. It identifies associations between pedestrian activity and holidays, events and weather, but cannot establish causal effects. Public holidays and events are not randomly assigned, weather is correlated with season, and unobserved factors such as transport disruptions, school holidays and construction could confound the results.
