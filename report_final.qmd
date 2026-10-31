@@ -1239,15 +1239,17 @@ K-means clustering uses a 48-dimensional profile of typical activity shares acro
 
 # Results and Findings
 
-## 3.2 Daily and weekly rhythm
+This section presents the main findings from the pedestrian counting data, beginning with Melbourne's daily, weekly and seasonal patterns. It then examines how activity has changed over time, differences between locations, and unusual periods of pedestrian activity. Where relevant, comparisons account for changes in sensor coverage to avoid interpreting network expansion as a change in pedestrian movement.
 
-Melbourne's daily pulse is strongly asymmetric. Across the full record, activity is lowest at 04:00, when the hourly index is about 5% of the annual average. It rises through the morning, reaches a broad midday plateau, and peaks at 17:00, when the index is about 222. The afternoon peak is therefore not solely a commuting phenomenon: the midday index is about 203 at 13:00, almost as high. This shape fits a mixed-use centre combining office work, retail, education, tourism and hospitality, not a pure commuter corridor.
+## Daily, Weekly and Seasonal Pedestrian Patterns
 
-The shape has changed since 2019. The 08:00 index fell from 128 to 108 between 2019 and 2025, while the 17:00 index remained high, falling only from 227 to 216. The morning peak has therefore softened much more than the evening peak, which is consistent with hybrid working: fewer workers make the early trip, but the city still fills during the day and after work. Midday hours have been comparatively resilient, helping explain why aggregate activity can remain substantial even when the traditional commuter peak weakens.
+Pedestrian activity in Melbourne varies throughout the day, across the week and between different times of the year. To understand these patterns, hourly and weekly activity indices were used to compare the relative timing of pedestrian activity across years. Monthly and seasonal summaries were also calculated to examine broader patterns in pedestrian counts.
 
-### Hourly Pedestrian Activity Over Time
+### Daily Pedestrian Activity Over Time
 
 ```{r}
+#| label: daily-pedestrian-rhythm
+
 hourly_by_sensor_year <- pedestrian_full %>%
   filter(
     !is.na(hourday),
@@ -1283,9 +1285,7 @@ hourly_summary <- hourly_index %>%
     q75 = quantile(activity_index, 0.75, na.rm = TRUE),
     .groups = "drop"
   )
-```
 
-```{r}
 daily_interactive_data <- hourly_index %>%
   mutate(
     year_label = case_when(
@@ -1294,11 +1294,7 @@ daily_interactive_data <- hourly_index %>%
       TRUE ~ as.character(year)
     )
   )
-```
 
-### PLOT 1 — Typical Daily Pedestrian Rhythm
-
-```{r}
 
 daily_interactive <- plot_ly(
   daily_interactive_data,
@@ -1341,6 +1337,7 @@ daily_interactive
 ### Weekly rhythm across the years
 
 ```{r}
+#| label: weekly-pedestrian-rythm
 
 pedestrian_full <- pedestrian_full %>%
   mutate(
@@ -1351,15 +1348,19 @@ pedestrian_full <- pedestrian_full %>%
       week_start = 1
     )
   )
-```
 
-### Calculating Weekly Patterns
 
-```{r}
 weekly_by_sensor_year <- pedestrian_full %>%
+  group_by(year, location_id, sensing_date, day_name) %>%
+  summarise(
+    hours_recorded = n_distinct(hourday),
+    daily_count = sum(pedestrian_count, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  filter(hours_recorded >= 20) %>%
   group_by(year, location_id, day_name) %>%
   summarise(
-    sensor_day_avg = mean(pedestrian_count, na.rm = TRUE),
+    sensor_day_avg = mean(daily_count),
     .groups = "drop"
   )
 
@@ -1386,9 +1387,7 @@ weekly_summary <- weekly_index %>%
     q75 = quantile(activity_index, 0.75, na.rm = TRUE),
     .groups = "drop"
   )
-```
 
-```{r}
 weekly_interactive_data <- weekly_index %>%
   mutate(
     year_label = case_when(
@@ -1397,11 +1396,7 @@ weekly_interactive_data <- weekly_index %>%
       TRUE ~ as.character(year)
     )
   )
-```
 
-### PLOT 2 — Typical Weekly Pedestrian Rhythm
-
-```{r}
 weekly_interactive <- plot_ly(
   weekly_interactive_data,
   x = ~day_name,
@@ -1439,19 +1434,19 @@ weekly_interactive
 
 The weekly rhythm tells a similar story. Across all years, Friday is strongest (median index 115.8), followed by Thursday (105.6) and Wednesday (103.6); Sunday is weakest (82.9). But the weekday–weekend gap has narrowed. In 2019, Saturday registered 94.5 against Friday's 115.5, a gap of 21 index points; in 2025, Saturday reached 107.5 against Friday's 108.9, a gap of only 1.4 points. Over the same period, Monday fell from 96.5 to 89.5 and Sunday rose from 78.7 to 87.9. Melbourne's weekend is no longer simply quieter than its working week; it is now a more important part of the pedestrian economy.
 
-## 3.3 Monthly and seasonal rhythm
 
-At the monthly scale, activity follows a consistent seasonal arc. Average daily counts rise from January to a March peak of roughly 10,800, decline through autumn, reach a June trough of roughly 8,700, and recover to a December level of roughly 10,400. The March and December peaks are separated by a winter trough almost 20% below March. The pattern is not a simple summer maximum: March, April and December are strong, while June, July and August are weak. This fits Melbourne's event calendar, university terms, retail cycles and the discomfort of winter walking, rather than temperature alone.
+### Monthly Pedestrian Rhythm
 
-The monthly figure below shows this rhythm across all available sensor data. The seasonal aggregation that follows confirms the structure: summer and autumn are strongest, winter weakest, and spring intermediate. The differences are modest but consistent, which matters for operations: an average that ignores season will over-predict winter demand and under-predict late-summer and pre-Christmas demand. Seasonality also complicates weather effects, because rain is more common in cooler months.
+Melbourne's pedestrian activity shows a recurring pattern throughout the year. Hourly counts were aggregated into daily totals for each sensor, and average daily activity was then calculated for each calendar month using the available observations from 2009 to 2026.
+
+The monthly results show that pedestrian activity generally increases towards March, declines through the winter months and recovers towards the end of the year. March and December are relatively busy periods, while June records lower activity.
+
+These patterns may reflect a combination of weather conditions, university schedules, retail activity and major events. However, the monthly averages alone cannot establish the influence of these factors. The results provide a useful picture of typical seasonal variation and help distinguish recurring fluctuations from unusual changes in pedestrian activity.
 
 ```{r}
-# Monthly rhythm using the full available dataset: 2009–2026
+#| label: monthly-pedestrian-rythm
+# Monthly rhythm using available data, 2009–2026
 monthly_profile <- pedestrian_full |>
-  filter(
-    year >= 2009,
-    year <= 2026
-  ) |>
   group_by(
     location_id,
     sensing_date,
@@ -1459,22 +1454,18 @@ monthly_profile <- pedestrian_full |>
     month_name
   ) |>
   summarise(
-    daily_count = sum(
-      pedestrian_count,
-      na.rm = TRUE
-    ),
+    hours_recorded = n_distinct(hourday),
+    daily_count = sum(pedestrian_count, na.rm = TRUE),
     .groups = "drop"
   ) |>
+  filter(hours_recorded >= 20) |>
   group_by(
     location_id,
     month,
     month_name
   ) |>
   summarise(
-    sensor_month_mean = mean(
-      daily_count,
-      na.rm = TRUE
-    ),
+    sensor_month_mean = mean(daily_count),
     .groups = "drop"
   ) |>
   group_by(
@@ -1482,16 +1473,12 @@ monthly_profile <- pedestrian_full |>
     month_name
   ) |>
   summarise(
-    mean_daily_count = mean(
-      sensor_month_mean,
-      na.rm = TRUE
-    ),
+    mean_daily_count = mean(sensor_month_mean),
     .groups = "drop"
   ) |>
   arrange(month)
-```
 
-```{r}
+
 monthly_profile |>
   ggplot(
     aes(
@@ -1507,7 +1494,7 @@ monthly_profile |>
   ) +
   labs(
     title = "Melbourne's monthly pedestrian rhythm",
-    subtitle = "Average daily pedestrian activity across available data, 2009–2026",
+    subtitle = "Mean daily count per sensor, across available observations (2009–2026)",
     x = NULL,
     y = "Average daily pedestrian count"
   ) +
@@ -1520,20 +1507,19 @@ monthly_profile |>
   )
 ```
 
-Melbourne's pedestrian activity follows a recurring annual rhythm, with noticeable differences between months and seasons. To understand these patterns, hourly pedestrian observations were aggregated into daily totals for each sensor, then summarised by calendar month across the available data from 2009 to 2026.
+### Seasonal pedestrian rythm
 
-The monthly analysis indicates that pedestrian activity generally increases towards March, reaching approximately 10,800 pedestrians per sensor-day, before declining towards June, when activity falls to approximately 8,700. Counts then recover gradually, with another relatively busy period in December. This suggests that pedestrian movement is influenced by more than temperature alone. University schedules, shopping activity and major events may contribute to the monthly variation, although the descriptive analysis does not establish these as direct causes.
+To examine broader seasonal differences, pedestrian activity was grouped into summer, autumn, winter and spring. Average daily pedestrian counts were calculated for each season using the available sensor observations.
 
-These recurring patterns are important when evaluating changes in Melbourne's pedestrian activity. A quieter winter month does not necessarily indicate an unusual decline, just as higher activity during March may reflect an established seasonal pattern. Understanding this annual rhythm therefore provides context for the subsequent analysis of long-term trends, COVID-19 disruptions and exceptional pedestrian activity.
+The seasonal results support the monthly findings, with summer and autumn showing relatively higher pedestrian activity and winter recording the lowest counts. Activity increases again during spring, suggesting that pedestrian movement follows a recurring seasonal pattern.
 
-### Seasonal patterns in pedestrian activity
+These differences are relevant to transport planning, public-space management and businesses that experience changes in pedestrian demand throughout the year. However, the results should be interpreted with some caution because sensor coverage changed over time and the dataset includes partial years.
 
-To examine the broader seasonal cycle, pedestrian activity was grouped into summer, autumn, winter and spring. The seasonal comparison supports the monthly findings, showing generally stronger activity during summer and autumn, lower pedestrian volumes during winter, and a gradual recovery through spring.
-
-The results highlight why seasonal variation should be considered when planning public transport services, managing public spaces and interpreting changes in pedestrian demand. However, the seasonal averages are descriptive because sensor coverage changed over time and the first and final years of the dataset are incomplete.
+Overall, the monthly and seasonal patterns provide context for understanding longer-term changes in pedestrian activity, particularly the disruption and recovery associated with COVID-19.
 
 ```{r}
- seasonal_profile <- pedestrian_full |>
+#| label: seasonal-pedestrian-rythm
+seasonal_profile <- pedestrian_full |>
   group_by(
     location_id,
     year,
@@ -1541,22 +1527,24 @@ The results highlight why seasonal variation should be considered when planning 
     season
   ) |>
   summarise(
+    hours_recorded = n_distinct(hourday),
     daily_count = sum(pedestrian_count, na.rm = TRUE),
     .groups = "drop"
   ) |>
+  filter(hours_recorded >= 20) |>
   group_by(location_id, year, season) |>
   summarise(
-    sensor_season_mean = mean(daily_count, na.rm = TRUE),
+    sensor_season_mean = mean(daily_count),
     .groups = "drop"
   ) |>
   group_by(year, season) |>
   summarise(
-    yearly_season_mean = mean(sensor_season_mean, na.rm = TRUE),
+    yearly_season_mean = mean(sensor_season_mean),
     .groups = "drop"
   ) |>
   group_by(season) |>
   summarise(
-    mean_daily_count = mean(yearly_season_mean, na.rm = TRUE),
+    mean_daily_count = mean(yearly_season_mean),
     .groups = "drop"
   ) |>
   mutate(
@@ -1565,9 +1553,8 @@ The results highlight why seasonal variation should be considered when planning 
       "Summer", "Autumn", "Winter", "Spring"
     )
   )
-```
 
-```{r}
+
 seasonal_profile |>
   ggplot(
     aes(
@@ -1578,24 +1565,15 @@ seasonal_profile |>
   geom_col() +
   labs(
     title = "Seasonal pattern in Melbourne pedestrian activity",
-    subtitle = "Average daily pedestrian activity across available data, 2009–2026",
+    subtitle = "Mean daily count per sensor, averaged across available years (2009–2026)",
     x = NULL,
     y = "Average daily pedestrian count"
   ) +
   theme_minimal()
 ```
 
-The monthly and seasonal analyses reveal a recurring annual pattern in Melbourne's pedestrian activity. The monthly results indicate that pedestrian movement generally peaks around March, declines towards June, and gradually recovers towards the end of the year.
 
-The seasonal comparison supports these findings, with autumn and summer recording the highest average daily pedestrian counts, while winter experiences the lowest activity. Spring shows a moderate recovery, suggesting that pedestrian movement varies throughout the year rather than remaining constant.
-
-These variations may reflect a combination of weather conditions, university schedules, retail activity and major events. However, these factors cannot be identified as direct causes from the seasonal analysis alone.
-
-The findings are relevant to transport planning, public-space management and business operations, where understanding seasonal demand can support resource allocation. Nevertheless, the results should be interpreted cautiously because sensor coverage varies across years and the dataset includes partial years.
-
-Overall, the recurring monthly and seasonal patterns provide useful context for distinguishing normal fluctuations from the longer-term changes examined in the next section, particularly the disruption and recovery associated with COVID-19.
-
-## 3.4 Long-term change and COVID-19
+## Long-term and Covid-19 changes
 
 Melbourne's pedestrian activity has experienced substantial changes over time, particularly following the COVID-19 pandemic. While the previous section demonstrated recurring monthly and seasonal patterns, this section examines whether the overall level of pedestrian activity has changed and how far the city has recovered from the pandemic disruption.
 
@@ -1606,6 +1584,8 @@ Based on the existing analysis, median daily pedestrian activity declined from a
 The analysis also examines the monthly disruption associated with COVID-19 using an index relative to the same-month 2015–2019 baseline. Together, the annual comparison and monthly index provide two perspectives: the longer-term change in pedestrian volumes and the timing of the pandemic-related decline and recovery.
 
 ```{r}
+#| label: select-consistent-sensors
+#| include: false
 sensor_coverage_check <- pedestrian_full |>
   filter(year %in% c(2017:2019, 2023:2025)) |>
   group_by(location_id, year) |>
@@ -1616,9 +1596,7 @@ sensor_coverage_check <- pedestrian_full |>
 
 sensor_coverage_check |>
   arrange(location_id, year)
-```
 
-```{r}
 sensor_coverage_check |>
   group_by(year) |>
   summarise(
@@ -1628,9 +1606,7 @@ sensor_coverage_check |>
     max_days = max(days_observed),
     .groups = "drop"
   )
-```
 
-```{r}
 consistent_sensors <- sensor_coverage_check |>
   filter(days_observed >= 300) |>
   group_by(location_id) |>
@@ -1642,9 +1618,7 @@ consistent_sensors <- sensor_coverage_check |>
   filter(years_covered == 6)
 
 consistent_sensors
-```
 
-```{r}
 consistent_sensors |>
   summarise(
     number_of_consistent_sensors = n()
@@ -1652,14 +1626,10 @@ consistent_sensors |>
 
 ```
 
-### Long-term Pedestrian Activity Over Time
+### Long term pedestrian rythm
 
 ```{r}
-
-#| label: fig-long-term-activity
-#| echo: false
-#| warning: false
-#| message: false
+#| label: long-term-activity
 
 # Monthly hourly activity at consistently monitored locations
 long_term_monthly <- pedestrian_full |>
@@ -1706,15 +1676,14 @@ plotly::ggplotly(long_term_plot)
 
 ```
 
-The long-term analysis examines how Melbourne's pedestrian activity has changed from 2009 to 2026. The monthly trend provides a broader historical perspective, showing variations in pedestrian movement over time and the pronounced disruption associated with the COVID-19 pandemic.
+The monthly trend shows a sharp decline in pedestrian activity during the COVID-19 period, followed by a recovery in subsequent years. However, the activity recorded at these locations has not consistently returned to its earlier levels.
 
-The sharp decline during 2020–2021 represents a substantial departure from earlier activity levels. Although pedestrian movement subsequently recovered, the comparison suggests that activity has not consistently returned to its pre-pandemic level.
+The graph also provides a longer historical view of the selected locations, although sensor reporting varies across the period. These differences should be considered when interpreting the trend, particularly in the earlier years.
 
-These findings highlight the importance of considering both long-term trends and major disruptions when examining urban movement. Changes in sensor availability across the historical period should also be considered when interpreting the results.
-
-### Before and After COVID-19
+### Covid-19 changes (Before vs After)
 
 ```{r}
+#| label: then-vs-now-comparison
 pedestrian_consistent <- pedestrian_full |>
   semi_join(
     consistent_sensors,
@@ -1725,7 +1694,6 @@ pedestrian_consistent <- pedestrian_full |>
   )
 
 
-
 pedestrian_consistent |>
   group_by(year) |>
   summarise(
@@ -1733,9 +1701,7 @@ pedestrian_consistent |>
     days = n_distinct(sensing_date),
     .groups = "drop"
   )
-```
 
-```{r}
 period_daily_consistent <- pedestrian_consistent |>
   mutate(
     period = case_when(
@@ -1755,9 +1721,7 @@ period_daily_consistent <- pedestrian_consistent |>
     ),
     .groups = "drop"
   )
-```
 
-```{r}
 period_summary_consistent <- period_daily_consistent |>
   group_by(period) |>
   summarise(
@@ -1778,9 +1742,7 @@ period_summary_consistent <- period_daily_consistent |>
   )
 
 period_summary_consistent
-```
 
-```{r}
 period_summary_consistent |>
   ggplot(
     aes(
@@ -1800,7 +1762,10 @@ period_summary_consistent |>
   theme_minimal()
 ```
 
+### Changes in Hourly Pedestrian Activity
+
 ```{r}
+#| label: then-vs-now-hourly
 period_change <- period_summary_consistent |>
   pivot_wider(
     names_from = period,
@@ -1817,13 +1782,6 @@ period_change <- period_summary_consistent |>
   )
 
 period_change
-```
-
-```{r}
-
-
-#| label: fig-before-after-hourly
-#| fig-cap: "Comparison of hourly pedestrian activity before and after COVID-19."
 
 # Compare hourly activity across the same consistent sensors
 hourly_comparison <- pedestrian_consistent |>
@@ -1889,158 +1847,35 @@ ggplot(
 
 ```
 
-### Changes in Hourly Pedestrian Activity
-
 The hourly comparison provides further insight into how Melbourne's pedestrian activity has changed since the pandemic. Both periods exhibit a recognisable daily rhythm, with low pedestrian activity overnight and stronger movement during the daytime.
 
 However, pedestrian volumes during 2023–2025 are generally lower than those recorded during 2017–2019, particularly during the busiest hours. This indicates that Melbourne has retained much of its traditional daily activity pattern, despite experiencing a substantial reduction in overall pedestrian volumes.
 
 The findings suggest that post-pandemic changes extend beyond the total number of pedestrians and may also reflect changes in commuting and city-centre activity. However, the observed differences cannot be attributed to any single behavioural factor without further analysis.
 
-### COVID-19 Disruption and Recovery
 
-The COVID-19 pandemic caused a major disruption to Melbourne's normal pedestrian activity. To examine the timing and extent of this change, monthly pedestrian activity was compared with the corresponding monthly average during 2015–2019, using an index where 100 represents the pre-pandemic baseline.
-
-The monthly index makes it possible to distinguish changes associated with the pandemic from Melbourne's recurring seasonal patterns. It also illustrates how pedestrian activity responded to different phases of restrictions, reopening and recovery.
-
-```{r}
-
-covid_daily <- pedestrian_full |>
-  filter(
-    year >= 2015,
-    year <= 2022
-  ) |>
-  group_by(
-    location_id,
-    sensing_date,
-    year,
-    month
-  ) |>
-  summarise(
-    daily_count = sum(
-      pedestrian_count,
-      na.rm = TRUE
-    ),
-    .groups = "drop"
-  ) |>
-  mutate(
-    month_date = floor_date(
-      sensing_date,
-      "month"
-    )
-  )
-```
-
-```{r}
-sensor_monthly <- covid_daily |>
-  group_by(
-    location_id,
-    month_date,
-    month
-  ) |>
-  summarise(
-    mean_daily_count = mean(
-      daily_count,
-      na.rm = TRUE
-    ),
-    days_observed = n_distinct(sensing_date),
-    .groups = "drop"
-  ) |>
-  filter(
-    days_observed >= 20
-  )
-```
-
-```{r}
-pre_covid_baseline <- sensor_monthly |>
-  filter(
-    year(month_date) >= 2015,
-    year(month_date) <= 2019
-  ) |>
-  group_by(
-    location_id,
-    month
-  ) |>
-  summarise(
-    baseline_count = mean(
-      mean_daily_count,
-      na.rm = TRUE
-    ),
-    .groups = "drop"
-  )
-```
-
-```{r}
-covid_index <- sensor_monthly |>
-  left_join(
-    pre_covid_baseline,
-    by = c(
-      "location_id",
-      "month"
-    )
-  ) |>
-  filter(
-    !is.na(baseline_count),
-    baseline_count > 0
-  ) |>
-  mutate(
-    activity_index =
-      mean_daily_count / baseline_count * 100
-  )
-```
-
-```{r}
-melbourne_covid_index <- covid_index |>
-  group_by(month_date) |>
-  summarise(
-    activity_index = median(
-      activity_index,
-      na.rm = TRUE
-    ),
-    sensors = n_distinct(location_id),
-    .groups = "drop"
-  )
-```
-
-```{r}
-melbourne_covid_index |>
-  ggplot(
-    aes(
-      x = month_date,
-      y = activity_index
-    )
-  ) +
-  geom_hline(
-    yintercept = 100,
-    linetype = "dashed"
-  ) +
-  geom_line(
-    linewidth = 0.9
-  ) +
-  labs(
-    title = "COVID-19 disrupted Melbourne's pedestrian pulse",
-    subtitle = "Monthly activity relative to the same-month 2015–2019 baseline",
-    x = NULL,
-    y = "Pedestrian activity index\n(100 = pre-COVID baseline)"
-  ) +
-  theme_minimal()
-```
-
-The long-term comparison indicates that Melbourne's pedestrian activity has not fully returned to its pre-pandemic level at consistently monitored locations. The estimated 28.5% decline between the selected pre-pandemic and post-pandemic periods demonstrates a substantial difference in typical daily pedestrian volumes.
-
-The COVID-19 activity index provides further context, showing a pronounced reduction during the pandemic and a gradual recovery as restrictions eased. However, the two comparisons use different baseline periods and sensor-selection methods, meaning their results should not be interpreted as directly equivalent measures.
-
-These findings suggest that Melbourne's pedestrian activity has changed beyond its usual daily and seasonal fluctuations. Possible influences include changes in commuting arrangements, working patterns, shopping behaviour and leisure activity, although the analysis cannot independently establish their effects.
-
-Overall, the results highlight the importance of comparing consistently monitored locations when evaluating long-term urban activity. They also provide a foundation for understanding how Melbourne's pedestrian patterns differ across locations and respond to other factors, including public holidays, major events and weather conditions.
-
-## 3.5 Outlier days, events and public holidays
+## Outlier days, events and public holidays
 
 The calendar-adjusted analysis identified 62 significant citywide pedestrian declines across 2019 and 2023–2026, of which 22 coincided with Victorian public holidays. Among the 1,718 eligible days, 63 were public holidays (3.7%), and 22 of these 63 holidays (34.9%) experienced significant pedestrian declines. Public holidays also accounted for 35.5% of all significant dip days, approximately 9.7 times their share of the eligible calendar days.
 
 Christmas Day showed particularly large declines, with median decreases of 50.0%, 44.4%, 43.2% and 38.1% across the four observed Christmas Days. Other holidays, including Australia Day, ANZAC Day, Good Friday, Boxing Day and Melbourne Cup Day, also appeared among the significant dip dates. These findings suggest that public holidays are associated with reduced pedestrian activity at monitored locations, potentially reflecting changes in commuting, business operations and everyday travel routines. However, the results demonstrate an association rather than establishing public holidays as the sole cause of these declines.
 
+
+### Unusual Pedestrian Surges and Permitted Events
+
+Alongside the usual daily and seasonal patterns, Melbourne experiences days when pedestrian activity is considerably higher than expected. To identify these unusual increases, daily pedestrian counts were compared with typical activity at the same sensor on nearby dates.
+
+For each sensor, the expected daily count was calculated using the median of the four previous and four following observations for the same day of the week. For example, a Saturday was compared with nearby Saturdays rather than weekdays. Only sensor-days with at least 20 recorded hours were included to reduce the influence of incomplete observations.
+
+The percentage increase, referred to as pedestrian uplift, measures how much the observed count exceeded the expected count. For example, if a sensor recorded 1,500 pedestrians when its expected count was 1,000, the uplift would be 50%. The median uplift across reporting sensors was then calculated for each date to identify unusually busy days across multiple locations.
+
+Days were considered potential pedestrian surges when at least 10 sensors reported, the median uplift was at least 20%, and at least 30% of sensors recorded an increase of 20% or more. Consecutive qualifying dates were grouped into event episodes to avoid treating a multi-day surge as several unrelated events.
+
+These episodes were then compared with the City of Melbourne's permitted-event records for 2014–2018. Short-duration permits were matched using overlapping dates, and matches were retained when the episode's peak date fell within the permitted event period. This provides a way to identify events that may be associated with unusually high pedestrian activity. 
+
 ```{r}
+#| label: non-covid-rises
+#| include: false
 sensor_daily_events <- pedestrian_full |>
   filter(
     !is.na(pedestrian_count),
@@ -2077,9 +1912,7 @@ sensor_daily_events <- pedestrian_full |>
     week_start = 1
   )
 )
-```
 
-```{r}
 sensor_event_index <- sensor_daily_events |>
   arrange(
     location_id,
@@ -2112,9 +1945,7 @@ sensor_event_index <- sensor_daily_events |>
   filter(
     is.finite(uplift_percent)
   )
-```
 
-```{r}
 event_day_summary <- sensor_event_index |>
   group_by(sensing_date) |>
   summarise(
@@ -2142,9 +1973,7 @@ event_day_summary <- sensor_event_index |>
     
     .groups = "drop"
   )
-```
 
-```{r}
 event_day_summary_non_covid <- event_day_summary |>
   filter(
     year(sensing_date) <= 2019 |
@@ -2161,9 +1990,7 @@ unusually_busy_dates_non_covid <- event_day_summary_non_covid |>
 
 unusually_busy_dates_non_covid |>
   slice_head(n = 30)
-```
 
-```{r}
 strong_event_candidates_non_covid <- event_day_summary_non_covid |>
   filter(
     sensors_reporting >= 10,
@@ -2174,9 +2001,7 @@ strong_event_candidates_non_covid <- event_day_summary_non_covid |>
 
 strong_event_candidates_non_covid |>
   slice_head(n = 30)
-```
 
-```{r}
 event_candidates_episode <- strong_event_candidates_non_covid |>
   arrange(sensing_date) |>
   mutate(
@@ -2186,9 +2011,7 @@ event_candidates_episode <- strong_event_candidates_non_covid |>
     new_episode = is.na(gap_days) | gap_days > 1,
     episode_id = cumsum(new_episode)
   )
-```
 
-```{r}
 event_episode_candidates <- event_candidates_episode |>
   group_by(episode_id) |>
   summarise(
@@ -2218,244 +2041,9 @@ event_episode_candidates |>
   slice_head(n = 20)
 ```
 
-### Summarise pedestrian decreases across sensors
 
 ```{r}
-
-
-decrease_day_summary <- sensor_event_index %>%
-  group_by(
-    sensing_date
-  ) %>%
-  summarise(
-    median_decrease = median(
-      uplift_percent,
-      na.rm = TRUE
-    ),
-
-    sensors_reporting = n_distinct(
-      location_id
-    ),
-
-    sensors_below_20 = sum(
-      uplift_percent <= -20,
-      na.rm = TRUE
-    ),
-
-    proportion_below_20 = mean(
-      uplift_percent <= -20,
-      na.rm = TRUE
-    ),
-
-    median_daily_count = median(
-      daily_count,
-      na.rm = TRUE
-    ),
-
-    .groups = "drop"
-  )
-```
-
-### Identify significant pedestrian decreases
-
-```{r}
-
-decrease_candidates <- decrease_day_summary %>%
-  filter(
-    sensors_reporting >= 10,
-    median_decrease <= -20,
-    proportion_below_20 >= 0.30
-  ) %>%
-  arrange(
-    median_decrease
-  )
-
-decrease_candidates %>%
-  slice_head(n = 30)
-```
-
-### Focus on non-COVID significant decreases
-
-```{r}
-
-decrease_non_covid <- decrease_candidates %>%
-  filter(
-    lubridate::year(sensing_date) < 2020 |
-      lubridate::year(sensing_date) > 2022
-  )
-```
-
-```{r}
-# Downloading the event permits dataset from COM
-event_url <- paste0(
-  "https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/",
-  "event-permits-2014-2018-including-film-shoots-photo-shoots-weddings-christmas-pa/",
-  "exports/csv"
-)
-
-
-event_path <- here::here(
-  "Data_pedestrians",
-  "raw2",
-  "event_permits_2014_2018.csv"
-)
-
-if (
-  !file.exists(event_path) ||
-    file.info(event_path)$size < 10000
-) {
-  curl::curl_download(
-    event_url,
-    event_path
-  )
-}
-
-readr::read_lines(
-  event_path,
-  n_max = 3
-)
-```
-
-```{r}
-event_permits <- readr::read_delim(
-  event_path,
-  delim = ";",
-  show_col_types = FALSE
-) |>
-  clean_names()
-
-event_permits |>
-  glimpse()
-```
-
-```{r}
-# Cleaning the inconsistency in the events dataset
-event_permits_relevant <- event_permits |>
-  mutate(
-    category_1_clean = category_1 |>
-      str_to_lower() |>
-      str_squish() |>
-      str_replace_all(
-        "non\\s*-?\\s*ticketed",
-        "non-ticketed"
-      ) |>
-      str_replace_all(
-        "run\\s*/?\\s*walk",
-        "run/walk"
-      ),
-
-    event_type = case_when(
-
-      str_detect(
-        category_1_clean,
-        "^public event"
-      ) &
-        str_detect(
-          category_1_clean,
-          "non-ticketed"
-        ) ~
-        "Non-ticketed public event",
-
-      str_detect(
-        category_1_clean,
-        "^public event"
-      ) &
-        str_detect(
-          category_1_clean,
-          "ticketed"
-        ) ~
-        "Ticketed public event",
-
-      str_detect(
-        category_1_clean,
-        "^public event"
-      ) &
-        str_detect(
-          category_1_clean,
-          "run/walk"
-        ) ~
-        "Run/Walk",
-
-      str_detect(
-        category_1_clean,
-        "^public event"
-      ) &
-        str_detect(
-          category_1_clean,
-          "music"
-        ) ~
-        "Music event",
-
-      str_detect(
-        category_1_clean,
-        "^public event"
-      ) &
-        str_detect(
-          category_1_clean,
-          "cycling"
-        ) ~
-        "Cycling event",
-
-      str_detect(
-        category_1_clean,
-        "^public event"
-      ) &
-        str_detect(
-          category_1_clean,
-          "parade"
-        ) ~
-        "Parade",
-
-      str_detect(
-        category_1_clean,
-        "^public event"
-      ) &
-        str_detect(
-          category_1_clean,
-          "memorial"
-        ) ~
-        "Memorial",
-
-      category_1_clean == "public event" ~
-        "Other public event",
-
-      TRUE ~ NA_character_
-    )
-  ) |>
-  filter(
-    !is.na(event_type)
-  )
-```
-
-```{r}
-event_permits_qc <- event_permits_relevant |>
-  mutate(
-    duration_days =
-      as.numeric(event_end - event_start) + 1,
-
-    permit_match_class = case_when(
-      is.na(event_end) ~
-        "Missing end date",
-
-      duration_days <= 7 ~
-        "Suitable for automatic matching",
-
-      duration_days <= 30 ~
-        "Extended permit - inspect manually",
-
-      duration_days > 30 ~
-        "Long permit window - do not auto-match"
-    )
-  )
-
-event_permits_qc |>
-  count(
-    permit_match_class,
-    sort = TRUE
-  )
-```
-
-```{r}
+#| label: rises-matched-with-events
 event_permits_auto <- event_permits_qc |>
   filter(
     permit_match_class ==
@@ -2467,9 +2055,7 @@ event_permits_extended <- event_permits_qc |>
     permit_match_class !=
       "Suitable for automatic matching"
   )
-```
 
-```{r}
 event_episodes_2014_2018 <-
   event_episode_candidates |>
   filter(
@@ -2496,9 +2082,7 @@ event_episode_matches <-
     desc(peak_uplift),
     desc(peak_date_inside_event)
   )
-```
 
-```{r}
 event_episode_matches_checked <- event_episode_matches |>
   mutate(
     date_match_quality = case_when(
@@ -2520,9 +2104,7 @@ event_matches_temporally_plausible <- event_episode_matches_checked |>
   filter(peak_date_inside_event)
 
 event_matches_temporally_plausible
-```
 
-```{r}
 event_case_candidates <- event_matches_temporally_plausible |>
   filter(
     peak_uplift >= 20,
@@ -2545,353 +2127,113 @@ event_case_candidates <- event_matches_temporally_plausible |>
   )
 
 event_case_candidates
-```
 
-```{r}
-event_date_overview <- event_case_candidates |>
-  group_by(
-    peak_date,
-    peak_uplift,
-    max_proportion_above_20
-  ) |>
-  summarise(
-    number_of_events = n_distinct(title),
-
-    matched_events = stringr::str_c(
-      unique(title),
-      collapse = "; "
-    ),
-
-    event_types = stringr::str_c(
-      unique(event_type),
-      collapse = "; "
-    ),
-
-    .groups = "drop"
-  ) |>
-  arrange(desc(peak_uplift))
-
-knitr::kable(
-  event_date_overview |>
-    slice_head(n = 10) |>
-    select(
-      peak_date,
-      peak_uplift,
-      max_proportion_above_20,
-      number_of_events,
-      matched_events
-    ),
-  digits = 1,
-  caption = "Strongest pedestrian surges linked to permitted events, 2014–2018"
-)
-```
-
-```{r}
-event_plot_data <- event_date_overview |>
+event_date_overview |>
+  slice_head(n = 10) |>
   mutate(
-    date_label = format(
-      peak_date,
-      "%d %b %Y"
+    Date = format(peak_date, "%d %b %Y"),
+    `Median uplift` = paste0(round(peak_uplift, 1), "%"),
+    `Sensors above 20%` = paste0(
+      round(max_proportion_above_20 * 100), "%"
     ),
-
-    hover_text = stringr::str_c(
-      "<b>Date:</b> ", date_label,
-      "<br><b>Pedestrian uplift:</b> ",
-      round(peak_uplift, 1), "%",
-      "<br><b>Sensors >20% above expected:</b> ",
-      scales::percent(
-        max_proportion_above_20,
-        accuracy = 1
-      ),
-      "<br><b>Matched events:</b> ",
-      matched_events
+    `Matched permits` = number_of_events,
+    `Example permit` = stringr::str_trunc(
+      sub(";.*", "", matched_events),
+      width = 45
     )
+  ) |>
+  select(
+    Date,
+    `Median uplift`,
+    `Sensors above 20%`,
+    `Matched permits`,
+    `Example permit`
+  ) |>
+  kableExtra::kbl(
+    caption = "Largest pedestrian surges with date-matched event permits, 2014–2018",
+    align = c("l", "r", "r", "r", "l")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "condensed"),
+    full_width = FALSE,
+    position = "left"
   )
+```
 
-event_plot <- event_plot_data |>
+```{r}
+
+event_bar_plot <- event_plot_data |>
+  mutate(
+    date_label = forcats::fct_reorder(
+      date_label,
+      peak_uplift
+    )
+  ) |>
   ggplot(
     aes(
       x = peak_uplift,
-      y = forcats::fct_reorder(
-        date_label,
-        peak_uplift
-      ),
+      y = date_label,
       text = hover_text
     )
   ) +
-  geom_segment(
-    aes(
-      x = 0,
-      xend = peak_uplift,
-      yend = forcats::fct_reorder(
-        date_label,
-        peak_uplift
-      )
-    ),
-    linewidth = 0.6
+  geom_col(
+    fill = "#3274A1",
+    width = 0.7
   ) +
-  geom_point(
-    aes(
-      size = max_proportion_above_20
-    )
-  ) +
-  scale_size_continuous(
-    labels = scales::percent,
-    range = c(3, 7)
+  scale_x_continuous(
+    limits = c(0, max(event_plot_data$peak_uplift) * 1.18)
   ) +
   labs(
-    title = "Major pedestrian surges coincided with permitted Melbourne events",
-    subtitle = "Hover to see the matched events for each date",
+    title = "Major pedestrian surges and matched events",
+    subtitle = "Median increase above expected activity on each date",
     x = "Median pedestrian uplift (%)",
-    y = NULL,
-    size = "Sensors with\n>20% uplift"
+    y = NULL
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 12)
 
 plotly::ggplotly(
-  event_plot,
+  event_bar_plot,
   tooltip = "text"
 )
 ```
 
-The permits cover 2014–2018, so event attribution cannot be extended with the same confidence to later years. The post-2022 record contains several large surges, including 24 August 2025 (+26.2%), 8 March 2026 (+26.0%) and 18 February 2024 (+24.1%), but these are identified from pedestrian data alone. They are candidate event days for future verification, not confirmed attributions.
+- The results show several notable increases in pedestrian activity between 2014 and 2018. The largest identified surge occurred on 22 February 2014, when the median pedestrian uplift reached 51.7%, and 80% of reporting sensors recorded increases of at least 20%. Four permitted events overlapped with this date, including White Night 2014.
 
-### Load Victorian Government Public Holiday Data
+Other notable increases occurred on 22 February 2015 and 3 November 2014, with median uplifts of 32.2% and 27.7%, respectively. These dates also matched permitted events, suggesting that organised activities may have contributed to higher pedestrian movement.
 
-```{r}
+Overall, the findings show how event records can provide context for unusual increases in pedestrian activity and may help city planners and event organisers better understand periods of higher demand.
 
-holiday_calendar_official <- readr::read_csv(
-  here::here("Data_pedestrians", "raw2", "important_dates_august_2026.csv"),
-  show_col_types = FALSE
-) %>%
-  filter(dateType == "PUBLIC_HOLIDAY") %>%
-  transmute(
-    holiday_date = lubridate::dmy(important_date),
-    holiday = name,
-    publisher,
-    source
-  ) %>%
-  filter(
-    holiday_date >= as.Date("2019-01-01"),
-    holiday_date <= as.Date("2026-09-06")
-  ) %>%
-  distinct(holiday_date, .keep_all = TRUE) %>%
-  arrange(holiday_date)
+### Unusual pedestrian dips and it's causes
 
-holiday_calendar_official %>%
-  count(lubridate::year(holiday_date), name = "holidays")
-```
+Apart from major events, pedestrian activity can also fall substantially below its usual level. This section examines whether unusually quiet days are associated with Victorian public holidays and weather conditions, particularly rainfall.
+
+As in the event analysis, daily pedestrian activity was compared with nearby observations from the same sensor and day of the week. A significant pedestrian dip was identified when at least 10 sensors were reporting, the median change was −20% or lower, and at least 30% of reporting sensors recorded a decrease of 20% or more. These criteria help identify declines affecting several monitored locations rather than isolated changes at individual sensors.
+
 
 ```{r}
+#| label: prepare-pedestrian-dips
+#| include: false
 
-decrease_holiday_test <- decrease_non_covid %>%
-  filter(
-    lubridate::year(sensing_date) %in%
-      c(2019, 2023, 2024, 2025, 2026)
-  ) %>%
-  left_join(
-    holiday_calendar_official %>%
-      select(holiday_date, holiday),
-    by = c("sensing_date" = "holiday_date")
-  ) %>%
-  mutate(
-    holiday_status = if_else(
-      is.na(holiday),
-      "Normal day",
-      "Public holiday"
-    )
-  )
-
-decrease_holiday_test %>%
-  count(holiday_status) %>%
-  mutate(
-    percentage = round(n / sum(n) * 100, 1)
-  )
-```
-
-### Compare public holidays with all eligible days
-
-```{r}
-
-eligible_days <- decrease_day_summary %>%
-  filter(
-    sensors_reporting >= 10,
-    lubridate::year(sensing_date) %in%
-      c(2019, 2023, 2024, 2025, 2026)
-  ) %>%
-  distinct(sensing_date) %>%
-  mutate(
-    holiday_status = if_else(
-      sensing_date %in% holiday_calendar_official$holiday_date,
-      "Public holiday",
-      "Normal day"
-    )
-  )
-
-baseline_holiday <- eligible_days %>%
-  count(holiday_status) %>%
-  mutate(
-    percentage = round(n / sum(n) * 100, 1)
-  )
-
-baseline_holiday
-```
-
-```{r}
-### Public holiday enrichment using official government data
-
-holiday_enrichment <- tibble::tibble(
-  baseline_holiday_percentage =
-    mean(eligible_days$holiday_status == "Public holiday") * 100,
-
-  significant_dip_holiday_percentage =
-    mean(decrease_holiday_test$holiday_status == "Public holiday") * 100
-) %>%
-  mutate(
-    enrichment =
-      significant_dip_holiday_percentage /
-      baseline_holiday_percentage
-  )
-
-holiday_enrichment
-```
-
-```{r}
-### Identify Public Holidays Associated with Significant Decreases
-
-public_holiday_dips <- decrease_holiday_test %>%
-  filter(holiday_status == "Public holiday") %>%
-  select(
-    sensing_date,
-    holiday,
-    median_decrease,
-    sensors_reporting
-  ) %>%
-  arrange(median_decrease)
-
-knitr::kable(
-  public_holiday_dips,
-  digits = 1,
-  caption = "Significant Pedestrian Decreases on Victorian Public Holidays"
-)
-```
-
-Holiday dips should be distinguished from event surges: holidays suppress routine commuter activity, while major events can concentrate and amplify it. The event table below summarises the strongest event-linked surges. Within the 2014–2018 permit window, the largest occurred on 22 February 2014, when median activity was 51.7% above expectation and 80% of reporting sensors were more than 20% above benchmark; the single largest surge of the whole record, 31 December 2019, is larger still but falls outside the permit data. Permits link that date to four events, including the Australian Henley Regatta, the 100mm Car Festival, White Night and the MS Melbourne Cycle. Other surges align with major runs, parades, White Night and New Year's Eve. Events can temporarily override the ordinary weekday and seasonal structure.
-
-```{r}
-### Interactive Significant Pedestrian Decreases Across Years
-
-holiday_timeline_data <- decrease_holiday_test %>%
-  mutate(
-    holiday_name = if_else(
-      is.na(holiday),
-      "Not a public holiday",
-      holiday
-    ),
-
-    hover_text = paste0(
-      "Date: ", format(sensing_date, "%d %B %Y"),
-      "<br>Holiday: ", holiday_name,
-      "<br>Median decrease: ", round(median_decrease, 1), "%",
-      "<br>Sensors reporting: ", sensors_reporting
-    )
-  ) %>%
-  arrange(sensing_date)
-
-holiday_timeline <- plotly::plot_ly(
-  holiday_timeline_data,
-  x = ~sensing_date,
-  y = ~median_decrease,
-  color = ~holiday_status,
-  colors = c(
-    "Normal day" = "#64748B",
-    "Public holiday" = "#E87932"
-  ),
-  type = "scatter",
-  mode = "markers",
-  marker = list(
-    size = 11,
-    opacity = 0.85
-  ),
-  text = ~hover_text,
-  hoverinfo = "text"
-) %>%
-  layout(
-    title = "Significant Pedestrian Decreases and Public Holidays",
-    xaxis = list(
-      title = "Date"
-    ),
-    yaxis = list(
-      title = "Median change from expected activity (%)"
-    ),
-    hovermode = "closest",
-    legend = list(
-      title = list(text = "Day type")
-    )
-  )
-
-holiday_timeline
-```
-
-The results indicate a strong association between Victorian public holidays and unusually low pedestrian activity in Melbourne. Although public holidays represent a relatively small proportion of the observed calendar days, they account for a considerably larger share of significant pedestrian declines.
-
-Christmas Day consistently recorded some of the largest reductions, highlighting how changes in regular working, shopping and commuting routines may influence pedestrian movement. Similar declines were observed on several other major public holidays, although the magnitude varied across dates.
-
-However, not every public holiday experienced a significant decline, and pedestrian activity may also be influenced by rainfall, local events and differences between sensor locations. Therefore, these findings should be interpreted as observational associations rather than evidence of direct causation.
-
-Overall, the analysis demonstrates that calendar-related factors are important when interpreting unusual pedestrian patterns. Recognising these effects helps distinguish expected reductions in routine activity from other unexpected changes in Melbourne's pedestrian movement.
-
-## 3.6 Weather sensitivity
-
-Weather is associated with large differences in the probability of a significant dip. After excluding public holidays, there were 40 significant dip days and 1,615 other days (see the weather comparison below). On dip days, median rainfall was 11.3 mm versus 0.2 mm; 55.0% of dip days had at least 10 mm of rain, versus 4.2% of other days. Median maximum wind was also higher (24.6 versus 19.8 km/h). Median maximum temperature was 20.6°C on dip days and 18.5°C on other days, which likely reflects the seasonal timing of rain-bearing systems once holidays are removed; temperature should not be read as protective.
-
-```{r}
-
-weather_daily <- readr::read_csv(
-  here::here("Data_pedestrians", "raw2", "melbourne_weather_daily.csv"),
-  skip = 3,
-  show_col_types = FALSE
-) %>%
-  transmute(
-    sensing_date = as.Date(time),
-
-    max_temperature_c = `temperature_2m_max (°C)`,
-
-    min_temperature_c = `temperature_2m_min (°C)`,
-
-    max_wind_kmh = `wind_speed_10m_max (km/h)`,
-
-    rainfall_mm = `precipitation_sum (mm)`
-  ) %>%
-  filter(
-    sensing_date >= as.Date("2009-05-01"),
-    sensing_date <= as.Date("2026-09-06")
-  )
-
-weather_daily %>%
+decrease_day_summary <- sensor_event_index |>
+  group_by(sensing_date) |>
   summarise(
-    total_days = n(),
-    first_date = min(sensing_date),
-    last_date = max(sensing_date),
-    missing_rainfall = sum(is.na(rainfall_mm)),
-    duplicate_dates = n() - n_distinct(sensing_date)
+    median_decrease = median(uplift_percent, na.rm = TRUE),
+    sensors_reporting = n_distinct(location_id),
+    proportion_below_20 = mean(
+      uplift_percent <= -20,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
   )
-```
 
-### Combine Weather with Pedestrian Decreases
-
-```{r}
-
-weather_dip_daily <- decrease_day_summary %>%
+# Use years covered by the holiday and weather analysis
+eligible_dip_days <- decrease_day_summary |>
   filter(
     sensors_reporting >= 10,
     lubridate::year(sensing_date) %in%
-      c(2019, 2023, 2024, 2025, 2026)
-  ) %>%
-  left_join(
-    weather_daily,
-    by = "sensing_date"
-  ) %>%
+      c(2019, 2023, 2024, 2025, 2026),
+    sensing_date <= as.Date("2026-09-06")
+  ) |>
   mutate(
     significant_dip =
       median_decrease <= -20 &
@@ -2901,84 +2243,189 @@ weather_dip_daily <- decrease_day_summary %>%
       sensing_date %in%
       holiday_calendar_official$holiday_date
   )
+```
 
-weather_dip_daily %>%
+
+```{r}
+#| label: holiday-dip-comparison
+#| echo: false
+
+holiday_comparison <- eligible_dip_days |>
+  mutate(
+    day_type = if_else(
+      public_holiday,
+      "Public holiday",
+      "Other day"
+    )
+  ) |>
+  group_by(day_type) |>
   summarise(
     total_days = n(),
     significant_dip_days = sum(significant_dip),
-    public_holiday_days = sum(public_holiday),
-    holiday_dip_days = sum(significant_dip & public_holiday),
-    missing_weather = sum(is.na(rainfall_mm)),
-    duplicate_dates = n() - n_distinct(sensing_date)
+    dip_percentage = round(
+      mean(significant_dip) * 100, 1
+    ),
+    .groups = "drop"
+  )
+
+holiday_comparison |>
+  mutate(
+    `Dip rate` = paste0(dip_percentage, "%")
+  ) |>
+  select(
+    `Day type` = day_type,
+    `Total days` = total_days,
+    `Significant dip days` = significant_dip_days,
+    `Dip rate`
+  ) |>
+  kableExtra::kbl(
+    caption = "Frequency of significant pedestrian dips by day type",
+    align = c("l", "r", "r", "r")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "condensed"),
+    full_width = FALSE,
+    position = "left"
   )
 ```
 
-```{r}
-### Compare Weather on Significant Dip Days and Other Days
 
-weather_comparison <- weather_dip_daily %>%
-  filter(!public_holiday) %>%
-  group_by(significant_dip) %>%
+```{r}
+#| label: fig-holiday-dips
+#| echo: false
+
+holiday_lookup <- holiday_calendar_official |>
+  group_by(holiday_date) |>
+  summarise(
+    holiday = paste(unique(holiday), collapse = " / "),
+    .groups = "drop"
+  )
+
+holiday_timeline_data <- eligible_dip_days |>
+  filter(significant_dip) |>
+  left_join(
+    holiday_lookup,
+    by = c("sensing_date" = "holiday_date")
+  ) |>
+  mutate(
+    day_type = if_else(
+      public_holiday,
+      "Public holiday",
+      "Other day"
+    ),
+    hover_text = paste0(
+      "Date: ", format(sensing_date, "%d %b %Y"),
+      "<br>Holiday: ",
+      coalesce(holiday, "Not a public holiday"),
+      "<br>Median change: ",
+      round(median_decrease, 1), "%",
+      "<br>Sensors reporting: ",
+      sensors_reporting
+    )
+  )
+
+plotly::plot_ly(
+  holiday_timeline_data,
+  x = ~sensing_date,
+  y = ~median_decrease,
+  color = ~day_type,
+  colors = c(
+    "Other day" = "#64748B",
+    "Public holiday" = "#E87932"
+  ),
+  type = "scatter",
+  mode = "markers",
+  marker = list(size = 10, opacity = 0.8),
+  text = ~hover_text,
+  hoverinfo = "text"
+) |>
+  plotly::layout(
+    title = "Significant Pedestrian Dips and Public Holidays",
+    xaxis = list(title = "Date"),
+    yaxis = list(
+      title = "Median change from expected activity (%)"
+    ),
+    hovermode = "closest"
+  )
+```
+
+The results indicate that Victorian public holidays are associated with unusually low pedestrian activity at several monitored locations. Although public holidays make up a relatively small proportion of the observed dates, they account for a noticeable share of significant pedestrian decreases.
+
+Christmas Day was among the dates associated with particularly large declines. This may reflect changes in everyday routines, including commuting, shopping and other activities that usually contribute to pedestrian movement in the city.
+
+However, not every public holiday recorded a significant decrease. Some holidays may attract visitors or events that increase activity in particular areas. Therefore, these findings suggest an association between public holidays and pedestrian movement rather than a uniform effect across all locations.
+
+
+```{r}
+#| label: prepare-weather-dips
+#| include: false
+
+weather_dip_daily <- eligible_dip_days |>
+  left_join(
+    weather_daily,
+    by = "sensing_date"
+  ) |>
+  filter(!is.na(rainfall_mm))
+```
+
+```{r}
+#| label: weather-dip-comparison
+#| echo: false
+
+weather_comparison <- weather_dip_daily |>
+  filter(!public_holiday) |>
+  group_by(significant_dip) |>
   summarise(
     days = n(),
-
-    median_rainfall_mm =
-      round(median(rainfall_mm, na.rm = TRUE), 1),
-
-    heavy_rain_pct =
-      round(mean(rainfall_mm >= 10, na.rm = TRUE) * 100, 1),
-
-    median_max_temp_c =
-      round(median(max_temperature_c, na.rm = TRUE), 1),
-
-    median_min_temp_c =
-      round(median(min_temperature_c, na.rm = TRUE), 1),
-
-    median_max_wind_kmh =
-      round(median(max_wind_kmh, na.rm = TRUE), 1),
-
-    .groups = "drop"
-  )
-
-print(weather_comparison, width = Inf)
-```
-
-The rainfall gradient is more informative than any single threshold (see the rainfall table below). On dry days, 1.3% were significant dip days; at 5–10 mm the rate rose to 6.4%, at 10–20 mm to 17.4%, and at 20 mm or more to 35.7%. The relationship is not perfectly monotonic at very low rainfall, but the increase above 5 mm is clear and large. Heavy rain does not merely reduce counts slightly; it changes the probability that the whole city has an unusually quiet day, which matters for staffing, transport and public-space operations.
-
-### Compare Pedestrian Dip Frequency on Heavy Rainfall Days
-
-```{r}
-rain_dip_frequency <- weather_dip_daily %>%
-  filter(!public_holiday) %>%
-  mutate(
-    rain_category = if_else(
-      rainfall_mm >= 10,
-      "Heavy rainfall (10 mm or more)",
-      "Less than 10 mm rainfall"
-    )
-  ) %>%
-  group_by(rain_category) %>%
-  summarise(
-    total_days = n(),
-
-    significant_dip_days = sum(significant_dip),
-
-    dip_percentage = round(
-      mean(significant_dip) * 100,
-      1
+    median_rainfall_mm = round(
+      median(rainfall_mm, na.rm = TRUE), 1
     ),
-
+    heavy_rain_pct = round(
+      mean(rainfall_mm >= 10) * 100, 1
+    ),
+    median_max_wind_kmh = round(
+      median(max_wind_kmh, na.rm = TRUE), 1
+    ),
     .groups = "drop"
   )
 
-print(rain_dip_frequency, width = Inf)
+weather_comparison |>
+  mutate(
+    `Day category` = if_else(
+      significant_dip,
+      "Significant dip",
+      "Other day"
+    ),
+    `Heavy rain days` = paste0(heavy_rain_pct, "%")
+  ) |>
+  select(
+    `Day category`,
+    `Days` = days,
+    `Median rainfall (mm)` = median_rainfall_mm,
+    `Heavy rain days`,
+    `Median max wind (km/h)` = median_max_wind_kmh
+  ) |>
+  kableExtra::kbl(
+    caption = "Weather conditions on significant pedestrian dip days and other days",
+    align = c("l", "r", "r", "r", "r")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "condensed"),
+    full_width = FALSE,
+    position = "left"
+  )
 ```
+The weather comparison shows that unusually quiet pedestrian days tend to experience considerably more rainfall than other days. After excluding public holidays, the median rainfall was 11.3 mm on significant dip days, compared with 0.2 mm on other days. Heavy rainfall of at least 10 mm was also more common on significant dip days, occurring on approximately 55% of those dates compared with 4.2% of other days.
 
-### Significant Pedestrian Decreases by Rainfall Amount
+Wind speeds were also somewhat higher on significant dip days. These differences suggest that unfavourable weather conditions may be associated with reduced pedestrian movement, although other factors may also contribute.
+
 
 ```{r}
-rainfall_levels <- weather_dip_daily %>%
-  filter(!public_holiday) %>%
+#| label: fig-rainfall-dips
+#| echo: false
+
+rainfall_levels <- weather_dip_daily |>
+  filter(!public_holiday) |>
   mutate(
     rainfall_group = case_when(
       rainfall_mm == 0 ~ "No rain",
@@ -3000,252 +2447,96 @@ rainfall_levels <- weather_dip_daily %>%
         "20 mm or more"
       )
     )
-  ) %>%
-  group_by(rainfall_group) %>%
+  ) |>
+  group_by(rainfall_group) |>
   summarise(
     total_days = n(),
     significant_dip_days = sum(significant_dip),
-
     dip_percentage = round(
-      mean(significant_dip) * 100,
-      1
+      mean(significant_dip) * 100, 1
     ),
-
     .groups = "drop"
-  )
-
-print(rainfall_levels, n = Inf)
-```
-
-The results are associational: rainfall correlates with season, cloud cover and event cancellations, and the analysis cannot isolate rain's direct discomfort from alternative-activity effects. Weather is nonetheless a first-order source of day-to-day variation, comparable to the calendar.
-
-### Interactive Rainfall Intensity and Pedestrian Decreases
-
-```{r}
-rainfall_levels_plot <- rainfall_levels %>%
+  ) |>
   mutate(
     hover_text = paste0(
       "Rainfall: ", rainfall_group,
       "<br>Total days: ", total_days,
-      "<br>Significant dip days: ", significant_dip_days,
+      "<br>Significant dip days: ",
+      significant_dip_days,
       "<br>Dip rate: ", dip_percentage, "%"
     )
   )
 
-rainfall_interactive <- plotly::plot_ly(
-  data = rainfall_levels_plot,
+plotly::plot_ly(
+  rainfall_levels,
   x = ~rainfall_group,
   y = ~dip_percentage,
   type = "bar",
   marker = list(color = "#478FAD"),
   hovertext = ~hover_text,
   hoverinfo = "text"
-)
-
-rainfall_interactive <- plotly::layout(
-  rainfall_interactive,
-  title = "Significant Pedestrian Decreases by Daily Rainfall",
-  xaxis = list(
-    title = "Daily rainfall (mm)"
-  ),
-  yaxis = list(
-    title = "Significant decrease rate (%)",
-    range = c(0, 55)
-  ),
-  showlegend = FALSE
-)
-
-rainfall_interactive
+) |>
+  plotly::layout(
+    title = "Significant Pedestrian Dips by Daily Rainfall",
+    xaxis = list(title = "Daily rainfall"),
+    yaxis = list(
+      title = "Days with a significant dip (%)",
+      rangemode = "tozero"
+    ),
+    showlegend = FALSE
+  )
 ```
 
-The rainfall analysis indicates a clear association between rainfall intensity and significant decreases in Melbourne's pedestrian activity. After excluding public holidays, approximately 24.7% of days with at least 10 mm of rainfall experienced a significant pedestrian decline, compared with approximately 1.3% of days with less than 10 mm of rainfall. This suggests that unusually quiet pedestrian days are considerably more common during heavy rainfall.
 
-The analysis across rainfall categories provides further insight. The proportion of significant pedestrian declines generally increases as rainfall becomes heavier, with particularly noticeable differences once daily rainfall exceeds 5 mm. This pattern suggests that weather conditions are an important factor in understanding short-term changes in pedestrian activity.
+The rainfall analysis shows that significant pedestrian declines become more common as rainfall increases. On days without rain, approximately 1.3% experienced a significant pedestrian dip. This proportion increased to 6.4% for days with 5–10 mm of rainfall, 18.2% for 10–20 mm, and 47.4% for days with at least 20 mm.
 
-However, rainfall should not be interpreted as the sole cause of these decreases. Other factors, including seasonal variation, public events and changes in regular commuting or recreational activities, may also influence pedestrian movement. As this is an observational analysis, the findings demonstrate an association rather than a causal relationship.
+The increase is particularly noticeable once daily rainfall exceeds 5 mm. This suggests that heavier rainfall is associated with a greater likelihood of unusually low pedestrian activity across Melbourne's monitored locations.
 
-Overall, rainfall adds another dimension to Melbourne's pedestrian patterns. Considering weather alongside calendar effects can help city planners and businesses better anticipate periods of reduced pedestrian activity.
+However, the analysis does not establish that rainfall directly caused these decreases. Seasonal conditions, changes in planned activities and local disruptions may also influence pedestrian movement. The results should therefore be interpreted as an observed relationship rather than a causal effect.
+
+
+- Overall, public holidays and rainfall both appear to be associated with unusually low pedestrian activity in Melbourne. Public holidays may change regular commuting and shopping patterns, while heavier rainfall may discourage outdoor movement. Considering these factors helps explain some of the short-term variation that cannot be captured by daily, weekly and seasonal patterns alone.
+
+## Spatial differences in pedestrian activity
+
+Pedestrian activity is not distributed evenly across Melbourne. Some locations experience consistently high pedestrian volumes, while others have different patterns depending on their surroundings and how people use the area.
+
+An important consideration is the growth of the pedestrian sensor network over time. As more sensors were installed, the number of monitored locations increased, making direct comparisons of total counts across years less reliable. The following analysis therefore examines individual locations and uses coverage requirements to improve comparability.
 
 ```{r}
-#| label: prepare-yearly-weather-holiday-data
-
-# Combine weather, pedestrian changes and holiday names
-
-weather_holiday_yearly <- weather_dip_daily %>%
-  left_join(
-    holiday_calendar_official %>%
-      group_by(holiday_date) %>%
-      summarise(
-        holiday = paste(unique(holiday), collapse = " / "),
-        .groups = "drop"
-      ),
-    by = c("sensing_date" = "holiday_date")
-  ) %>%
+#| label: fig-sensor-expansion
+sensor_installations <- sensor_locations |>
+  filter(!is.na(installation_date)) |>
   mutate(
-    year_label = factor(
-      as.character(lubridate::year(sensing_date)),
-      levels = c("2019", "2023", "2024", "2025", "2026")
-    ),
+    installation_year = year(installation_date)
+  ) |>
+  count(
+    installation_year,
+    name = "new_sensors"
+  )
 
-    # Align all years by month and day for comparison
-    plot_date = as.Date(
-      paste0("2024-", format(sensing_date, "%m-%d"))
-    ),
-
-    holiday_name = coalesce(
-      holiday,
-      "Not a public holiday"
-    ),
-
-    hover_text = paste0(
-      "Date: ", format(sensing_date, "%d %B %Y"),
-      "<br>Holiday: ", holiday_name,
-      "<br>Median pedestrian change: ",
-      round(median_decrease, 1), "%",
-      "<br>Rainfall: ", rainfall_mm, " mm",
-      "<br>Maximum temperature: ", max_temperature_c, "°C",
-      "<br>Minimum temperature: ", min_temperature_c, "°C",
-      "<br>Maximum wind speed: ", max_wind_kmh, " km/h",
-      "<br>Sensors reporting: ", sensors_reporting
+sensor_installations |>
+  ggplot(
+    aes(
+      x = installation_year,
+      y = new_sensors
     )
-  ) %>%
-  arrange(year_label, plot_date)
+  ) +
+  geom_col() +
+  labs(
+    title = "Expansion of Melbourne's pedestrian sensor network",
+    x = "Installation year",
+    y = "Sensors installed"
+  ) +
+  theme_minimal()
+
+
 ```
 
-```{r}
-### Smoothed Pedestrian Changes, Weather and Holidays by Year
-
-smoothed_yearly_data <- weather_holiday_yearly %>%
-  group_by(year_label) %>%
-  arrange(sensing_date, .by_group = TRUE) %>%
-  mutate(
-    smoothed_change = slider::slide_dbl(
-      median_decrease,
-      ~ median(.x, na.rm = TRUE),
-      .before = 3,
-      .after = 3
-    )
-  ) %>%
-  ungroup()
-
-# Coloured line for each year
-smoothed_yearly_plot <- plotly::plot_ly(
-  data = smoothed_yearly_data,
-  x = ~plot_date,
-  y = ~smoothed_change,
-  color = ~year_label,
-  type = "scatter",
-  mode = "lines",
-  line = list(width = 2),
-  text = ~paste0(
-    hover_text,
-    "<br>7-day median change: ",
-    round(smoothed_change, 1), "%"
-  ),
-  hoverinfo = "text"
-)
-
-# Actual significant decreases on public holidays
-smoothed_yearly_plot <- smoothed_yearly_plot %>%
-  plotly::add_markers(
-    data = smoothed_yearly_data %>%
-      filter(significant_dip, public_holiday),
-    x = ~plot_date,
-    y = ~median_decrease,
-    text = ~hover_text,
-    hoverinfo = "text",
-    name = "Public holiday dip",
-    marker = list(color = "#E87932", size = 9),
-    inherit = FALSE
-  )
-
-# Actual significant decreases on other dates
-smoothed_yearly_plot <- smoothed_yearly_plot %>%
-  plotly::add_markers(
-    data = smoothed_yearly_data %>%
-      filter(significant_dip, !public_holiday),
-    x = ~plot_date,
-    y = ~median_decrease,
-    text = ~hover_text,
-    hoverinfo = "text",
-    name = "Other significant dip",
-    marker = list(color = "#3288BD", size = 8),
-    inherit = FALSE
-  )
-
-# Month labels from January to December
-month_ticks <- seq.Date(
-  as.Date("2024-01-01"),
-  as.Date("2024-12-01"),
-  by = "month"
-)
-
-smoothed_yearly_plot <- plotly::layout(
-  smoothed_yearly_plot,
-  title = list(
-  text = paste0(
-    "Pedestrian Activity Changes and Significant Dip Days by Year",
-    "<br><sup>Lines: 7-day rolling median | ",
-    "Dots: actual significant pedestrian decreases</sup>"
-  )
-),
-  xaxis = list(
-    title = "Month of year",
-    tickvals = month_ticks,
-    ticktext = format(month_ticks, "%b"),
-    range = c("2024-01-01", "2024-12-31")
-  ),
-  yaxis = list(
-    title = "Change from expected pedestrian activity (%)"
-  ),
-  hovermode = "closest",
-  legend = list(
-    title = list(text = "Year / Dip type")
-  )
-)
-
-smoothed_yearly_plot
-```
-
-The combined timeline illustrates how Melbourne's pedestrian activity fluctuates throughout the year and highlights days when pedestrian movement falls substantially below expected levels. Although the overall patterns vary between years, significant declines occur across several months, indicating that unusual reductions in activity are not restricted to a particular season.
-
-Public holidays account for some of the most pronounced declines, particularly towards the end of the year. However, significant decreases also occur on non-holiday dates, suggesting that factors beyond the public holiday calendar may contribute to unusually quiet days. Weather conditions, local disruptions and changes in everyday travel behaviour are possible explanations that require further investigation.
-
-Together, these patterns reinforce the importance of considering both recurring calendar effects and short-term external conditions when interpreting Melbourne's pedestrian activity.
-
-## 3.7 Spatial structure and activity types
-
-The busiest locations are concentrated in the traditional retail and transport core. In 2025, sensor 41 on Swanston Street recorded a typical daily count of about 40,000, followed by sensor 4 on Swanston Street at about 36,000, sensor 35 at Southbank at about 31,000, sensor 84 on Elizabeth Street at about 29,000, and sensor 66 at QV at about 28,000 (see the busiest-location figure below). Princes, Collins, Bourke and Elizabeth Streets also appear in the top ten. A relatively small number of CBD spines carry a disproportionate share of activity.
 
 ```{r}
-sensor_locations <- readr::read_csv(
-  here::here("Data_pedestrians", "raw", "data_pedestrian", "2025_Pedestrian_Data.csv"),
-  col_select = c(
-    Location_ID,
-    SensorVariable,
-    Latitude,
-    Longitude
-  ),
-  show_col_types = FALSE
-) %>%
-  distinct(Location_ID, .keep_all = TRUE)
-```
-
-```{r}
-
-if (!"note" %in% names(sensor_locations)) {
-  sensor_locations$note <- NA_character_
-}
-
-sensor_locations <- sensor_locations |>
-  janitor::clean_names() |>
-  mutate(
-    sensor_name = sensor_variable,
-    sensor_description = paste0(
-      "Sensor ", location_id, " (", sensor_variable, ")"
-    ),
-    installation_date = as.Date(NA)
-  )
+#| label: prepare-spatial-activity
+#| include: false
 
 location_metadata <- sensor_locations |>
   mutate(
@@ -3270,9 +2561,7 @@ location_metadata <- sensor_locations |>
     note,
     relocation_flag
   )
-```
 
-```{r}
 sensor_daily_spatial <- pedestrian_full |>
   group_by(
     location_id,
@@ -3288,16 +2577,10 @@ sensor_daily_spatial <- pedestrian_full |>
     hours_observed = n_distinct(hourday),
     .groups = "drop"
   ) |>
-  filter(
-    hours_observed >= 20
-  )
-```
+  filter(hours_observed >= 20)
 
-```{r}
 recent_strength <- sensor_daily_spatial |>
-  filter(
-    year == 2025
-  ) |>
+  filter(year == 2025) |>
   group_by(location_id) |>
   summarise(
     typical_daily_count = median(
@@ -3307,16 +2590,17 @@ recent_strength <- sensor_daily_spatial |>
     days_observed = n(),
     .groups = "drop"
   ) |>
-  filter(
-    days_observed >= 292
-  ) |>
+  filter(days_observed >= 292) |>
   inner_join(
     location_metadata,
     by = "location_id"
   )
 ```
 
+
 ```{r}
+#| label: fig-spatial-intensity
+#| echo: false
 
 spatial_plot <- recent_strength |>
   ggplot(
@@ -3325,14 +2609,17 @@ spatial_plot <- recent_strength |>
       y = latitude,
       size = typical_daily_count,
       text = paste0(
-        "<b>", sensor_description, "</b>",
+        sensor_description,
         "<br>Location ID: ", location_id,
         "<br>Typical daily count: ",
         scales::comma(round(typical_daily_count))
       )
     )
   ) +
-  geom_point(alpha = 0.65) +
+  geom_point(
+    colour = "#3274A1",
+    alpha = 0.65
+  ) +
   coord_quickmap() +
   labs(
     title = "Where is Melbourne's pedestrian pulse strongest?",
@@ -3343,52 +2630,323 @@ spatial_plot <- recent_strength |>
   ) +
   theme_minimal()
 
-ggplotly(
+plotly::ggplotly(
   spatial_plot,
   tooltip = "text"
 )
 ```
 
+
 ```{r}
+#| label: fig-busiest-locations
+#| echo: false
+
 top_locations <- recent_strength |>
   slice_max(
     typical_daily_count,
-    n = 10
+    n = 10,
+    with_ties = FALSE
   ) |>
   mutate(
-    sensor_description = fct_reorder(
+    sensor_description = forcats::fct_reorder(
       sensor_description,
       typical_daily_count
     )
   )
 
 top_locations |>
-  mutate(
-    sensor_description = fct_reorder(
-      sensor_description,
-      typical_daily_count
-    )
-  ) |>
   ggplot(
     aes(
       x = sensor_description,
       y = typical_daily_count
     )
   ) +
-  geom_col() +
+  geom_col(fill = "#3274A1") +
   coord_flip() +
   labs(
     title = "Melbourne's busiest monitored pedestrian locations",
-    subtitle = "Typical daily pedestrian activity, 2025",
+    subtitle = "Median daily pedestrian counts, 2025",
     x = NULL,
     y = "Typical daily pedestrian count"
   ) +
   theme_minimal()
 ```
+The 2025 results show that pedestrian activity is concentrated around Melbourne's major retail, transport and commercial areas. Swanston Street stands out among the busiest monitored locations, with one sensor recording a typical daily count of approximately 40,000 pedestrians and another recording around 36,000. Other busy locations include Southbank, Elizabeth Street and the QV precinct.
 
-Clustering shows that locations do not all share one rhythm. The two-cluster solution separates nine sensors with a sharply peaked weekday profile from 35 with a broader midday profile (see the cluster figure below). Cluster 1 rises steeply at 08:00, falls at midday, rises again at 17:00, and is comparatively quiet at weekends. Cluster 2 rises more gradually, stays high from late morning to late afternoon, and retains a substantial weekend profile. The first is consistent with office and commuter precincts; the second with retail, hospitality and visitor precincts. The weekend panels show the distinction is not absolute—both have a midday hump—but the weekday contrast is strong.
+The spatial plot shows where these high-activity locations are situated, while the top 10 comparison provides a clearer view of the differences in pedestrian volumes between them.
+
+These results highlight the importance of Melbourne's central pedestrian corridors. However, the figures represent activity at individual monitoring locations, not total pedestrian numbers for entire streets or precincts. The comparison also excludes sensors without sufficient observations during 2025.
+
 
 ```{r}
+#| label: spatial-recovery-calculation
+#| include: false
+
+# Average daily activity for each sensor-month
+sensor_monthly_change <- sensor_daily_spatial |>
+  mutate(
+    month_date = lubridate::floor_date(
+      sensing_date,
+      "month"
+    )
+  ) |>
+  group_by(
+    location_id,
+    year,
+    month,
+    month_date
+  ) |>
+  summarise(
+    mean_daily_count = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  filter(days_observed >= 20)
+
+# Same-month baseline before COVID-19
+pre_covid_location_baseline <- sensor_monthly_change |>
+  filter(year >= 2015, year <= 2019) |>
+  group_by(location_id, month) |>
+  summarise(
+    baseline_count = median(
+      mean_daily_count,
+      na.rm = TRUE
+    ),
+    baseline_years = n_distinct(year),
+    .groups = "drop"
+  ) |>
+  filter(
+    baseline_years >= 3,
+    baseline_count > 0
+  )
+
+# Recent activity relative to that baseline
+recent_location_change <- sensor_monthly_change |>
+  filter(year >= 2024, year <= 2026) |>
+  inner_join(
+    pre_covid_location_baseline,
+    by = c("location_id", "month")
+  ) |>
+  mutate(
+    activity_index =
+      mean_daily_count / baseline_count * 100
+  )
+
+# Median recovery index for each location
+location_recovery_robust <- recent_location_change |>
+  group_by(location_id) |>
+  summarise(
+    recovery_index = median(
+      activity_index,
+      na.rm = TRUE
+    ),
+    recent_months = n_distinct(month_date),
+    .groups = "drop"
+  ) |>
+  filter(recent_months >= 20) |>
+  mutate(
+    change_percent = recovery_index - 100
+  )
+
+location_recovery_final <- location_recovery_robust |>
+  inner_join(
+    location_metadata,
+    by = "location_id"
+  ) |>
+  filter(!relocation_flag)
+```
+
+
+```{r}
+#| label: fig-location-recovery
+#| echo: false
+
+location_recovery_final |>
+  mutate(
+    hover_text = paste0(
+      sensor_description,
+      "<br>Location ID: ", location_id,
+      "<br>Recent activity index: ",
+      round(recovery_index, 1),
+      "<br>Change from pre-COVID: ",
+      round(change_percent, 1), "%",
+      "<br>Recent months: ",
+      recent_months
+    )
+  ) |>
+  plotly::plot_ly(
+    type = "scattermapbox",
+    mode = "markers",
+    lat = ~latitude,
+    lon = ~longitude,
+    text = ~hover_text,
+    hoverinfo = "text",
+    marker = list(
+      size = 14,
+      color = ~change_percent,
+      colorscale = "RdBu",
+      cmin = -75,
+      cmax = 75,
+      showscale = TRUE,
+      opacity = 0.85,
+      colorbar = list(title = "Change (%)")
+    )
+  ) |>
+  plotly::layout(
+    title = "Where has Melbourne's pedestrian activity changed?",
+    mapbox = list(
+      style = "open-street-map",
+      center = list(
+        lat = -37.8136,
+        lon = 144.9631
+      ),
+      zoom = 12.5
+    ),
+    margin = list(
+      l = 0,
+      r = 0,
+      b = 0,
+      t = 55
+    )
+  )
+```
+
+Comparing recent activity with pre-COVID conditions reveals further differences between Melbourne's monitored locations. For this analysis, average daily pedestrian counts were compared with the corresponding calendar-month baseline from 2015–2019. The recent recovery index was calculated using available observations from 2024–2026.
+
+The map shows that the extent of recovery varies between locations. Some sensors record activity closer to or above their earlier levels, while others remain substantially below their pre-pandemic baseline. This suggests that Melbourne's recovery has not been uniform across the city.
+
+The comparison uses same-month baselines to account for recurring seasonal differences. However, it remains a descriptive analysis, and changes in surrounding land use, transport patterns or sensor conditions may also affect the results. The 2026 observations are incomplete, so the recent period should not be interpreted as three full calendar years.
+
+### Checking the Flinders Underpass Result
+
+One location requiring closer examination was Flinders Underpass – Myki Barriers, where the recovery analysis indicated a particularly large decline of approximately 72.6% compared with its pre-COVID baseline.
+
+The sensor metadata records an upgrade in September 2021, raising the question of whether changes to the monitoring equipment could have affected the comparison. To investigate this, the monthly pedestrian counts were examined alongside the recorded upgrade date. A further sensitivity check compared the overall spatial results with and without this location.
+
+
+```{r}
+#| label: fig-flinders-underpass
+#| echo: false
+
+flinders_monthly <- pedestrian_full |>
+  filter(location_id == 6) |>
+  group_by(
+    source,
+    sensing_date
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(hours_observed >= 20) |>
+  mutate(
+    month_date = lubridate::floor_date(
+      sensing_date,
+      "month"
+    )
+  ) |>
+  group_by(source, month_date) |>
+  summarise(
+    mean_daily_count = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+
+flinders_monthly |>
+  ggplot(
+    aes(
+      x = month_date,
+      y = mean_daily_count,
+      group = source,
+      linetype = source
+    )
+  ) +
+  geom_line() +
+  geom_vline(
+    xintercept = as.Date("2021-09-08"),
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Pedestrian activity at Flinders Underpass",
+    subtitle = "Dashed line marks the recorded sensor upgrade in September 2021",
+    x = "Year",
+    y = "Mean daily pedestrian count",
+    linetype = "Data source"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+#| label: flinders-sensitivity
+#| echo: false
+
+spatial_with_flinders <- location_recovery_final |>
+  summarise(
+    locations = n(),
+    median_change = median(
+      change_percent,
+      na.rm = TRUE
+    )
+  ) |>
+  mutate(
+    analysis = "Including Flinders Underpass"
+  )
+
+spatial_without_flinders <- location_recovery_final |>
+  filter(location_id != 6) |>
+  summarise(
+    locations = n(),
+    median_change = median(
+      change_percent,
+      na.rm = TRUE
+    )
+  ) |>
+  mutate(
+    analysis = "Excluding Flinders Underpass"
+  )
+
+flinders_sensitivity <- bind_rows(
+  spatial_with_flinders,
+  spatial_without_flinders
+)
+
+flinders_sensitivity |>
+  mutate(
+    `Median change` = paste0(
+      round(median_change, 1), "%"
+    )
+  ) |>
+  select(
+    `Comparison` = analysis,
+    `Locations` = locations,
+    `Median change`
+  ) |>
+  kableExtra::kbl(
+    caption = "Sensitivity of the spatial recovery result to Flinders Underpass",
+    align = c("l", "r", "r")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "condensed"),
+    full_width = FALSE,
+    position = "left"
+  )
+```
+
+
+
+```{r}
+#| label: prepare-cluster-profiles
+#| include: false
+
 recent_data <- pedestrian_full |>
   filter(
     year %in% 2023:2025,
@@ -3397,16 +2955,20 @@ recent_data <- pedestrian_full |>
     pedestrian_count >= 0
   )
 
-# Identify sufficiently complete days
+# Retain days with at least 23 observed hours
 valid_days <- recent_data |>
-  group_by(location_id, year, sensing_date) |>
+  group_by(
+    location_id,
+    year,
+    sensing_date
+  ) |>
   summarise(
     hours_observed = n_distinct(hourday),
     .groups = "drop"
   ) |>
   filter(hours_observed >= 23)
 
-# Check coverage in each year
+# Coverage for each sensor and year
 recent_coverage <- valid_days |>
   group_by(location_id, year) |>
   summarise(
@@ -3414,11 +2976,16 @@ recent_coverage <- valid_days |>
     .groups = "drop"
   ) |>
   mutate(
-    expected_days = if_else(leap_year(year), 366, 365),
+    expected_days = if_else(
+      lubridate::leap_year(year),
+      366,
+      365
+    ),
     coverage = days_observed / expected_days
   )
 
-# Retain sensors with good coverage in all 3 years
+# Select sensors with at least 80% coverage
+# in all three years
 reliable_sensors <- recent_coverage |>
   group_by(location_id) |>
   summarise(
@@ -3431,15 +2998,15 @@ reliable_sensors <- recent_coverage |>
     minimum_coverage >= 0.80
   )
 
-reliable_sensors |>
-  summarise(sensors_selected = n())
-```
-
-```{r}
+# Typical hourly pattern for each location
 hourly_profiles <- recent_data |>
   semi_join(
     valid_days,
-    by = c("location_id", "year", "sensing_date")
+    by = c(
+      "location_id",
+      "year",
+      "sensing_date"
+    )
   ) |>
   semi_join(
     reliable_sensors,
@@ -3447,12 +3014,19 @@ hourly_profiles <- recent_data |>
   ) |>
   mutate(
     day_type = if_else(
-      lubridate::wday(sensing_date, week_start = 1) <= 5,
+      lubridate::wday(
+        sensing_date,
+        week_start = 1
+      ) <= 5,
       "Weekday",
       "Weekend"
     )
   ) |>
-  group_by(location_id, day_type, hourday) |>
+  group_by(
+    location_id,
+    day_type,
+    hourday
+  ) |>
   summarise(
     typical_count = median(pedestrian_count),
     .groups = "drop"
@@ -3463,47 +3037,61 @@ hourly_profiles <- recent_data |>
     sum(typical_count) > 0
   ) |>
   mutate(
-    hour_share = typical_count / sum(typical_count)
+    hour_share = typical_count /
+      sum(typical_count)
   ) |>
   ungroup()
 ```
 
+
+
 ```{r}
-# One row per sensor, with 48 profile measurements
+#| label: select-cluster-number
+#| include: false
+
+# 48 hourly profile features per sensor
 cluster_features <- hourly_profiles |>
   mutate(
     feature = paste0(
       day_type,
       "_",
-      str_pad(hourday, width = 2, pad = "0")
+      stringr::str_pad(
+        hourday,
+        width = 2,
+        pad = "0"
+      )
     )
   ) |>
-  select(location_id, feature, hour_share) |>
-  pivot_wider(
+  select(
+    location_id,
+    feature,
+    hour_share
+  ) |>
+  tidyr::pivot_wider(
     names_from = feature,
     values_from = hour_share
   ) |>
-  drop_na()
+  tidyr::drop_na()
 
-# Calculate distances between sensor profiles
+# Distances between sensor profiles
 sensor_distances <- cluster_features |>
   select(-location_id) |>
   stats::dist()
 
 set.seed(123)
 
-# Test 2 to 5 clusters
-cluster_tests <- tibble(k = 2:5) |>
+cluster_tests <- tibble::tibble(k = 2:5) |>
   mutate(
-    model = map(
+    model = purrr::map(
       k,
       ~ stats::kmeans(
-        cluster_features |> select(-location_id),
+        cluster_features |>
+          select(-location_id),
         centers = .x,
         nstart = 30
       )
     ),
-    silhouette = map_dbl(
+    silhouette = purrr::map_dbl(
       model,
       ~ mean(
         cluster::silhouette(
@@ -3513,12 +3101,6 @@ cluster_tests <- tibble(k = 2:5) |>
       )
     )
   )
-
-cluster_tests |>
-  select(k, silhouette)
-```
-
-```{r}
 
 best_k <- cluster_tests |>
   slice_max(
@@ -3531,7 +3113,8 @@ best_k <- cluster_tests |>
 set.seed(123)
 
 final_kmeans <- stats::kmeans(
-  cluster_features |> select(-location_id),
+  cluster_features |>
+    select(-location_id),
   centers = best_k,
   nstart = 50
 )
@@ -3544,18 +3127,24 @@ sensor_clusters <- cluster_features |>
       final_kmeans$cluster
     )
   )
-
-sensor_clusters |>
-  count(cluster)
 ```
 
+
+
 ```{r}
+#| label: fig-cluster-profiles
+#| echo: false
+
 cluster_profiles <- hourly_profiles |>
   inner_join(
     sensor_clusters,
     by = "location_id"
   ) |>
-  group_by(cluster, day_type, hourday) |>
+  group_by(
+    cluster,
+    day_type,
+    hourday
+  ) |>
   summarise(
     typical_share = median(hour_share) * 100,
     .groups = "drop"
@@ -3571,11 +3160,11 @@ cluster_profiles |>
   ) +
   geom_line(linewidth = 1) +
   scale_colour_manual(
-  values = c(
-    "Cluster 1" = "#F8766D",
-    "Cluster 2" = "#00BFC4"
-  )
-) +
+    values = c(
+      "Cluster 1" = "#F8766D",
+      "Cluster 2" = "#00BFC4"
+    )
+  ) +
   facet_wrap(~day_type) +
   scale_x_continuous(
     breaks = seq(0, 23, by = 2)
@@ -3584,15 +3173,16 @@ cluster_profiles |>
     title = "Melbourne has different pedestrian rhythms",
     subtitle = "K-means clustering of hourly profiles, 2023–2025",
     x = "Hour of day",
-    y = "Share of typical weekday + weekend activity (%)",
+    y = "Share of typical activity (%)",
     colour = "Cluster"
   ) +
   theme_minimal()
 ```
 
-The cluster result is a summary of similarity, not a land-use classification. The silhouette of 0.442 indicates moderate separation: the groups are distinguishable but not sharply isolated. Its value is to demonstrate heterogeneity that citywide averages conceal: a policy that revives a commuter precinct may do little in a visitor precinct. Sensor-level dip rates show the same local variation: the highest in 2023–2025 were 35% at sensors 7 and 136, followed by 23.6% at sensor 44, 22.7% at sensor 42 and 22.2% at sensors 29 and 43. These locations warrant investigation, because persistent local volatility is unlikely to be explained by weather or holidays alone.
-
 ```{r}
+#| label: fig-cluster-map
+#| echo: false
+
 cluster_locations <- sensor_clusters |>
   left_join(
     location_metadata |>
@@ -3610,14 +3200,12 @@ cluster_locations <- sensor_clusters |>
   ) |>
   mutate(
     hover_text = paste0(
-      "<b>", sensor_description, "</b>",
+      sensor_description,
       "<br>Location ID: ", location_id,
       "<br>", cluster
     )
   )
-```
 
-```{r}
 plotly::plot_ly(
   data = cluster_locations,
   type = "scattermapbox",
@@ -3625,10 +3213,10 @@ plotly::plot_ly(
   lat = ~latitude,
   lon = ~longitude,
   color = ~cluster,
-colors = c(
-  "Cluster 1" = "#F8766D",
-  "Cluster 2" = "#00BFC4"
-),
+  colors = c(
+    "Cluster 1" = "#F8766D",
+    "Cluster 2" = "#00BFC4"
+  ),
   text = ~hover_text,
   hoverinfo = "text",
   marker = list(
@@ -3655,136 +3243,17 @@ colors = c(
   )
 ```
 
-```{r}
-sensor_locations <- readr::read_csv(
-here::here("Data_pedestrians", "raw", "data_pedestrian", "2025_Pedestrian_Data.csv"),
-  col_select = c(
-    Location_ID,
-    SensorVariable,
-    Latitude,
-    Longitude
-  ),
-  show_col_types = FALSE
-) %>%
-  distinct(Location_ID, .keep_all = TRUE)
-```
 
-### Load Sensor Location Information
+The clustering analysis shows that Melbourne's monitored locations do not all follow the same daily pedestrian pattern. K-means clustering was applied to typical hourly activity profiles from 2023–2025, using weekday and weekend observations. The hourly counts were converted into proportions of each sensor's overall typical activity so that the clustering focused on the shape of pedestrian movement rather than the size of the counts.
 
-```{r}
-# Create one location record per sensor
+The two-cluster solution separated 44 sensors into groups of 9 and 35. The first cluster shows more pronounced morning and evening peaks on weekdays, with relatively lower weekend activity. This pattern is consistent with locations used heavily for commuting and office-related movement.
 
-sensor_lookup <- sensor_locations %>%
-  group_by(Location_ID) %>%
-  summarise(
-    sensor_name = first(SensorVariable),
-    latitude = first(Latitude),
-    longitude = first(Longitude),
-    .groups = "drop"
-  ) %>%
-  rename(location_id = Location_ID)
+The second cluster has a broader period of activity during the middle of the day and maintains stronger weekend movement. This may reflect a greater mixture of shopping, hospitality and visitor activity.
 
-```
+The cluster map shows where these different activity patterns occur across Melbourne. The silhouette score of approximately 0.442 indicates moderate separation between the two groups. This means the clusters capture meaningful differences, although individual locations may share characteristics of both patterns.
 
-```{r}
-sensor_overall_dips <- sensor_event_index %>%
-  filter(
-    sensing_date >= as.Date("2023-01-01"),
-    sensing_date <= as.Date("2025-12-31"),
-    !is.na(uplift_percent),
-    is.finite(uplift_percent)
-  ) %>%
-  group_by(location_id) %>%
-  summarise(
-    days_reporting = n_distinct(sensing_date),
+Overall, the results show that citywide averages can hide important differences between locations. Understanding these patterns can help inform transport planning, pedestrian infrastructure and the management of public spaces in areas with different types of activity.
 
-    dip_days = sum(uplift_percent <= -20),
-
-    dip_rate_pct = round(
-      100 * mean(uplift_percent <= -20), 1
-    ),
-
-    median_dip_pct = round(
-      median(
-        uplift_percent[uplift_percent <= -20],
-        na.rm = TRUE
-      ), 1
-    ),
-
-    .groups = "drop"
-  ) %>%
-  filter(days_reporting >= 180) %>%
-  left_join(sensor_lookup, by = "location_id") %>%
-  arrange(desc(dip_rate_pct))
-
-print(
-  sensor_overall_dips %>%
-    select(
-      location_id,
-      sensor_name,
-      days_reporting,
-      dip_days,
-      dip_rate_pct,
-      median_dip_pct
-    ) %>%
-    slice_head(n = 15),
-  n = 15,
-  width = Inf
-)
-```
-
-```{r}
-#| label: sensor-dip-map
-
-sensor_dip_map_ready <- sensor_overall_dips %>%
-  filter(
-    !is.na(latitude),
-    !is.na(longitude)
-  )
-
-# Create colour scale
-sensor_palette <- leaflet::colorNumeric(
-  palette = "YlOrRd",
-  domain = sensor_dip_map_ready$dip_rate_pct
-)
-
-# Interactive map
-sensor_dip_map <- leaflet::leaflet(
-  data = sensor_dip_map_ready
-) %>%
-  leaflet::addTiles() %>%
-  leaflet::addCircleMarkers(
-    lng = ~longitude,
-    lat = ~latitude,
-    radius = 5,
-    color = ~sensor_palette(dip_rate_pct),
-    fillColor = ~sensor_palette(dip_rate_pct),
-    fillOpacity = 0.8,
-    weight = 1,
-    label = ~paste0(
-      sensor_name,
-      " | Dip rate: ", dip_rate_pct, "%"
-    ),
-    popup = ~paste0(
-      "<b>Sensor: </b>", sensor_name,
-      "<br><b>Location ID: </b>", location_id,
-      "<br><b>Reporting days: </b>", days_reporting,
-      "<br><b>Dip days: </b>", dip_days,
-      "<br><b>Dip rate: </b>", dip_rate_pct, "%",
-      "<br><b>Median dip: </b>", median_dip_pct, "%"
-    )
-  ) %>%
-  leaflet::addLegend(
-    position = "bottomleft",
-    pal = sensor_palette,
-    values = ~dip_rate_pct,
-    title = "Dip rate (%)",
-    opacity = 0.8
-  )
-
-sensor_dip_map
-
-```
 
 # 4. Discussion
 
