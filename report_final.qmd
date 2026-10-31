@@ -24,7 +24,8 @@ execute:
 ```{r}
 #| label: setup
 #| include: false
-# Loading all the libraries
+# Load packages required for the analysis
+
 library(tidyverse)
 library(lubridate)
 library(janitor)
@@ -56,6 +57,101 @@ These findings demonstrate that Melbourne's pedestrian activity varies not only 
 ## Understanding Melbourne's Pedestrian Pulse
 
 On 22 February 2014, pedestrian activity near Flinders Street and Elizabeth Street showed an unusual pattern. Compared with other Saturdays in February, pedestrian counts remained noticeably higher, particularly into the evening. What would normally have been a relatively quiet period instead recorded sustained activity. This observation raised a broader question: was this an isolated occurrence at one location, or part of a larger change in how people were moving through Melbourne?
+
+```{r}
+#| label: fig-flinders-introduction
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-cap: "Hourly pedestrian activity at Flinders Street–Elizabeth Street (East), 22 February 2014 compared with other February Saturdays."
+
+# Compare the selected Saturday with typical February Saturday activity
+intro_ped <- data.table::fread(
+  here::here(
+    "Data_pedestrians",
+    "raw",
+    "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
+  ),
+  select = c(
+    "Year", "Month", "Mdate", "Day",
+    "Time", "Sensor_ID", "Sensor_Name", "Hourly_Counts"
+  )
+)
+
+intro_saturdays <- intro_ped[
+  Sensor_Name == "Flinders St-Elizabeth St (East)" &
+    Year == 2014 &
+    Month == "February" &
+    Day == "Saturday"
+]
+
+intro_special <- intro_saturdays[
+  Mdate == 22,
+  .(Time, Count = Hourly_Counts)
+]
+intro_special[, Series := "22 Feb 2014"]
+
+intro_typical <- intro_saturdays[
+  Mdate != 22,
+  .(Count = median(Hourly_Counts, na.rm = TRUE)),
+  by = Time
+]
+intro_typical[, Series := "Other February Saturdays (median)"]
+
+intro_plot_data <- data.table::rbindlist(
+  list(intro_special, intro_typical)
+)
+
+intro_plot <- ggplot(
+  intro_plot_data,
+  aes(x = Time, y = Count, colour = Series, linewidth = Series)
+) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, 23, by = 2)) +
+  scale_colour_manual(values = c(
+    "22 Feb 2014" = "#005EB8",
+    "Other February Saturdays (median)" = "#8A8A8A"
+  )) +
+  scale_linewidth_manual(values = c(
+    "22 Feb 2014" = 1.4,
+    "Other February Saturdays (median)" = 1
+  )) +
+  labs(
+    title = "Flinders Street came alive after dark",
+    subtitle = "Flinders St–Elizabeth St (East)",
+    x = "Hour of day",
+    y = "Pedestrians per hour",
+    colour = NULL,
+    linewidth = NULL
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank()
+  )
+
+plotly::ggplotly(
+  intro_plot,
+  width = 850,
+  height = 500,
+  tooltip = c("x", "y", "colour")
+) |>
+  plotly::layout(
+    hovermode = "x unified",
+    legend = list(
+      orientation = "h",
+      x = 0.5,
+      xanchor = "center",
+      y = -0.25
+    ),
+    margin = list(b = 110)
+  ) |>
+  plotly::config(
+    displaylogo = FALSE,
+    responsive = TRUE
+  )
+```
+
 
 Melbourne's streets serve different purposes throughout the day. Morning activity often reflects commuting, while shopping, leisure and other activities contribute to movement during the afternoon, evenings and weekends. These patterns can also vary across locations, seasons and years. Major disruptions, public events and weather conditions may further influence how frequently and when people move through the city.
 
@@ -121,7 +217,8 @@ The combination of sensor identifier, date and hour was subsequently used as the
 ```{r}
 #| label: download-current-pedestrian-data
 #| eval: false
-# Current data through API
+# Download the latest hourly pedestrian counts from the City of Melbourne API
+
 fs::dir_create("Data_pedestrians/raw2")
 
 raw_path <- "Data_pedestrians/raw2/pedestrian_counts_raw.csv"
@@ -140,6 +237,7 @@ httr2::request(pedestrian_url) |>
 
 ```{r}
 #| label: load-current-pedestrian-data
+# Import and clean current pedestrian data
 
 current <- read_csv(
   here::here(
@@ -155,7 +253,8 @@ current <- read_csv(
 
 ```{r}
 #| label: load-historical-data
-# Historical data
+# Import and clean historical pedestrian data
+
 historical <- read_csv(
   here(
     "Data_pedestrians",
@@ -171,7 +270,8 @@ historical <- read_csv(
 ```{r}
 #| label: standardise-pedestrian-records
 
-# Historical data
+# Standardise the historical pedestrian records.
+
 historical_standardised <- historical |>
   transmute(
     id,
@@ -185,7 +285,8 @@ historical_standardised <- historical |>
   )
 
 
-# Current API data
+# Standardise current pedestrian records
+
 current_clean <- current |>
   transmute(
     location_id = as.numeric(location_id),
@@ -198,6 +299,7 @@ current_clean <- current |>
 
 ```{r}
 #| label: locate-snapshot-files
+# Locate annual pedestrian snapshot files
 
 snapshot_dir <- here::here(
   "Data_pedestrians",
@@ -209,6 +311,7 @@ snapshot_dir <- here::here(
 
 ```{r}
 #| label: standardise-snapshot-records
+# Identify available snapshot files
 
 snapshot_files <- list.files(
   snapshot_dir,
@@ -216,7 +319,8 @@ snapshot_files <- list.files(
   full.names = TRUE
 )
 
-# Inspect snapshot file structure 
+# Check the structure of annual snapshots
+
 snapshot_schema <- purrr::map_dfr(
   snapshot_files,
   function(f) {
@@ -233,6 +337,8 @@ snapshot_schema <- purrr::map_dfr(
     )
   }
 )
+
+# Combine snapshots into a consistent format
 
 snapshot_standardised <- purrr::map_dfr(
   snapshot_files,
@@ -310,6 +416,7 @@ historical_clean <- historical_standardised |>
 
 ```{r}
 #| label: check-source-duplicates
+# Check for duplicate records in each data source
 
 source_duplicates <- bind_rows(
   historical_clean,
@@ -466,6 +573,7 @@ comparison_2022 |>
 ```{r}
 #| label: validate-2022-direction-totals
 #| include: false
+# Check whether directional counts match the recorded pedestrian totals
 
 snapshot_2022_full <- data.table::fread(
   file.path(snapshot_dir, "2022_Pedestrian_Data.csv")
@@ -581,6 +689,7 @@ bind_rows(
 ```
 
 ```{r}
+# Summarise matching records and discrepancies across data sources
 
 comparison_summary <- bind_rows(
   comparison_2022 |>
@@ -621,6 +730,7 @@ comparison_summary <- bind_rows(
 ```{r}
 #| label: source-comparison-summary
 #| echo: false
+# Present source comparison results in a formatted table
 
 comparison_summary |>
   mutate(
@@ -713,6 +823,7 @@ pedestrian_full <- bind_rows(
 
 ```{r}
 #| label: create-time-variables
+# Create time variables for daily, weekly and seasonal analysis
 
 pedestrian_full <- pedestrian_full |>
   mutate(
@@ -756,9 +867,9 @@ pedestrian_full <- pedestrian_full |>
 ```
 
 ```{r}
-# Final checks
 #| label: snapshot-quality-check
 #| include: false
+# Check snapshot coverage, duplicate records and missing values
 
 snapshot_quality <- snapshot_standardised |>
   group_by(source) |>
@@ -780,6 +891,7 @@ snapshot_quality
 ```{r}
 #| label: final-data-validation
 #| echo: false
+# Validate the combined dataset and summarise data quality
 
 final_check <- pedestrian_full |>
   summarise(
@@ -854,6 +966,7 @@ validation_table |>
 ```{r}
 #| label: yearly-data-coverage
 #| echo: false
+# Summarise pedestrian observations and sensor coverage by year
 
 yearly_coverage <- pedestrian_full |>
   group_by(year) |>
@@ -918,6 +1031,7 @@ The dataset also retains information about the original data source and whether 
 ```{r}
 #| label: final-dataset-variables
 #| echo: false
+# Describe the variables in the final pedestrian dataset
 
 variable_description <- tibble::tribble(
   ~Variable, ~Description,
@@ -961,6 +1075,7 @@ These supporting datasets were used to provide context for pedestrian activity, 
 
 ```{r}
 #| label: download-sensor-locations
+# Download and save pedestrian sensor location data
 
 fs::dir_create(
   here::here("Data_pedestrians", "raw2")
@@ -987,6 +1102,7 @@ readr::write_csv(
 
 ```{r}
 #| label: load-sensor-locations
+# Import sensor locations for spatial analysis
 
 sensor_locations <- read_csv(
   here::here("Data_pedestrians", "raw2", "sensor_locations.csv"),
@@ -999,6 +1115,7 @@ sensor_locations <- read_csv(
 ```{r}
 #| label: download-event-permits
 #| eval: false
+# Download historical event permit records
 
 event_url <- paste0(
   "https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/",
@@ -1022,6 +1139,7 @@ curl::curl_download(
 
 ```{r}
 #| label: load-event-permits
+# Import and clean event permit data
 
 event_path <- here::here(
   "Data_pedestrians",
@@ -1041,6 +1159,7 @@ event_permits <- readr::read_delim(
 ```{r}
 #| label: inspect-event-categories
 #| include: false
+# Examine the available event categories
 
 event_permits |>
   count(category_1, sort = TRUE)
@@ -1109,6 +1228,7 @@ event_permits_relevant <- event_permits |>
 ```{r}
 #| label: check-event-types
 #| include: false
+# Check the distribution of event types
 
 event_permits_relevant |>
   count(event_type, sort = TRUE)
@@ -1116,6 +1236,7 @@ event_permits_relevant |>
 
 ```{r}
 #| label: classify-event-permits
+# Classify event permits based on their duration
 
 event_permits_qc <- event_permits_relevant |>
   mutate(
@@ -1141,6 +1262,7 @@ event_permits_qc <- event_permits_relevant |>
 ```{r}
 #| label: event-permit-quality-summary
 #| echo: false
+# Summarise event permits by matching suitability
 
 event_permits_qc |>
   count(permit_match_class, name = "Permits") |>
@@ -1160,6 +1282,7 @@ event_permits_qc |>
 
 ```{r}
 #| label: select-event-permits
+# Separate suitable event permits from those requiring review
 
 event_permits_auto <- event_permits_qc |>
   filter(
@@ -1179,6 +1302,7 @@ event_permits_extended <- event_permits_qc |>
 
 ```{r}
 #| label: prepare-weather-data
+# Prepare daily rainfall, temperature and wind data
 
 weather_daily <- readr::read_csv(
   here::here("Data_pedestrians", "raw2", "melbourne_weather_daily.csv"),
@@ -1200,6 +1324,7 @@ weather_daily <- readr::read_csv(
 
 ```{r}
 #| label: prepare-public-holidays
+# Prepare official Victorian public holiday dates
 
 holiday_calendar_official <- readr::read_csv(
   here::here("Data_pedestrians", "raw2", "important_dates_august_2026.csv"),
@@ -1248,6 +1373,7 @@ Pedestrian activity in Melbourne varies throughout the day, across the week and 
 
 ```{r}
 #| label: daily-pedestrian-rhythm
+# Calculate hourly activity indices and visualise daily pedestrian patterns across years
 
 hourly_by_sensor_year <- pedestrian_full %>%
   filter(
@@ -1337,6 +1463,7 @@ daily_interactive
 
 ```{r}
 #| label: weekly-pedestrian-rythm
+# Calculate weekly activity indices and compare pedestrian patterns across years
 
 pedestrian_full <- pedestrian_full %>%
   mutate(
@@ -1444,7 +1571,8 @@ These patterns may reflect a combination of weather conditions, university sched
 
 ```{r}
 #| label: monthly-pedestrian-rythm
-# Monthly rhythm using available data, 2009–2026
+# Calculate average daily pedestrian counts by month and visualise the monthly pattern
+
 monthly_profile <- pedestrian_full |>
   group_by(
     location_id,
@@ -1518,6 +1646,8 @@ Overall, the monthly and seasonal patterns provide context for understanding lon
 
 ```{r}
 #| label: seasonal-pedestrian-rythm
+# Calculate and compare average daily pedestrian activity across the four seasons
+
 seasonal_profile <- pedestrian_full |>
   group_by(
     location_id,
@@ -1553,7 +1683,6 @@ seasonal_profile <- pedestrian_full |>
     )
   )
 
-
 seasonal_profile |>
   ggplot(
     aes(
@@ -1585,6 +1714,8 @@ The analysis also examines the monthly disruption associated with COVID-19 using
 ```{r}
 #| label: select-consistent-sensors
 #| include: false
+# Identify sensors with sufficient observations across all six comparison years
+
 sensor_coverage_check <- pedestrian_full |>
   filter(year %in% c(2017:2019, 2023:2025)) |>
   group_by(location_id, year) |>
@@ -1629,8 +1760,8 @@ consistent_sensors |>
 
 ```{r}
 #| label: long-term-activity
+# Calculate monthly pedestrian activity across consistently monitored sensors
 
-# Monthly hourly activity at consistently monitored locations
 long_term_monthly <- pedestrian_full |>
   semi_join(consistent_sensors, by = "location_id") |>
   filter(
@@ -1683,6 +1814,8 @@ The graph also provides a longer historical view of the selected locations, alth
 
 ```{r}
 #| label: then-vs-now-comparison
+# Compare median daily pedestrian counts before and after COVID-19
+
 pedestrian_consistent <- pedestrian_full |>
   semi_join(
     consistent_sensors,
@@ -1765,6 +1898,8 @@ period_summary_consistent |>
 
 ```{r}
 #| label: then-vs-now-hourly
+# Calculate the percentage change in daily pedestrian activity
+
 period_change <- period_summary_consistent |>
   pivot_wider(
     names_from = period,
@@ -1875,6 +2010,8 @@ These episodes were then compared with the City of Melbourne's permitted-event r
 ```{r}
 #| label: non-covid-rises
 #| include: false
+# Calculate the percentage change in daily pedestrian activity
+
 sensor_daily_events <- pedestrian_full |>
   filter(
     !is.na(pedestrian_count),
@@ -2043,6 +2180,8 @@ event_episode_candidates |>
 
 ```{r}
 #| label: rises-matched-with-events
+# Match significant pedestrian surges with permitted city events
+
 event_permits_auto <- event_permits_qc |>
   filter(
     permit_match_class ==
@@ -2257,6 +2396,7 @@ As in the event analysis, daily pedestrian activity was compared with nearby obs
 ```{r}
 #| label: prepare-pedestrian-dips
 #| include: false
+# Identify significant pedestrian declines across monitored locations
 
 decrease_day_summary <- sensor_event_index |>
   group_by(sensing_date) |>
@@ -2293,6 +2433,7 @@ eligible_dip_days <- decrease_day_summary |>
 ```{r}
 #| label: holiday-dip-comparison
 #| echo: false
+# Compare pedestrian dip rates on public holidays and other days
 
 holiday_comparison <- eligible_dip_days |>
   mutate(
@@ -2337,6 +2478,7 @@ holiday_comparison |>
 ```{r}
 #| label: fig-holiday-dips
 #| echo: false
+# Visualise significant pedestrian dips and public holiday dates
 
 holiday_lookup <- holiday_calendar_official |>
   group_by(holiday_date) |>
@@ -2403,6 +2545,7 @@ However, not every public holiday recorded a significant decrease. Some holidays
 ```{r}
 #| label: prepare-weather-dips
 #| include: false
+# Combine pedestrian dip records with daily weather data
 
 weather_dip_daily <- eligible_dip_days |>
   left_join(
@@ -2415,6 +2558,7 @@ weather_dip_daily <- eligible_dip_days |>
 ```{r}
 #| label: weather-dip-comparison
 #| echo: false
+# Compare rainfall and wind conditions on significant dip days
 
 weather_comparison <- weather_dip_daily |>
   filter(!public_holiday) |>
@@ -2467,6 +2611,7 @@ Wind speeds were also somewhat higher on significant dip days. These differences
 ```{r}
 #| label: fig-rainfall-dips
 #| echo: false
+# Visualise the frequency of pedestrian dips across rainfall levels
 
 rainfall_levels <- weather_dip_daily |>
   filter(!public_holiday) |>
@@ -2549,6 +2694,8 @@ An important consideration is the growth of the pedestrian sensor network over t
 
 ```{r}
 #| label: fig-sensor-expansion
+# Visualise the expansion of pedestrian sensors over time
+
 sensor_installations <- sensor_locations |>
   filter(!is.na(installation_date)) |>
   mutate(
@@ -2581,6 +2728,7 @@ sensor_installations |>
 ```{r}
 #| label: prepare-spatial-activity
 #| include: false
+# Prepare sensor locations and pedestrian counts for spatial analysis
 
 location_metadata <- sensor_locations |>
   mutate(
@@ -2645,6 +2793,7 @@ recent_strength <- sensor_daily_spatial |>
 ```{r}
 #| label: fig-spatial-intensity
 #| echo: false
+# Map pedestrian activity across Melbourne sensor locations
 
 spatial_plot <- recent_strength |>
   ggplot(
@@ -2684,6 +2833,7 @@ plotly::ggplotly(
 ```{r}
 #| label: fig-busiest-locations
 #| echo: false
+# Identify and visualise the ten busiest pedestrian locations
 
 top_locations <- recent_strength |>
   slice_max(
@@ -2715,6 +2865,7 @@ top_locations |>
   ) +
   theme_minimal()
 ```
+
 The 2025 results show that pedestrian activity is concentrated around Melbourne's major retail, transport and commercial areas. Swanston Street stands out among the busiest monitored locations, with one sensor recording a typical daily count of approximately 40,000 pedestrians and another recording around 36,000. Other busy locations include Southbank, Elizabeth Street and the QV precinct.
 
 The spatial plot shows where these high-activity locations are situated, while the top 10 comparison provides a clearer view of the differences in pedestrian volumes between them.
@@ -2807,6 +2958,7 @@ location_recovery_final <- location_recovery_robust |>
 ```{r}
 #| label: fig-location-recovery
 #| echo: false
+# Compare changes in pedestrian activity across locations
 
 location_recovery_final |>
   mutate(
@@ -2874,6 +3026,7 @@ The sensor metadata records an upgrade in September 2021, raising the question o
 ```{r}
 #| label: fig-flinders-underpass
 #| echo: false
+# Examine historical pedestrian activity at Flinders Underpass
 
 flinders_monthly <- pedestrian_full |>
   filter(location_id == 6) |>
@@ -2932,6 +3085,7 @@ flinders_monthly |>
 ```{r}
 #| label: flinders-sensitivity
 #| echo: false
+# Assess how excluding Flinders Underpass affects the results
 
 spatial_with_flinders <- location_recovery_final |>
   summarise(
@@ -2990,6 +3144,7 @@ flinders_sensitivity |>
 ```{r}
 #| label: prepare-cluster-profiles
 #| include: false
+# Prepare hourly pedestrian activity profiles for clustering
 
 recent_data <- pedestrian_full |>
   filter(
@@ -3178,6 +3333,7 @@ sensor_clusters <- cluster_features |>
 ```{r}
 #| label: fig-cluster-profiles
 #| echo: false
+# Visualise typical weekday and weekend patterns for each cluster
 
 cluster_profiles <- hourly_profiles |>
   inner_join(
@@ -3226,6 +3382,7 @@ cluster_profiles |>
 ```{r}
 #| label: fig-cluster-map
 #| echo: false
+# Map the geographical distribution of pedestrian clusters
 
 cluster_locations <- sensor_clusters |>
   left_join(
@@ -3331,3 +3488,37 @@ Open-Meteo. (2026). *Historical weather API* \[Data set\]. https://open-meteo.co
 R Core Team. (2025). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing. https://www.R-project.org/
 
 Victorian Government. (2026). *Victorian public holidays*. https://www.vic.gov.au/public-holidays
+
+## R Package References
+
+Barrett, T., Dowle, M., Srinivasan, A., Gorecki, J., Chirico, M., Hocking, T., Schwendinger, B., & Krylov, I. (2025). *data.table: Extension of data.frame* (Version 1.17.8) [R package]. https://CRAN.R-project.org/package=data.table
+
+Cheng, J., Schloerke, B., Karambelkar, B., & Xie, Y. (2024). *leaflet: Create interactive web maps with the JavaScript Leaflet library* (Version 2.2.2) [R package]. https://CRAN.R-project.org/package=leaflet
+
+Firke, S. (2024). *janitor: Simple tools for examining and cleaning dirty data* (Version 2.2.1) [R package]. https://CRAN.R-project.org/package=janitor
+
+Grolemund, G., & Wickham, H. (2011). Dates and times made easy with lubridate. *Journal of Statistical Software, 40*(3), 1–25. https://www.jstatsoft.org/v40/i03/
+
+Hester, J., Wickham, H., & Csárdi, G. (2026). *fs: Cross-platform file system operations based on libuv* (Version 1.6.7) [R package]. https://CRAN.R-project.org/package=fs
+
+Maechler, M., Rousseeuw, P., Struyf, A., Hubert, M., & Hornik, K. (2026). *cluster: Cluster analysis basics and extensions* (Version 2.1.8.2) [R package]. https://CRAN.R-project.org/package=cluster
+
+Müller, K. (2025). *here: A simpler way to find your files* (Version 1.0.2) [R package]. https://CRAN.R-project.org/package=here
+
+Ooms, J. (2025). *curl: A modern and flexible web client for R* (Version 6.4.0) [R package]. https://CRAN.R-project.org/package=curl
+
+Richardson, N., Cook, I., Crane, N., Dunnington, D., François, R., Keane, J., Mecum, B., Moldovan-Grünfeld, D., Ooms, J., Wujciak-Jens, J., & Apache Arrow. (2026). *arrow: Integration to Apache Arrow* (Version 25.0.1) [R package]. https://CRAN.R-project.org/package=arrow
+
+Sievert, C. (2020). *Interactive web-based data visualization with R, plotly, and shiny*. Chapman and Hall/CRC. https://plotly-r.com/
+
+Slowikowski, K. (2024). *ggrepel: Automatically position non-overlapping text labels with ggplot2* (Version 0.9.6) [R package]. https://CRAN.R-project.org/package=ggrepel
+
+Vaughan, D. (2025). *slider: Sliding window functions* (Version 0.3.3) [R package]. https://CRAN.R-project.org/package=slider
+
+Wickham, H. (2025). *httr2: Perform HTTP requests and process the responses* (Version 1.2.1) [R package]. https://CRAN.R-project.org/package=httr2
+
+Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T. L., Miller, E., Bache, S. M., Müller, K., Ooms, J., Robinson, D., Seidel, D. P., Spinu, V., ... Yutani, H. (2019). Welcome to the tidyverse. *Journal of Open Source Software, 4*(43), 1686. https://doi.org/10.21105/joss.01686
+
+Xie, Y. (2025). *knitr: A general-purpose package for dynamic report generation in R* (Version 1.50) [R package]. https://yihui.org/knitr/
+
+Zhu, H. (2024). *kableExtra: Construct complex tables with kable and pipe syntax* (Version 1.4.0) [R package]. https://CRAN.R-project.org/package=kableExtra
