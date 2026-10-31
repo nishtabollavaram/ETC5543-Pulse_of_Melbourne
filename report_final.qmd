@@ -217,6 +217,7 @@ The combination of sensor identifier, date and hour was subsequently used as the
 ```{r}
 #| label: download-current-pedestrian-data
 #| eval: false
+#| include: false
 # Download the latest hourly pedestrian counts from the City of Melbourne API
 
 fs::dir_create("Data_pedestrians/raw2")
@@ -237,6 +238,7 @@ httr2::request(pedestrian_url) |>
 
 ```{r}
 #| label: load-current-pedestrian-data
+#| include: false
 # Import and clean current pedestrian data
 
 current <- read_csv(
@@ -253,6 +255,7 @@ current <- read_csv(
 
 ```{r}
 #| label: load-historical-data
+#| include: false
 # Import and clean historical pedestrian data
 
 historical <- read_csv(
@@ -269,6 +272,7 @@ historical <- read_csv(
 
 ```{r}
 #| label: standardise-pedestrian-records
+#| include: false
 
 # Standardise the historical pedestrian records.
 
@@ -299,6 +303,7 @@ current_clean <- current |>
 
 ```{r}
 #| label: locate-snapshot-files
+#| include: false
 # Locate annual pedestrian snapshot files
 
 snapshot_dir <- here::here(
@@ -311,6 +316,7 @@ snapshot_dir <- here::here(
 
 ```{r}
 #| label: standardise-snapshot-records
+#| include: false
 # Identify available snapshot files
 
 snapshot_files <- list.files(
@@ -371,7 +377,10 @@ A total of 510 sensor-day groups exhibited this issue, representing 12,240 recor
 
 This correction relied on the assumption that record identifiers preserved the chronological order of observations. Because the original hour labels could not independently confirm this ordering, the reconstructed timestamps remain a source of uncertainty for analyses involving these records.
 
-Overlapping observations from different sources were also examined. A comparison of historical records and the 2022 City-supplied snapshot was conducted using matching sensor-date-hour keys. Differences in recorded pedestrian counts were investigated before selecting the records to retain in the final dataset.
+Overlapping observations from different data sources were examined to identify inconsistencies before combining the records. The comparison between the historical dataset and the City-supplied 2022 snapshot identified 464,481 matching sensor-date-hour records, of which 10,298 (approximately 2.2%) contained different pedestrian counts.
+
+In contrast, the overlapping API and snapshot records compared for 2024 and 2025 showed no differences in pedestrian counts. These findings indicated that overlapping sources were not always interchangeable, particularly for 2022. To maintain a consistent selection of records, the City-supplied snapshots were used for 2022–2025, while the historical and API datasets supplied observations outside that period.
+
 
 ```{r}
 #| label: correct-historical-hour-labels
@@ -443,6 +452,7 @@ knitr::kable(
 
 ```{r}
 #| label: compare-2022-records
+#| include: false
 
 # Historical records for 2022
 historical_2022 <- historical_clean |>
@@ -689,6 +699,7 @@ bind_rows(
 ```
 
 ```{r}
+#| label: comparison-summary-snapshots
 # Summarise matching records and discrepancies across data sources
 
 comparison_summary <- bind_rows(
@@ -760,9 +771,11 @@ comparison_summary |>
 
 ### Combining Historical and Recent Records
 
-Following standardisation and validation, the pedestrian records were combined into a consolidated hourly dataset. The historical records were retained for observations before 2022, while the City of Melbourne's annual snapshot files were used for 2022–2025. More recent observations outside the snapshot period were retained from the API dataset.
+Following standardisation, validation and source comparison, the pedestrian records were combined into a single hourly dataset. Historical records were retained for observations before 2022, while the City-supplied snapshots provided data for 2022–2025. More recent observations from 2026 were retained from the City of Melbourne's open data API.
 
-This approach avoided retaining overlapping records from multiple sources for the same sensor, date and hour. The resulting dataset was then organised chronologically, and additional variables were created to support the temporal analyses, including year, month, day of the week, weekend status and season.
+Where multiple sources contained records for the same sensor, date and hour, the selected source was retained to prevent duplicate observations. The combined dataset was then checked for duplicate sensor-date-hour keys, missing values, invalid hour labels and negative pedestrian counts.
+
+Additional variables were created to support the temporal analyses, including year, month, day of the week, weekend status and Australian season. These variables allowed pedestrian activity to be summarised consistently across different time periods.
 
 ```{r}
 #| label: combine-cleaned-records
@@ -928,7 +941,7 @@ validation_table <- tibble(
     "Duplicate sensor-date-hour keys",
     "Missing sensor identifiers",
     "Missing dates",
-    "Missing hours",
+    "Missing hour labels",
     "Missing pedestrian counts",
     "Invalid hour values",
     "Negative pedestrian counts"
@@ -3488,8 +3501,6 @@ Open-Meteo. (2026). *Historical weather API* \[Data set\]. https://open-meteo.co
 R Core Team. (2025). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing. https://www.R-project.org/
 
 Victorian Government. (2026). *Victorian public holidays*. https://www.vic.gov.au/public-holidays
-
-## R Package References
 
 Barrett, T., Dowle, M., Srinivasan, A., Gorecki, J., Chirico, M., Hocking, T., Schwendinger, B., & Krylov, I. (2025). *data.table: Extension of data.frame* (Version 1.17.8) [R package]. https://CRAN.R-project.org/package=data.table
 
