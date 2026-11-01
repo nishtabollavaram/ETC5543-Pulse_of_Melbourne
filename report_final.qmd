@@ -66,19 +66,26 @@ On 22 February 2014, pedestrian activity near Flinders Street and Elizabeth Stre
 #| message: false
 #| fig-cap: "Hourly pedestrian activity at Flinders Street–Elizabeth Street (East), 22 February 2014 compared with other February Saturdays."
 
-# Compare the selected Saturday with typical February Saturday activity
+# Load historical pedestrian data for the Flinders Street comparison
+csv_path <- here::here(
+  "Data_pedestrians",
+  "raw",
+  "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
+)
+
+if (!file.exists(csv_path)) {
+  stop("Historical pedestrian CSV not found: ", csv_path)
+}
+
 intro_ped <- data.table::fread(
-  here::here(
-    "Data_pedestrians",
-    "raw",
-    "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
-  ),
+  file = csv_path,
   select = c(
     "Year", "Month", "Mdate", "Day",
     "Time", "Sensor_ID", "Sensor_Name", "Hourly_Counts"
   )
 )
 
+# Select February 2014 Saturdays at Flinders Street
 intro_saturdays <- intro_ped[
   Sensor_Name == "Flinders St-Elizabeth St (East)" &
     Year == 2014 &
@@ -86,37 +93,54 @@ intro_saturdays <- intro_ped[
     Day == "Saturday"
 ]
 
+# Extract pedestrian counts for 22 February 2014
 intro_special <- intro_saturdays[
   Mdate == 22,
   .(Time, Count = Hourly_Counts)
 ]
+
 intro_special[, Series := "22 Feb 2014"]
 
+# Calculate typical hourly counts for other February Saturdays
 intro_typical <- intro_saturdays[
   Mdate != 22,
   .(Count = median(Hourly_Counts, na.rm = TRUE)),
   by = Time
 ]
+
 intro_typical[, Series := "Other February Saturdays (median)"]
 
+# Combine both series for comparison
 intro_plot_data <- data.table::rbindlist(
   list(intro_special, intro_typical)
 )
 
+# Visualise the difference in hourly pedestrian activity
 intro_plot <- ggplot(
   intro_plot_data,
-  aes(x = Time, y = Count, colour = Series, linewidth = Series)
+  aes(
+    x = Time,
+    y = Count,
+    colour = Series,
+    linewidth = Series
+  )
 ) +
   geom_line() +
-  scale_x_continuous(breaks = seq(0, 23, by = 2)) +
-  scale_colour_manual(values = c(
-    "22 Feb 2014" = "#005EB8",
-    "Other February Saturdays (median)" = "#8A8A8A"
-  )) +
-  scale_linewidth_manual(values = c(
-    "22 Feb 2014" = 1.4,
-    "Other February Saturdays (median)" = 1
-  )) +
+  scale_x_continuous(
+    breaks = seq(0, 23, by = 2)
+  ) +
+  scale_colour_manual(
+    values = c(
+      "22 Feb 2014" = "#005EB8",
+      "Other February Saturdays (median)" = "#8A8A8A"
+    )
+  ) +
+  scale_linewidth_manual(
+    values = c(
+      "22 Feb 2014" = 1.4,
+      "Other February Saturdays (median)" = 1
+    )
+  ) +
   labs(
     title = "Flinders Street came alive after dark",
     subtitle = "Flinders St–Elizabeth St (East)",
@@ -131,10 +155,11 @@ intro_plot <- ggplot(
     panel.grid.minor = element_blank()
   )
 
+# Display the interactive graph with the legend underneath
 plotly::ggplotly(
   intro_plot,
   width = 850,
-  height = 500,
+  height = 420,
   tooltip = c("x", "y", "colour")
 ) |>
   plotly::layout(
