@@ -148,22 +148,30 @@ intro_plot <- ggplot(
     panel.grid.minor = element_blank()
   )
 
-# Display the interactive graph with the legend underneath
+# Display the interactive Flinders Street comparison
 plotly::ggplotly(
   intro_plot,
-  width = 850,
-  height = 420,
   tooltip = c("x", "y", "colour")
 ) |>
   plotly::layout(
+    autosize = TRUE,
     hovermode = "x unified",
+    xaxis = list(
+      title = list(text = "Hour of day", standoff = 15),
+      automargin = TRUE
+    ),
     legend = list(
       orientation = "h",
       x = 0.5,
       xanchor = "center",
       y = -0.25
     ),
-    margin = list(b = 110)
+    margin = list(
+      l = 75,
+      r = 20,
+      t = 90,
+      b = 130
+    )
   ) |>
   plotly::config(
     displaylogo = FALSE,
