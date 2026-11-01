@@ -61,9 +61,6 @@ On 22 February 2014, pedestrian activity near Flinders Street and Elizabeth Stre
 
 ```{r}
 #| label: fig-flinders-introduction
-#| echo: false
-#| warning: false
-#| message: false
 #| fig-cap: "Hourly pedestrian activity at Flinders Street–Elizabeth Street (East), 22 February 2014 compared with other February Saturdays."
 
 # Load historical pedestrian data for the Flinders Street comparison
@@ -72,10 +69,6 @@ csv_path <- here::here(
   "raw",
   "Pedestrian_Counting_System_Monthly_counts_per_hour_may_2009_to_14_dec_2022.csv"
 )
-
-if (!file.exists(csv_path)) {
-  stop("Historical pedestrian CSV not found: ", csv_path)
-}
 
 intro_ped <- data.table::fread(
   file = csv_path,
@@ -3171,7 +3164,7 @@ flinders_sensitivity |>
   )
 ```
 
-
+### K-means Clustering
 
 ```{r}
 #| label: prepare-cluster-profiles
