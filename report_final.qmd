@@ -1425,20 +1425,61 @@ holiday_calendar_official <- readr::read_csv(
   arrange(holiday_date)
 ```
 
+# Analytical Methodology
 
-# Analytical Methodology 
+The analysis combines descriptive visualisation, comparisons across consistently monitored locations, identification of unusual activity, and K-means clustering. The basic observation is a sensor-hour. Daily counts are calculated by summing recorded hourly counts for one sensor on one date. Coverage requirements and aggregation methods differ between analyses, as outlined below.
 
-The basic unit is the sensor-hour. For daily measures, counts were summed across available hours for each sensor and date, excluding days with fewer than 20 observed hours; clustering used a 23-hour threshold. Citywide statements use the median across sensors rather than the sum.
+Different analyses use different subsets of locations because their periods and coverage requirements differ. The 27-location panel supports comparisons between 2017–2019 and 2023–2025 using the same locations. The spatial recovery analysis includes 31 locations meeting the requirements for a 2015–2019 monthly baseline and sufficient recent observations during 2024–2026. Clustering uses 44 locations meeting the annual coverage requirements for hourly profiles during 2023–2025. These results therefore describe different samples and should be interpreted alongside their respective periods and measures.  
 
-Two normalised measures make comparison across years possible. The hourly activity index divides the average count at each hour by the year's overall mean and multiplies by 100; the weekly index applies the same logic to days of the week. Because each year is normalised against its own mean, the index describes the shape of the rhythm rather than its absolute level. Absolute change is measured separately using median daily counts.
+## Daily, Weekly, Monthly and Seasonal Patterns
 
-Long-term change uses a balanced panel of 27 sensors that recorded at least 300 days in every year from 2017 to 2019 and 2023 to 2025. This reduces the influence of changes in sensor coverage when comparing pedestrian activity across periods. For each sensor-day, counts were summed across hours; median daily counts were calculated for the two periods, and percentage change derived from those medians. The COVID-19 analysis instead indexes each sensor-month against its own same-month mean for 2015–2019, with the citywide index taken as the median across sensors with at least 20 observed days.
+Hourly profiles were calculated by averaging recorded counts for each sensor, year and hour, then averaging these sensor-level values across reporting locations. Weekly profiles used daily totals from sensor-days with at least 20 distinct recorded hours. Counts were averaged for each sensor, year and day of the week, then averaged across locations.
 
-Unusual days are defined against a local calendar expectation. For each sensor, day of week and date, expected activity is the median daily count on the same weekday in the four weeks before and after the date, excluding the date itself. A significant citywide surge requires median uplift of at least +20% and at least 30% of sensors more than 20% above expectation; a dip uses the mirror thresholds, with at least ten sensors reporting.
+For both profiles, each value was divided by the mean of its annual profile and multiplied by 100. An index of 100 therefore represents average activity within that profile. These indices describe the relative timing of activity within each year.
 
-Holiday enrichment compares the share of significant dips on public holidays with the share of all eligible days that are holidays. Weather comparisons exclude public holidays, and rainfall is examined as a 10 mm threshold and in six ordered groups.
+Monthly and seasonal summaries also retained sensor-days with at least 20 recorded hours. Monthly results were calculated by averaging daily totals within each sensor and calendar month across available years, then averaging across sensors. Seasonal results first averaged daily totals within each sensor, year and Australian season, then across sensors within each year, and finally across available years. The monthly and seasonal summaries therefore use different weighting.
 
-K-means clustering uses a 48-dimensional profile of typical activity shares across weekday and weekend hours. Sensors with at least 80% daily coverage in 2023–2025 were retained (44 locations). Profiles were compared by Euclidean distance, and two-to-five-cluster solutions evaluated with mean silhouette width. The two-cluster solution performed best (0.442, versus 0.252–0.270) and is used descriptively.
+## Long-term and Pre-pandemic Comparisons
+
+The pre-pandemic comparison used 27 locations with observations on at least 300 distinct dates in every year of 2017–2019 and 2023–2025. This coverage requirement counts dates containing any recorded observations. Daily totals were calculated from the available hourly records, without applying an additional 20-hour filter. All recorded sensor-day totals were pooled within each period, and the percentage change was calculated between the two period medians.
+
+Hourly differences between these periods were examined using the median recorded count at each hour across the same selected locations.
+
+The long-term graph used available members of this 27-location panel during 2009–2026. Each sensor-month was summarised by its median recorded hourly count, retaining sensor-months with at least 15 observed dates. The median across eligible sensors was then calculated for each month. The number of contributing locations could therefore vary over time.
+
+## Unusual Pedestrian Activity and Event Matching
+
+Unusual activity was assessed using daily totals with at least 20 recorded hours. The baseline dataset covered 2013–2019 and 2022–2026. For each sensor and date, expected activity was the median daily count from the four preceding and four following available observations on the same day of the week, excluding the date itself. All eight neighbouring observations were required. Because the window follows available observations, its calendar span can extend beyond four weeks on either side.
+
+Percentage deviation was calculated as the observed count minus the expected count, divided by the expected count and multiplied by 100. Comparisons with undefined percentage changes were excluded. The median deviation across valid reporting sensors summarised each date.
+
+A surge required at least ten valid sensor comparisons, a median uplift of at least 20%, and at least 30% of sensors recording an uplift of 20% or more. Dips used the corresponding negative thresholds. These are operational definitions of substantial changes; they do not represent statistical significance tests.
+
+Surge summaries retained dates during 2013–2019 and 2024–2026. Consecutive qualifying dates were grouped into episodes, with the peak defined by the highest median uplift. Episodes were matched against event permits covering 2014–2018. Automatic matching used permits lasting up to seven days and required the episode’s peak date to fall within the permit period. Longer permits were set aside from automatic matching. The event table reports peak-day uplift and the maximum proportion of sensors exceeding the uplift threshold anywhere within each episode.
+
+## Public Holidays and Weather
+
+Holiday and weather comparisons used eligible dates during 2019, 2023–2025, and 1 January–6 September 2026. Dip rates were calculated separately for Victorian public holidays and other dates by dividing the number of flagged dip dates by the total eligible dates in each category.
+
+Weather comparisons excluded public holidays and dates without rainfall information. Median rainfall, median daily maximum wind speed, and the proportion of days with at least 10 mm of rainfall were compared between dip dates and other dates. Dip rates were also calculated within six rainfall categories: no rain, positive rainfall below 2 mm, 2 to below 5 mm, 5 to below 10 mm, 10 to below 20 mm, and at least 20 mm.
+
+## Spatial Activity and Recovery
+
+The spatial activity map and busiest-location ranking used median daily counts during 2025. Locations required valid coordinates and at least 292 days with 20 or more recorded hours.
+
+Spatial recovery was assessed separately using mean daily counts within each sensor-month, requiring at least 20 eligible days per month. Each calendar-month baseline was the median of the corresponding monthly means from at least three years during 2015–2019. Recent monthly means during 2024–2026 were divided by these positive baselines and multiplied by 100.
+
+Each location’s recovery index was the median of its recent monthly indices. Subtracting 100 expressed this as a percentage change. Locations required at least 20 recent months, valid coordinates and no relocation flag, leaving 31 locations.
+
+Flinders Underpass was investigated through its monthly mean daily counts, distinguished by data source and viewed alongside the recorded September 2021 upgrade date. The median spatial change was also compared with and without this location.
+
+## K-means Clustering
+
+Clustering used 44 locations with eligible observations on at least 80% of calendar days in each year during 2023–2025. Eligible days required at least 23 distinct recorded hours.
+
+For each location, median hourly counts were calculated separately for weekdays and weekends, producing 48 features. Each feature was divided by the sum of all 48 values for that location. This joint normalisation removed overall scale while retaining differences in hourly timing and relative weekday/weekend intensity.
+
+K-means solutions with two to five clusters were compared using mean silhouette width based on Euclidean distances. The solution with the highest score was selected. A fixed random seed of 123 was used, with 30 random starts for each candidate solution and 50 for the final fit. Cluster profiles were summarised using the median hourly share across locations within each cluster, and assignments were mapped geographically.
 
 
 # Results and Findings
@@ -1733,7 +1774,7 @@ monthly_profile |>
 
 To examine broader seasonal differences, pedestrian activity was grouped into summer, autumn, winter and spring. Average daily pedestrian counts were calculated for each season using the available sensor observations.
 
-The seasonal results support the monthly findings, with summer and autumn showing relatively higher pedestrian activity and winter recording the lowest counts. Activity increases again during spring, suggesting that pedestrian movement follows a recurring seasonal pattern.(@fig-seasonal-rhythm)
+@fig-seasonal-rhythm shows higher average activity in summer and autumn, with winter recording the lowest counts. This agrees with the broad seasonal pattern in @fig-monthly-rhythm. However, the monthly calculation pools available dates within each sensor and calendar month, whereas the seasonal calculation averages within years before giving each available year equal weight. With changing sensor coverage and activity over time, these approaches can produce different overall levels, so their absolute counts should not be compared directly.
 
 These differences are relevant to transport planning, public-space management and businesses that experience changes in pedestrian demand throughout the year. However, the results should be interpreted with some caution because sensor coverage changed over time and the dataset includes partial years.
 
@@ -2092,6 +2133,815 @@ ggplot(
 
 
 ```
+
+
+## Spatial differences in pedestrian activity
+
+Pedestrian activity is not distributed evenly across Melbourne. Some locations experience consistently high pedestrian volumes, while others have different patterns depending on their surroundings and how people use the area.
+
+An important consideration is the growth of the pedestrian sensor network over time. As more sensors were installed, the number of monitored locations increased, making direct comparisons of total counts across years less reliable. The following analysis therefore examines individual locations and uses coverage requirements to improve comparability.
+
+```{r}
+#| label: fig-sensor-expansion
+#| fig-cap: "Number of pedestrian sensor installations by year, based on available installation dates in the sensor metadata. Installation counts describe network development and do not necessarily equal the number of locations actively reporting observations in each year."
+# Visualise the expansion of pedestrian sensors over time
+
+sensor_installations <- sensor_locations |>
+  filter(!is.na(installation_date)) |>
+  mutate(
+    installation_year = year(installation_date)
+  ) |>
+  count(
+    installation_year,
+    name = "new_sensors"
+  )
+
+sensor_installations |>
+  ggplot(
+    aes(
+      x = installation_year,
+      y = new_sensors
+    )
+  ) +
+  geom_col() +
+  labs(
+    title = "Expansion of Melbourne's pedestrian sensor network",
+    x = "Installation year",
+    y = "Sensors installed"
+  ) +
+  theme_minimal()
+
+
+```
+
+@fig-sensor-expansion illustrates the expansion of the sensor network through new installations. However, installation counts do not necessarily represent the number of sensors actively reporting pedestrian observations in each year, as individual sensors may experience interruptions or changes in operation.
+
+```{r}
+#| label: prepare-spatial-activity
+#| include: false
+# Prepare sensor locations and pedestrian counts for spatial analysis
+
+location_metadata <- sensor_locations |>
+  mutate(
+    relocation_flag = str_detect(
+      str_to_lower(
+        coalesce(note, "")
+      ),
+      "relocat|moved to|move to"
+    )
+  ) |>
+  filter(
+    !is.na(latitude),
+    !is.na(longitude)
+  ) |>
+  select(
+    location_id,
+    sensor_description,
+    sensor_name,
+    latitude,
+    longitude,
+    installation_date,
+    note,
+    relocation_flag
+  )
+
+sensor_daily_spatial <- pedestrian_full |>
+  group_by(
+    location_id,
+    sensing_date,
+    year,
+    month
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(hours_observed >= 20)
+
+recent_strength <- sensor_daily_spatial |>
+  filter(year == 2025) |>
+  group_by(location_id) |>
+  summarise(
+    typical_daily_count = median(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  filter(days_observed >= 292) |>
+  inner_join(
+    location_metadata,
+    by = "location_id"
+  )
+```
+
+
+```{r}
+#| label: fig-spatial-intensity
+#| fig-cap: "Spatial distribution of median daily recorded pedestrian counts at eligible monitoring locations in 2025. Larger symbols indicate higher counts. Locations require at least 292 sensor-days with 20 or more recorded hours and valid geographical coordinates."
+#| echo: false
+# Map pedestrian activity across Melbourne sensor locations
+
+spatial_plot <- recent_strength |>
+  ggplot(
+    aes(
+      x = longitude,
+      y = latitude,
+      size = typical_daily_count,
+      text = paste0(
+        sensor_description,
+        "<br>Location ID: ", location_id,
+        "<br>Typical daily count: ",
+        scales::comma(round(typical_daily_count))
+      )
+    )
+  ) +
+  geom_point(
+    colour = "#3274A1",
+    alpha = 0.65
+  ) +
+  coord_quickmap() +
+  labs(
+    title = "Where is Melbourne's pedestrian pulse strongest?",
+    subtitle = "Typical daily pedestrian activity at well-covered sensor locations, 2025",
+    x = NULL,
+    y = NULL,
+    size = "Typical daily count"
+  ) +
+  theme_minimal()
+
+plotly::ggplotly(
+  spatial_plot,
+  tooltip = "text"
+)
+```
+
+
+```{r}
+#| label: fig-busiest-locations
+#| fig-cap: "Ten highest median daily recorded pedestrian counts among eligible monitoring locations in 2025. Locations require at least 292 sensor-days with 20 or more recorded hours. Counts represent recorded passages at individual sensors rather than unique pedestrians or totals for entire precincts."
+#| echo: false
+# Identify and visualise the ten busiest pedestrian locations
+
+top_locations <- recent_strength |>
+  slice_max(
+    typical_daily_count,
+    n = 10,
+    with_ties = FALSE
+  ) |>
+  mutate(
+    sensor_description = forcats::fct_reorder(
+      sensor_description,
+      typical_daily_count
+    )
+  )
+
+top_locations |>
+  ggplot(
+    aes(
+      x = sensor_description,
+      y = typical_daily_count
+    )
+  ) +
+  geom_col(fill = "#3274A1") +
+  coord_flip() +
+  labs(
+    title = "Melbourne's busiest monitored pedestrian locations",
+    subtitle = "Median daily pedestrian counts, 2025",
+    x = NULL,
+    y = "Typical daily pedestrian count"
+  ) +
+  theme_minimal()
+```
+
+@fig-busiest-locations show that pedestrian activity is concentrated around Melbourne's major retail, transport and commercial areas. Flinders La–Swanston St (West) recorded the highest typical daily count at approximately 40,000 pedestrians, followed by Town Hall (West) at approximately 36,000. Other busy monitored locations include Southbank Promenade, Elizabeth Street and the QV precinct.
+
+@fig-spatial-intensity illustrates the geographic distribution of pedestrian activity, while the top-10 ranking identifies the busiest monitored locations in 2025. These findings highlight the importance of Melbourne's central pedestrian corridors.
+
+However, the results represent pedestrian counts at individual sensor locations rather than total pedestrian activity across entire streets or precincts. Locations without sufficient observations during the selected period were excluded.
+
+
+```{r}
+#| label: spatial-recovery-calculation
+#| include: false
+
+# Average daily activity for each sensor-month
+sensor_monthly_change <- sensor_daily_spatial |>
+  mutate(
+    month_date = lubridate::floor_date(
+      sensing_date,
+      "month"
+    )
+  ) |>
+  group_by(
+    location_id,
+    year,
+    month,
+    month_date
+  ) |>
+  summarise(
+    mean_daily_count = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  filter(days_observed >= 20)
+
+# Same-month baseline before COVID-19
+pre_covid_location_baseline <- sensor_monthly_change |>
+  filter(year >= 2015, year <= 2019) |>
+  group_by(location_id, month) |>
+  summarise(
+    baseline_count = median(
+      mean_daily_count,
+      na.rm = TRUE
+    ),
+    baseline_years = n_distinct(year),
+    .groups = "drop"
+  ) |>
+  filter(
+    baseline_years >= 3,
+    baseline_count > 0
+  )
+
+# Recent activity relative to that baseline
+recent_location_change <- sensor_monthly_change |>
+  filter(year >= 2024, year <= 2026) |>
+  inner_join(
+    pre_covid_location_baseline,
+    by = c("location_id", "month")
+  ) |>
+  mutate(
+    activity_index =
+      mean_daily_count / baseline_count * 100
+  )
+
+# Median recovery index for each location
+location_recovery_robust <- recent_location_change |>
+  group_by(location_id) |>
+  summarise(
+    recovery_index = median(
+      activity_index,
+      na.rm = TRUE
+    ),
+    recent_months = n_distinct(month_date),
+    .groups = "drop"
+  ) |>
+  filter(recent_months >= 20) |>
+  mutate(
+    change_percent = recovery_index - 100
+  )
+
+location_recovery_final <- location_recovery_robust |>
+  inner_join(
+    location_metadata,
+    by = "location_id"
+  ) |>
+  filter(!relocation_flag)
+```
+
+
+```{r}
+#| label: fig-location-recovery
+#| fig-cap: "Percentage change in pedestrian activity at 31 eligible monitoring locations, using available observations during 2024–2026 relative to corresponding calendar-month baselines from 2015–2019. Each location’s value is the median of its eligible monthly percentage changes. Colours distinguish increases from declines; the recent period includes a partial 2026."
+#| echo: false
+# Compare changes in pedestrian activity across locations
+
+location_recovery_final |>
+  mutate(
+    hover_text = paste0(
+      sensor_description,
+      "<br>Location ID: ", location_id,
+      "<br>Recent activity index: ",
+      round(recovery_index, 1),
+      "<br>Change from pre-COVID: ",
+      round(change_percent, 1), "%",
+      "<br>Recent months: ",
+      recent_months
+    )
+  ) |>
+  plotly::plot_ly(
+    type = "scattermapbox",
+    mode = "markers",
+    lat = ~latitude,
+    lon = ~longitude,
+    text = ~hover_text,
+    hoverinfo = "text",
+    marker = list(
+      size = 14,
+      color = ~change_percent,
+      colorscale = "RdBu",
+      cmin = -75,
+      cmax = 75,
+      showscale = TRUE,
+      opacity = 0.85,
+      colorbar = list(title = "Change (%)")
+    )
+  ) |>
+  plotly::layout(
+    title = "Where has Melbourne's pedestrian activity changed?",
+    mapbox = list(
+      style = "open-street-map",
+      center = list(
+        lat = -37.8136,
+        lon = 144.9631
+      ),
+      zoom = 12.5
+    ),
+    margin = list(
+      l = 0,
+      r = 0,
+      b = 0,
+      t = 55
+    )
+  )
+```
+
+Comparing recent activity with pre-COVID conditions reveals further differences between Melbourne's monitored locations. For this analysis, average daily pedestrian counts were compared with the corresponding calendar-month baseline from 2015–2019. The recent recovery index was calculated using available observations from 2024–2026.
+
+@fig-location-recovery shows that recovery differs substantially between monitored locations. Webb Bridge recorded activity approximately 29.7% above its baseline, while Town Hall (West) was close to its earlier level at 0.4% above baseline. In contrast, Bourke Street Mall (South) remained approximately 42.5% below baseline. These differences show that the overall recovery summary conceals considerable variation between individual locations.
+
+The comparison uses same-month baselines to account for recurring seasonal differences. However, it remains a descriptive analysis, and changes in surrounding land use, transport patterns or sensor conditions may also affect the results. The 2026 observations are incomplete, so the recent period should not be interpreted as three full calendar years.
+
+### Checking the Flinders Underpass Result
+
+One location requiring closer examination was Flinders Underpass – Myki Barriers, where the recovery analysis(@fig-location-recovery) indicated a particularly large decline of approximately 72.6% compared with its pre-COVID baseline.
+
+The sensor metadata records an upgrade in September 2021, raising the question of whether changes to the monitoring equipment could have affected the comparison. To investigate this, the monthly pedestrian counts were examined alongside the recorded upgrade date. A further sensitivity check compared the overall spatial results with and without this location.
+
+
+```{r}
+#| label: fig-flinders-underpass
+#| fig-cap: "Monthly mean daily recorded pedestrian counts at Flinders Underpass–Myki Barriers. Daily totals retain dates with at least 20 recorded hours. Line styles distinguish data sources, and the vertical dashed line marks the sensor upgrade recorded on 8 September 2021."
+#| echo: false
+# Examine historical pedestrian activity at Flinders Underpass
+
+flinders_monthly <- pedestrian_full |>
+  filter(location_id == 6) |>
+  group_by(
+    source,
+    sensing_date
+  ) |>
+  summarise(
+    daily_count = sum(
+      pedestrian_count,
+      na.rm = TRUE
+    ),
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(hours_observed >= 20) |>
+  mutate(
+    month_date = lubridate::floor_date(
+      sensing_date,
+      "month"
+    )
+  ) |>
+  group_by(source, month_date) |>
+  summarise(
+    mean_daily_count = mean(
+      daily_count,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  )
+
+flinders_monthly |>
+  ggplot(
+    aes(
+      x = month_date,
+      y = mean_daily_count,
+      group = source,
+      linetype = source
+    )
+  ) +
+  geom_line() +
+  geom_vline(
+    xintercept = as.Date("2021-09-08"),
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Pedestrian activity at Flinders Underpass",
+    subtitle = "Dashed line marks the recorded sensor upgrade in September 2021",
+    x = "Year",
+    y = "Mean daily pedestrian count",
+    linetype = "Data source"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+#| label: flinders-sensitivity
+#| echo: false
+# Assess how excluding Flinders Underpass affects the results
+
+spatial_with_flinders <- location_recovery_final |>
+  summarise(
+    locations = n(),
+    median_change = median(
+      change_percent,
+      na.rm = TRUE
+    )
+  ) |>
+  mutate(
+    analysis = "Including Flinders Underpass"
+  )
+
+spatial_without_flinders <- location_recovery_final |>
+  filter(location_id != 6) |>
+  summarise(
+    locations = n(),
+    median_change = median(
+      change_percent,
+      na.rm = TRUE
+    )
+  ) |>
+  mutate(
+    analysis = "Excluding Flinders Underpass"
+  )
+
+flinders_sensitivity <- bind_rows(
+  spatial_with_flinders,
+  spatial_without_flinders
+)
+
+flinders_sensitivity |>
+  mutate(
+    `Median change` = paste0(
+      round(median_change, 1), "%"
+    )
+  ) |>
+  select(
+    `Comparison` = analysis,
+    `Locations` = locations,
+    `Median change`
+  ) |>
+  kableExtra::kbl(
+    caption = "Sensitivity of the spatial recovery result to Flinders Underpass",
+    align = c("l", "r", "r")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "condensed"),
+    full_width = FALSE,
+    position = "left"
+  )
+```
+
+Excluding Flinders Underpass changes the median spatial decline from 21.0% across 31 locations to 20.5% across 30 locations, a difference of only 0.5 percentage points. This indicates that the overall median result is relatively insensitive to this location, despite its unusually large individual decline.
+
+### K-means Clustering for pedestrian patterns
+
+To understand how pedestrian activity differs between locations, K-means clustering was applied to 44 sensor locations with sufficient data coverage during 2023–2025. Rather than comparing locations based only on their total pedestrian counts, the analysis focused on how activity was distributed throughout the day.
+
+For each location, median hourly pedestrian counts were calculated separately for weekdays and weekends, producing 48 features: 24 weekday values and 24 weekend values. Each value was divided by the sum of all 48 values for that location. This joint normalisation allowed locations to be compared independently of their overall pedestrian volumes, while retaining differences in hourly timing and relative weekday/weekend activity.
+
+The number of clusters was selected by comparing the mean silhouette widths of K-means solutions with two to five clusters. The two-cluster solution achieved the highest score of approximately 0.442, compared with 0.252–0.270 for the other solutions. The final model assigned nine locations to Cluster 1 and 35 locations to Cluster 2.
+
+
+```{r}
+#| label: prepare-cluster-profiles
+#| include: false
+# Prepare hourly pedestrian activity profiles for clustering
+
+recent_data <- pedestrian_full |>
+  filter(
+    year %in% 2023:2025,
+    between(hourday, 0, 23),
+    !is.na(pedestrian_count),
+    pedestrian_count >= 0
+  )
+
+# Retain days with at least 23 observed hours
+valid_days <- recent_data |>
+  group_by(
+    location_id,
+    year,
+    sensing_date
+  ) |>
+  summarise(
+    hours_observed = n_distinct(hourday),
+    .groups = "drop"
+  ) |>
+  filter(hours_observed >= 23)
+
+# Coverage for each sensor and year
+recent_coverage <- valid_days |>
+  group_by(location_id, year) |>
+  summarise(
+    days_observed = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    expected_days = if_else(
+      lubridate::leap_year(year),
+      366,
+      365
+    ),
+    coverage = days_observed / expected_days
+  )
+
+# Select sensors with at least 80% coverage
+# in all three years
+reliable_sensors <- recent_coverage |>
+  group_by(location_id) |>
+  summarise(
+    years_covered = n_distinct(year),
+    minimum_coverage = min(coverage),
+    .groups = "drop"
+  ) |>
+  filter(
+    years_covered == 3,
+    minimum_coverage >= 0.80
+  )
+
+# Typical hourly pattern for each location
+hourly_profiles <- recent_data |>
+  semi_join(
+    valid_days,
+    by = c(
+      "location_id",
+      "year",
+      "sensing_date"
+    )
+  ) |>
+  semi_join(
+    reliable_sensors,
+    by = "location_id"
+  ) |>
+  mutate(
+    day_type = if_else(
+      lubridate::wday(
+        sensing_date,
+        week_start = 1
+      ) <= 5,
+      "Weekday",
+      "Weekend"
+    )
+  ) |>
+  group_by(
+    location_id,
+    day_type,
+    hourday
+  ) |>
+  summarise(
+    typical_count = median(pedestrian_count),
+    .groups = "drop"
+  ) |>
+  group_by(location_id) |>
+  filter(
+    n() == 48,
+    sum(typical_count) > 0
+  ) |>
+  mutate(
+    hour_share = typical_count /
+      sum(typical_count)
+  ) |>
+  ungroup()
+```
+
+
+
+```{r}
+#| label: select-cluster-number
+#| include: false
+
+# 48 hourly profile features per sensor
+cluster_features <- hourly_profiles |>
+  mutate(
+    feature = paste0(
+      day_type,
+      "_",
+      stringr::str_pad(
+        hourday,
+        width = 2,
+        pad = "0"
+      )
+    )
+  ) |>
+  select(
+    location_id,
+    feature,
+    hour_share
+  ) |>
+  tidyr::pivot_wider(
+    names_from = feature,
+    values_from = hour_share
+  ) |>
+  tidyr::drop_na()
+
+# Distances between sensor profiles
+sensor_distances <- cluster_features |>
+  select(-location_id) |>
+  stats::dist()
+
+set.seed(123)
+
+cluster_tests <- tibble::tibble(k = 2:5) |>
+  mutate(
+    model = purrr::map(
+      k,
+      ~ stats::kmeans(
+        cluster_features |>
+          select(-location_id),
+        centers = .x,
+        nstart = 30
+      )
+    ),
+    silhouette = purrr::map_dbl(
+      model,
+      ~ mean(
+        cluster::silhouette(
+          .x$cluster,
+          sensor_distances
+        )[, "sil_width"]
+      )
+    )
+  )
+
+best_k <- cluster_tests |>
+  slice_max(
+    silhouette,
+    n = 1,
+    with_ties = FALSE
+  ) |>
+  pull(k)
+
+set.seed(123)
+
+final_kmeans <- stats::kmeans(
+  cluster_features |>
+    select(-location_id),
+  centers = best_k,
+  nstart = 50
+)
+
+sensor_clusters <- cluster_features |>
+  select(location_id) |>
+  mutate(
+    cluster = paste0(
+      "Cluster ",
+      final_kmeans$cluster
+    )
+  )
+```
+
+```{r}
+#| label: tbl-cluster-selection
+#| echo: false
+#| tbl-cap: "Mean silhouette widths for K-means solutions with two to five clusters, using pedestrian activity profiles from 2023–2025."
+
+cluster_tests |>
+  transmute(
+    `Number of clusters (K)` = k,
+    `Mean silhouette width` = formatC(
+      silhouette,
+      format = "f",
+      digits = 3
+    )
+  ) |>
+  kableExtra::kbl(
+    format = "html",
+    align = c("c", "r")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "condensed"),
+    full_width = FALSE,
+    position = "left"
+  ) |>
+  kableExtra::row_spec(
+    row = which.max(cluster_tests$silhouette),
+    bold = TRUE
+  )
+```
+
+```{r}
+#| label: fig-cluster-profiles
+#| fig-cap: "Typical weekday and weekend hourly profiles for two K-means clusters fitted to 44 eligible locations during 2023–2025. Each location’s hourly values are normalised jointly across its 48 weekday and weekend features. Lines show the median share at each hour within each cluster. Cluster 1 contains 9 locations and Cluster 2 contains 35."
+#| echo: false
+# Visualise typical weekday and weekend patterns for each cluster
+
+cluster_profiles <- hourly_profiles |>
+  inner_join(
+    sensor_clusters,
+    by = "location_id"
+  ) |>
+  group_by(
+    cluster,
+    day_type,
+    hourday
+  ) |>
+  summarise(
+    typical_share = median(hour_share) * 100,
+    .groups = "drop"
+  )
+
+cluster_profiles |>
+  ggplot(
+    aes(
+      x = hourday,
+      y = typical_share,
+      colour = cluster
+    )
+  ) +
+  geom_line(linewidth = 1) +
+  scale_colour_manual(
+    values = c(
+      "Cluster 1" = "#F8766D",
+      "Cluster 2" = "#00BFC4"
+    )
+  ) +
+  facet_wrap(~day_type) +
+  scale_x_continuous(
+    breaks = seq(0, 23, by = 2)
+  ) +
+  labs(
+    title = "Melbourne has different pedestrian rhythms",
+    subtitle = "K-means clustering of hourly profiles, 2023–2025",
+    x = "Hour of day",
+    y = "Share of typical activity (%)",
+    colour = "Cluster"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+#| label: fig-cluster-map
+#| fig-cap: "Geographical distribution of monitoring locations assigned to the two K-means clusters using their 2023–2025 weekday and weekend hourly profiles. Colours correspond to the cluster profiles shown in @fig-cluster-profiles."
+#| echo: false
+# Map the geographical distribution of pedestrian clusters
+
+cluster_locations <- sensor_clusters |>
+  left_join(
+    location_metadata |>
+      select(
+        location_id,
+        sensor_description,
+        latitude,
+        longitude
+      ),
+    by = "location_id"
+  ) |>
+  filter(
+    !is.na(latitude),
+    !is.na(longitude)
+  ) |>
+  mutate(
+    hover_text = paste0(
+      sensor_description,
+      "<br>Location ID: ", location_id,
+      "<br>", cluster
+    )
+  )
+
+plotly::plot_ly(
+  data = cluster_locations,
+  type = "scattermapbox",
+  mode = "markers",
+  lat = ~latitude,
+  lon = ~longitude,
+  color = ~cluster,
+  colors = c(
+    "Cluster 1" = "#F8766D",
+    "Cluster 2" = "#00BFC4"
+  ),
+  text = ~hover_text,
+  hoverinfo = "text",
+  marker = list(
+    size = 12,
+    opacity = 0.85
+  )
+) |>
+  plotly::layout(
+    title = "Where are Melbourne's different pedestrian rhythms?",
+    mapbox = list(
+      style = "open-street-map",
+      center = list(
+        lat = -37.8136,
+        lon = 144.9631
+      ),
+      zoom = 12.5
+    ),
+    margin = list(
+      l = 0,
+      r = 0,
+      b = 0,
+      t = 50
+    )
+  )
+```
+
+@fig-cluster-profiles shows two different activity profiles. Cluster 1, containing nine locations, has sharper weekday morning and late-afternoon peaks and lower relative weekend activity. Cluster 2, containing 35 locations, has broader daytime activity and relatively stronger weekend patterns. The distinction therefore concerns both when locations are busiest and how activity is distributed between weekdays and weekends.
+
+@fig-cluster-map shows where these two activity patterns occur across Melbourne. Viewing the geographic locations alongside their hourly profiles helps identify areas with similar movement patterns, even when they are not located next to one another.
+
+Overall, the clustering analysis identifies two distinct patterns of pedestrian activity among the 44 selected locations. Together with the busiest-location rankings and spatial recovery analysis, it shows that Melbourne's pedestrian network varies in both the intensity and timing of movement.
 
 
 ## Outlier days, events and public holidays
@@ -2490,6 +3340,7 @@ plotly::ggplotly(
 )
 ```
 
+Returning to the opening example @fig-flinders-introduction, 22 February 2014 recorded the largest matched surge, with a median uplift of 51.7% across reporting sensors. This indicates that unusually high activity extended beyond the Flinders Street location. Four event permits matched this date, providing possible context for the increase, although date matching alone cannot establish which events contributed to the observed pattern.
 
 ### Unusual pedestrian dips: associations with public holidays and rainfall
 
@@ -2792,831 +3643,26 @@ The increase is particularly noticeable once daily rainfall exceeds 5 mm. This s
 
 Overall, public holidays and rainfall both appear to be associated with unusually low pedestrian activity in Melbourne. Public holidays may change regular commuting and shopping patterns, while heavier rainfall may discourage outdoor movement.
 
-## Spatial differences in pedestrian activity
-
-Pedestrian activity is not distributed evenly across Melbourne. Some locations experience consistently high pedestrian volumes, while others have different patterns depending on their surroundings and how people use the area.
-
-An important consideration is the growth of the pedestrian sensor network over time. As more sensors were installed, the number of monitored locations increased, making direct comparisons of total counts across years less reliable. The following analysis therefore examines individual locations and uses coverage requirements to improve comparability.
-
-```{r}
-#| label: fig-sensor-expansion
-#| fig-cap: "Number of pedestrian sensor installations by year, based on available installation dates in the sensor metadata. Installation counts describe network development and do not necessarily equal the number of locations actively reporting observations in each year."
-# Visualise the expansion of pedestrian sensors over time
-
-sensor_installations <- sensor_locations |>
-  filter(!is.na(installation_date)) |>
-  mutate(
-    installation_year = year(installation_date)
-  ) |>
-  count(
-    installation_year,
-    name = "new_sensors"
-  )
-
-sensor_installations |>
-  ggplot(
-    aes(
-      x = installation_year,
-      y = new_sensors
-    )
-  ) +
-  geom_col() +
-  labs(
-    title = "Expansion of Melbourne's pedestrian sensor network",
-    x = "Installation year",
-    y = "Sensors installed"
-  ) +
-  theme_minimal()
-
-
-```
-
-@fig-sensor-expansion illustrates the expansion of the sensor network through new installations. However, installation counts do not necessarily represent the number of sensors actively reporting pedestrian observations in each year, as individual sensors may experience interruptions or changes in operation.
-
-```{r}
-#| label: prepare-spatial-activity
-#| include: false
-# Prepare sensor locations and pedestrian counts for spatial analysis
-
-location_metadata <- sensor_locations |>
-  mutate(
-    relocation_flag = str_detect(
-      str_to_lower(
-        coalesce(note, "")
-      ),
-      "relocat|moved to|move to"
-    )
-  ) |>
-  filter(
-    !is.na(latitude),
-    !is.na(longitude)
-  ) |>
-  select(
-    location_id,
-    sensor_description,
-    sensor_name,
-    latitude,
-    longitude,
-    installation_date,
-    note,
-    relocation_flag
-  )
-
-sensor_daily_spatial <- pedestrian_full |>
-  group_by(
-    location_id,
-    sensing_date,
-    year,
-    month
-  ) |>
-  summarise(
-    daily_count = sum(
-      pedestrian_count,
-      na.rm = TRUE
-    ),
-    hours_observed = n_distinct(hourday),
-    .groups = "drop"
-  ) |>
-  filter(hours_observed >= 20)
-
-recent_strength <- sensor_daily_spatial |>
-  filter(year == 2025) |>
-  group_by(location_id) |>
-  summarise(
-    typical_daily_count = median(
-      daily_count,
-      na.rm = TRUE
-    ),
-    days_observed = n(),
-    .groups = "drop"
-  ) |>
-  filter(days_observed >= 292) |>
-  inner_join(
-    location_metadata,
-    by = "location_id"
-  )
-```
-
-
-```{r}
-#| label: fig-spatial-intensity
-#| fig-cap: "Spatial distribution of median daily recorded pedestrian counts at eligible monitoring locations in 2025. Larger symbols indicate higher counts. Locations require at least 292 sensor-days with 20 or more recorded hours and valid geographical coordinates."
-#| echo: false
-# Map pedestrian activity across Melbourne sensor locations
-
-spatial_plot <- recent_strength |>
-  ggplot(
-    aes(
-      x = longitude,
-      y = latitude,
-      size = typical_daily_count,
-      text = paste0(
-        sensor_description,
-        "<br>Location ID: ", location_id,
-        "<br>Typical daily count: ",
-        scales::comma(round(typical_daily_count))
-      )
-    )
-  ) +
-  geom_point(
-    colour = "#3274A1",
-    alpha = 0.65
-  ) +
-  coord_quickmap() +
-  labs(
-    title = "Where is Melbourne's pedestrian pulse strongest?",
-    subtitle = "Typical daily pedestrian activity at well-covered sensor locations, 2025",
-    x = NULL,
-    y = NULL,
-    size = "Typical daily count"
-  ) +
-  theme_minimal()
-
-plotly::ggplotly(
-  spatial_plot,
-  tooltip = "text"
-)
-```
-
-
-```{r}
-#| label: fig-busiest-locations
-#| fig-cap: "Ten highest median daily recorded pedestrian counts among eligible monitoring locations in 2025. Locations require at least 292 sensor-days with 20 or more recorded hours. Counts represent recorded passages at individual sensors rather than unique pedestrians or totals for entire precincts."
-#| echo: false
-# Identify and visualise the ten busiest pedestrian locations
-
-top_locations <- recent_strength |>
-  slice_max(
-    typical_daily_count,
-    n = 10,
-    with_ties = FALSE
-  ) |>
-  mutate(
-    sensor_description = forcats::fct_reorder(
-      sensor_description,
-      typical_daily_count
-    )
-  )
-
-top_locations |>
-  ggplot(
-    aes(
-      x = sensor_description,
-      y = typical_daily_count
-    )
-  ) +
-  geom_col(fill = "#3274A1") +
-  coord_flip() +
-  labs(
-    title = "Melbourne's busiest monitored pedestrian locations",
-    subtitle = "Median daily pedestrian counts, 2025",
-    x = NULL,
-    y = "Typical daily pedestrian count"
-  ) +
-  theme_minimal()
-```
-
-@fig-busiest-locations show that pedestrian activity is concentrated around Melbourne's major retail, transport and commercial areas. Flinders La–Swanston St (West) recorded the highest typical daily count at approximately 40,000 pedestrians, followed by Town Hall (West) at approximately 36,000. Other busy monitored locations include Southbank Promenade, Elizabeth Street and the QV precinct.
-
-@fig-spatial-intensity illustrates the geographic distribution of pedestrian activity, while the top-10 ranking identifies the busiest monitored locations in 2025. These findings highlight the importance of Melbourne's central pedestrian corridors.
-
-However, the results represent pedestrian counts at individual sensor locations rather than total pedestrian activity across entire streets or precincts. Locations without sufficient observations during the selected period were excluded.
-
-
-```{r}
-#| label: spatial-recovery-calculation
-#| include: false
-
-# Average daily activity for each sensor-month
-sensor_monthly_change <- sensor_daily_spatial |>
-  mutate(
-    month_date = lubridate::floor_date(
-      sensing_date,
-      "month"
-    )
-  ) |>
-  group_by(
-    location_id,
-    year,
-    month,
-    month_date
-  ) |>
-  summarise(
-    mean_daily_count = mean(
-      daily_count,
-      na.rm = TRUE
-    ),
-    days_observed = n(),
-    .groups = "drop"
-  ) |>
-  filter(days_observed >= 20)
-
-# Same-month baseline before COVID-19
-pre_covid_location_baseline <- sensor_monthly_change |>
-  filter(year >= 2015, year <= 2019) |>
-  group_by(location_id, month) |>
-  summarise(
-    baseline_count = median(
-      mean_daily_count,
-      na.rm = TRUE
-    ),
-    baseline_years = n_distinct(year),
-    .groups = "drop"
-  ) |>
-  filter(
-    baseline_years >= 3,
-    baseline_count > 0
-  )
-
-# Recent activity relative to that baseline
-recent_location_change <- sensor_monthly_change |>
-  filter(year >= 2024, year <= 2026) |>
-  inner_join(
-    pre_covid_location_baseline,
-    by = c("location_id", "month")
-  ) |>
-  mutate(
-    activity_index =
-      mean_daily_count / baseline_count * 100
-  )
-
-# Median recovery index for each location
-location_recovery_robust <- recent_location_change |>
-  group_by(location_id) |>
-  summarise(
-    recovery_index = median(
-      activity_index,
-      na.rm = TRUE
-    ),
-    recent_months = n_distinct(month_date),
-    .groups = "drop"
-  ) |>
-  filter(recent_months >= 20) |>
-  mutate(
-    change_percent = recovery_index - 100
-  )
-
-location_recovery_final <- location_recovery_robust |>
-  inner_join(
-    location_metadata,
-    by = "location_id"
-  ) |>
-  filter(!relocation_flag)
-```
-
-
-```{r}
-#| label: fig-location-recovery
-#| fig-cap: "Percentage change in pedestrian activity at 31 eligible monitoring locations, using available observations during 2024–2026 relative to corresponding calendar-month baselines from 2015–2019. Each location’s value is the median of its eligible monthly percentage changes. Colours distinguish increases from declines; the recent period includes a partial 2026."
-#| echo: false
-# Compare changes in pedestrian activity across locations
-
-location_recovery_final |>
-  mutate(
-    hover_text = paste0(
-      sensor_description,
-      "<br>Location ID: ", location_id,
-      "<br>Recent activity index: ",
-      round(recovery_index, 1),
-      "<br>Change from pre-COVID: ",
-      round(change_percent, 1), "%",
-      "<br>Recent months: ",
-      recent_months
-    )
-  ) |>
-  plotly::plot_ly(
-    type = "scattermapbox",
-    mode = "markers",
-    lat = ~latitude,
-    lon = ~longitude,
-    text = ~hover_text,
-    hoverinfo = "text",
-    marker = list(
-      size = 14,
-      color = ~change_percent,
-      colorscale = "RdBu",
-      cmin = -75,
-      cmax = 75,
-      showscale = TRUE,
-      opacity = 0.85,
-      colorbar = list(title = "Change (%)")
-    )
-  ) |>
-  plotly::layout(
-    title = "Where has Melbourne's pedestrian activity changed?",
-    mapbox = list(
-      style = "open-street-map",
-      center = list(
-        lat = -37.8136,
-        lon = 144.9631
-      ),
-      zoom = 12.5
-    ),
-    margin = list(
-      l = 0,
-      r = 0,
-      b = 0,
-      t = 55
-    )
-  )
-```
-
-Comparing recent activity with pre-COVID conditions reveals further differences between Melbourne's monitored locations. For this analysis, average daily pedestrian counts were compared with the corresponding calendar-month baseline from 2015–2019. The recent recovery index was calculated using available observations from 2024–2026.
-
-@fig-location-recovery shows that the extent of recovery varies between locations. Some sensors record activity closer to or above their earlier levels, while others remain substantially below their pre-pandemic baseline. This suggests that Melbourne's recovery has not been uniform across the city.
-
-The comparison uses same-month baselines to account for recurring seasonal differences. However, it remains a descriptive analysis, and changes in surrounding land use, transport patterns or sensor conditions may also affect the results. The 2026 observations are incomplete, so the recent period should not be interpreted as three full calendar years.
-
-### Checking the Flinders Underpass Result
-
-One location requiring closer examination was Flinders Underpass – Myki Barriers, where the recovery analysis(@fig-location-recovery) indicated a particularly large decline of approximately 72.6% compared with its pre-COVID baseline.
-
-The sensor metadata records an upgrade in September 2021, raising the question of whether changes to the monitoring equipment could have affected the comparison. To investigate this, the monthly pedestrian counts were examined alongside the recorded upgrade date. A further sensitivity check compared the overall spatial results with and without this location.
-
-
-```{r}
-#| label: fig-flinders-underpass
-#| fig-cap: "Monthly mean daily recorded pedestrian counts at Flinders Underpass–Myki Barriers. Daily totals retain dates with at least 20 recorded hours. Line styles distinguish data sources, and the vertical dashed line marks the sensor upgrade recorded on 8 September 2021."
-#| echo: false
-# Examine historical pedestrian activity at Flinders Underpass
-
-flinders_monthly <- pedestrian_full |>
-  filter(location_id == 6) |>
-  group_by(
-    source,
-    sensing_date
-  ) |>
-  summarise(
-    daily_count = sum(
-      pedestrian_count,
-      na.rm = TRUE
-    ),
-    hours_observed = n_distinct(hourday),
-    .groups = "drop"
-  ) |>
-  filter(hours_observed >= 20) |>
-  mutate(
-    month_date = lubridate::floor_date(
-      sensing_date,
-      "month"
-    )
-  ) |>
-  group_by(source, month_date) |>
-  summarise(
-    mean_daily_count = mean(
-      daily_count,
-      na.rm = TRUE
-    ),
-    .groups = "drop"
-  )
-
-flinders_monthly |>
-  ggplot(
-    aes(
-      x = month_date,
-      y = mean_daily_count,
-      group = source,
-      linetype = source
-    )
-  ) +
-  geom_line() +
-  geom_vline(
-    xintercept = as.Date("2021-09-08"),
-    linetype = "dashed"
-  ) +
-  labs(
-    title = "Pedestrian activity at Flinders Underpass",
-    subtitle = "Dashed line marks the recorded sensor upgrade in September 2021",
-    x = "Year",
-    y = "Mean daily pedestrian count",
-    linetype = "Data source"
-  ) +
-  theme_minimal()
-```
-
-```{r}
-#| label: flinders-sensitivity
-#| echo: false
-# Assess how excluding Flinders Underpass affects the results
-
-spatial_with_flinders <- location_recovery_final |>
-  summarise(
-    locations = n(),
-    median_change = median(
-      change_percent,
-      na.rm = TRUE
-    )
-  ) |>
-  mutate(
-    analysis = "Including Flinders Underpass"
-  )
-
-spatial_without_flinders <- location_recovery_final |>
-  filter(location_id != 6) |>
-  summarise(
-    locations = n(),
-    median_change = median(
-      change_percent,
-      na.rm = TRUE
-    )
-  ) |>
-  mutate(
-    analysis = "Excluding Flinders Underpass"
-  )
-
-flinders_sensitivity <- bind_rows(
-  spatial_with_flinders,
-  spatial_without_flinders
-)
-
-flinders_sensitivity |>
-  mutate(
-    `Median change` = paste0(
-      round(median_change, 1), "%"
-    )
-  ) |>
-  select(
-    `Comparison` = analysis,
-    `Locations` = locations,
-    `Median change`
-  ) |>
-  kableExtra::kbl(
-    caption = "Sensitivity of the spatial recovery result to Flinders Underpass",
-    align = c("l", "r", "r")
-  ) |>
-  kableExtra::kable_styling(
-    bootstrap_options = c("striped", "condensed"),
-    full_width = FALSE,
-    position = "left"
-  )
-```
-
-### K-means Clustering for pedestrian patterns
-
-To understand how pedestrian activity differs between locations, K-means clustering was applied to 44 sensor locations with sufficient data coverage during 2023–2025. Rather than comparing locations based only on their total pedestrian counts, the analysis focused on how activity was distributed throughout the day.
-
-For each location, typical hourly pedestrian activity was calculated separately for weekdays and weekends. These values were converted into proportions of daily activity, producing 48 features per sensor: 24 hourly proportions for weekdays and 24 for weekends. This allowed locations to be grouped according to the shape of their pedestrian activity patterns rather than their overall pedestrian volumes.
-
-The number of clusters was assessed using the elbow method and silhouette scores. Based on these results, two clusters were selected, with an average silhouette score of approximately 0.442. The final K-means model grouped 9 sensor locations into Cluster 1 and 35 into Cluster 2.
-
-
-```{r}
-#| label: prepare-cluster-profiles
-#| include: false
-# Prepare hourly pedestrian activity profiles for clustering
-
-recent_data <- pedestrian_full |>
-  filter(
-    year %in% 2023:2025,
-    between(hourday, 0, 23),
-    !is.na(pedestrian_count),
-    pedestrian_count >= 0
-  )
-
-# Retain days with at least 23 observed hours
-valid_days <- recent_data |>
-  group_by(
-    location_id,
-    year,
-    sensing_date
-  ) |>
-  summarise(
-    hours_observed = n_distinct(hourday),
-    .groups = "drop"
-  ) |>
-  filter(hours_observed >= 23)
-
-# Coverage for each sensor and year
-recent_coverage <- valid_days |>
-  group_by(location_id, year) |>
-  summarise(
-    days_observed = n(),
-    .groups = "drop"
-  ) |>
-  mutate(
-    expected_days = if_else(
-      lubridate::leap_year(year),
-      366,
-      365
-    ),
-    coverage = days_observed / expected_days
-  )
-
-# Select sensors with at least 80% coverage
-# in all three years
-reliable_sensors <- recent_coverage |>
-  group_by(location_id) |>
-  summarise(
-    years_covered = n_distinct(year),
-    minimum_coverage = min(coverage),
-    .groups = "drop"
-  ) |>
-  filter(
-    years_covered == 3,
-    minimum_coverage >= 0.80
-  )
-
-# Typical hourly pattern for each location
-hourly_profiles <- recent_data |>
-  semi_join(
-    valid_days,
-    by = c(
-      "location_id",
-      "year",
-      "sensing_date"
-    )
-  ) |>
-  semi_join(
-    reliable_sensors,
-    by = "location_id"
-  ) |>
-  mutate(
-    day_type = if_else(
-      lubridate::wday(
-        sensing_date,
-        week_start = 1
-      ) <= 5,
-      "Weekday",
-      "Weekend"
-    )
-  ) |>
-  group_by(
-    location_id,
-    day_type,
-    hourday
-  ) |>
-  summarise(
-    typical_count = median(pedestrian_count),
-    .groups = "drop"
-  ) |>
-  group_by(location_id) |>
-  filter(
-    n() == 48,
-    sum(typical_count) > 0
-  ) |>
-  mutate(
-    hour_share = typical_count /
-      sum(typical_count)
-  ) |>
-  ungroup()
-```
-
-
-
-```{r}
-#| label: select-cluster-number
-#| include: false
-
-# 48 hourly profile features per sensor
-cluster_features <- hourly_profiles |>
-  mutate(
-    feature = paste0(
-      day_type,
-      "_",
-      stringr::str_pad(
-        hourday,
-        width = 2,
-        pad = "0"
-      )
-    )
-  ) |>
-  select(
-    location_id,
-    feature,
-    hour_share
-  ) |>
-  tidyr::pivot_wider(
-    names_from = feature,
-    values_from = hour_share
-  ) |>
-  tidyr::drop_na()
-
-# Distances between sensor profiles
-sensor_distances <- cluster_features |>
-  select(-location_id) |>
-  stats::dist()
-
-set.seed(123)
-
-cluster_tests <- tibble::tibble(k = 2:5) |>
-  mutate(
-    model = purrr::map(
-      k,
-      ~ stats::kmeans(
-        cluster_features |>
-          select(-location_id),
-        centers = .x,
-        nstart = 30
-      )
-    ),
-    silhouette = purrr::map_dbl(
-      model,
-      ~ mean(
-        cluster::silhouette(
-          .x$cluster,
-          sensor_distances
-        )[, "sil_width"]
-      )
-    )
-  )
-
-best_k <- cluster_tests |>
-  slice_max(
-    silhouette,
-    n = 1,
-    with_ties = FALSE
-  ) |>
-  pull(k)
-
-set.seed(123)
-
-final_kmeans <- stats::kmeans(
-  cluster_features |>
-    select(-location_id),
-  centers = best_k,
-  nstart = 50
-)
-
-sensor_clusters <- cluster_features |>
-  select(location_id) |>
-  mutate(
-    cluster = paste0(
-      "Cluster ",
-      final_kmeans$cluster
-    )
-  )
-```
-
-```{r}
-#| label: tbl-cluster-selection
-#| echo: false
-
-cluster_tests |>
-  transmute(
-    `Number of clusters (K)` = k,
-    `Mean silhouette width` = formatC(
-      silhouette,
-      format = "f",
-      digits = 3
-    )
-  ) |>
-  kableExtra::kbl(
-    format = "html",
-    align = c("c", "r")
-  ) |>
-  kableExtra::kable_styling(
-    bootstrap_options = c("striped", "condensed"),
-    full_width = FALSE,
-    position = "left"
-  ) |>
-  kableExtra::row_spec(
-    row = which.max(cluster_tests$silhouette),
-    bold = TRUE
-  )
-```
-
-```{r}
-#| label: fig-cluster-profiles
-#| fig-cap: "Typical weekday and weekend hourly profiles for two K-means clusters fitted to 44 eligible locations during 2023–2025. Each location’s hourly values are normalised jointly across its 48 weekday and weekend features. Lines show the median share at each hour within each cluster. Cluster 1 contains 9 locations and Cluster 2 contains 35."
-#| echo: false
-# Visualise typical weekday and weekend patterns for each cluster
-
-cluster_profiles <- hourly_profiles |>
-  inner_join(
-    sensor_clusters,
-    by = "location_id"
-  ) |>
-  group_by(
-    cluster,
-    day_type,
-    hourday
-  ) |>
-  summarise(
-    typical_share = median(hour_share) * 100,
-    .groups = "drop"
-  )
-
-cluster_profiles |>
-  ggplot(
-    aes(
-      x = hourday,
-      y = typical_share,
-      colour = cluster
-    )
-  ) +
-  geom_line(linewidth = 1) +
-  scale_colour_manual(
-    values = c(
-      "Cluster 1" = "#F8766D",
-      "Cluster 2" = "#00BFC4"
-    )
-  ) +
-  facet_wrap(~day_type) +
-  scale_x_continuous(
-    breaks = seq(0, 23, by = 2)
-  ) +
-  labs(
-    title = "Melbourne has different pedestrian rhythms",
-    subtitle = "K-means clustering of hourly profiles, 2023–2025",
-    x = "Hour of day",
-    y = "Share of typical activity (%)",
-    colour = "Cluster"
-  ) +
-  theme_minimal()
-```
-
-```{r}
-#| label: fig-cluster-map
-#| fig-cap: "Geographical distribution of monitoring locations assigned to the two K-means clusters using their 2023–2025 weekday and weekend hourly profiles. Colours correspond to the cluster profiles shown in @fig-cluster-profiles."
-#| echo: false
-# Map the geographical distribution of pedestrian clusters
-
-cluster_locations <- sensor_clusters |>
-  left_join(
-    location_metadata |>
-      select(
-        location_id,
-        sensor_description,
-        latitude,
-        longitude
-      ),
-    by = "location_id"
-  ) |>
-  filter(
-    !is.na(latitude),
-    !is.na(longitude)
-  ) |>
-  mutate(
-    hover_text = paste0(
-      sensor_description,
-      "<br>Location ID: ", location_id,
-      "<br>", cluster
-    )
-  )
-
-plotly::plot_ly(
-  data = cluster_locations,
-  type = "scattermapbox",
-  mode = "markers",
-  lat = ~latitude,
-  lon = ~longitude,
-  color = ~cluster,
-  colors = c(
-    "Cluster 1" = "#F8766D",
-    "Cluster 2" = "#00BFC4"
-  ),
-  text = ~hover_text,
-  hoverinfo = "text",
-  marker = list(
-    size = 12,
-    opacity = 0.85
-  )
-) |>
-  plotly::layout(
-    title = "Where are Melbourne's different pedestrian rhythms?",
-    mapbox = list(
-      style = "open-street-map",
-      center = list(
-        lat = -37.8136,
-        lon = 144.9631
-      ),
-      zoom = 12.5
-    ),
-    margin = list(
-      l = 0,
-      r = 0,
-      b = 0,
-      t = 50
-    )
-  )
-```
-
-
-@fig-cluster-profiles show that the two clusters follow different daily rhythms. One group has more concentrated activity during typical weekday commuting hours, with noticeable morning and late-afternoon peaks. The other group shows a broader distribution of activity throughout the day, with relatively stronger weekend activity. These differences suggest that pedestrian movement varies not only in volume but also in when locations are most active.
-
-@fig-cluster-map shows where these two activity patterns occur across Melbourne. Viewing the geographic locations alongside their hourly profiles helps identify areas with similar movement patterns, even when they are not located next to one another.
-
-Overall, the clustering analysis identifies two distinct patterns of pedestrian activity among the 44 selected locations. Together with the busiest-location rankings and spatial recovery analysis, it shows that Melbourne's pedestrian network varies in both the intensity and timing of movement.
-
 # Limitations
 
 Several limitations should be acknowledged. First, the analysis is observational. It identifies associations between pedestrian activity and holidays, events and weather, but cannot establish causal effects. Public holidays and events are not randomly assigned, weather is correlated with season, and unobserved factors such as transport disruptions, school holidays and construction could confound the results.
 
-Second, the sensor network is not a random sample of the city. It is concentrated in the CBD and surrounding activity centres, and its composition has changed over time. The 27-sensor balanced panel reduces this problem for the long-term comparison, but may not represent the whole municipality. The 44-sensor clustering sample is also restricted to high-coverage locations.
+Second, the sensor network is not a random sample of the city. It is concentrated in the CBD and surrounding activity centres, and its composition has changed over time. The 27-sensor balanced panel reduces this problem for the long-term comparison, but may not represent the whole municipality. The 44-sensor clustering sample is also restricted to high-coverage locations. 
+
+The estimated 28.5% decline also depends on source conventions and aggregation choices. Comparisons of overlapping historical and City-supplied records suggest that zero-count hours are represented differently, meaning absent hourly records cannot uniformly be treated as either missing observations or zero activity. Furthermore, pooling sensor-day totals gives locations with more recorded days greater representation in the calculation. The estimate should therefore be interpreted as a descriptive comparison of recorded activity at the selected locations, with its magnitude dependent on coverage and weighting choices.
 
 Third, the historical data required repair. The 2022 reconciliation identified 10,298 records with differing pedestrian counts, concentrated at location 6. In addition, 12,240 records from September 2010 required reconstruction of their hour labels using record order. Although the repaired records passed subsequent consistency checks, the reconstruction introduces some uncertainty into the hourly patterns.
 
-Fourth, the event analysis is limited by permit coverage. The permit dataset covers 2014–2018, so event matching could only be conducted for dates within this period. Surges outside 2014–2018 were identified statistically but could not be matched using this permit dataset. A single date may also host multiple events, making a surge difficult to attribute to one cause.
+Fourth, the event analysis is limited by permit coverage. The permit dataset covers 2014-2018, so event matching could only be conducted for dates within this period. Surges outside 2014-2018 were identified statistically but could not be matched using this permit dataset. A single date may also host multiple events, making a surge difficult to attribute to one cause.
 
-Fifth, the definition of a "significant" day uses thresholds—20% deviation and 30% of sensors—that are convenient but ultimately arbitrary; different thresholds would produce different counts of outlier days. The results therefore identify days meeting the selected thresholds rather than every possible unusual activity day.
+Fifth, the definition of a "significant" day uses thresholds-20% deviation and 30% of sensors-that are convenient but ultimately arbitrary; different thresholds would produce different counts of outlier days. The results therefore identify days meeting the selected thresholds rather than every possible unusual activity day.
 
-Sixth, the weather analysis uses daily aggregates from a single series. Rainfall can be localised, and a citywide total may not reflect conditions at a particular sensor. Temperature results are bivariate and should not be read causally. Finally, clustering is descriptive and cross-sectional; it shows that two profiles dominate 2023–2025, not that Melbourne has exactly two types of place or that locations cannot change type.
+Sixth, the weather analysis uses daily aggregates from a single series. Rainfall can be localised, and a citywide total may not reflect conditions at a particular sensor. Finally, clustering is descriptive and cross-sectional; it shows that two profiles dominate 2023-2025, not that Melbourne has exactly two types of place or that locations cannot change type.
 
 # Conclusion
 
-Melbourne's pedestrian pulse is neither constant nor fully restored to its pre-pandemic pattern. It follows a recognisable rhythm across different hours, weekdays and seasons, with unusual increases and declines occurring around public holidays, events and different weather conditions. The long-term comparison identified a 28.5% reduction in median daily pedestrian activity across consistently monitored locations between 2017–2019 and 2023–2025. However, this change is not uniform across locations or times of day, highlighting how the nature of pedestrian movement has evolved.
+Melbourne’s pedestrian activity follows recognisable daily, weekly and seasonal rhythms, while recorded volumes have changed over time. Across 27 selected monitoring locations, the pooled median of recorded daily counts was 28.5% lower during 2023–2025 than during 2017–2019. The hourly comparison nevertheless showed broadly similar timing, indicating lower recorded activity alongside a largely recognisable daily rhythm.
 
-The findings suggest that understanding Melbourne's pedestrian activity requires more than measuring overall foot traffic. Changes in commuting patterns, differences between precincts and the effects of external conditions all contribute to the city's movement. These insights can support more informed decisions about transport, public spaces, business operations and urban planning.
+The spatial analysis showed that recovery varied considerably between locations. Clustering of 44 locations identified two profiles: one with sharper weekday peaks and another with broader daytime and relatively stronger weekend activity. Unusual activity also provided a different perspective on the city’s movement. Selected surges coincided with event permits, while public holidays and heavier rainfall were associated with more frequent substantial pedestrian dips.
 
-Ultimately, the most useful question is not simply whether Melbourne has recovered, but how its pedestrian patterns have changed and what those changes mean for the future. A city's pulse is not a single number but a pattern of times and places, and the better that pattern is understood, the better the city can respond.
-
+These findings can inform staffing and service scheduling around monitored pedestrian corridors, provide context for event monitoring, and help identify locations requiring closer investigation. Their interpretation depends on sensor coverage, recording conventions and aggregation choices, and the selected locations do not represent every part of Melbourne.
