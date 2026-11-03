@@ -1,5 +1,9 @@
-# Large pedestrian datasets
-Data_pedestrians/raw2/
+# Ignore bulky downloads but retain small supporting datasets
+Data_pedestrians/raw2/*
+!Data_pedestrians/raw2/event_permits_2014_2018.csv
+!Data_pedestrians/raw2/important_dates_august_2026.csv
+!Data_pedestrians/raw2/melbourne_weather_daily.csv
+!Data_pedestrians/raw2/sensor_locations.csv
 analysis_drafts/Data_pedestrians/raw2/
 
 # RStudio files

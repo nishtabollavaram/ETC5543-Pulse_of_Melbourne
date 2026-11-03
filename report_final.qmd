@@ -13,6 +13,12 @@ format:
     toc-depth: 3
     number-sections: true
     fig-responsive: true
+    embed-resources: true
+    code-links:
+      - text: GitHub repository
+        icon: github
+        href: https://github.com/nishtabollavaram/ETC5543-Pulse_of_Melbourne
+        target: _blank
 editor: visual
 bibliography: references.bib
 nocite: '@*'
@@ -46,13 +52,11 @@ library(kableExtra)
 
 # Abstract {.unnumbered}
 
-Melbourne's pedestrian activity reflects the city's daily routines, spatial differences and responses to major disruptions. This project investigates how pedestrian movement varies across time and location, how these patterns have evolved, and which circumstances are associated with unusually high or low activity.
+Melbourne’s pedestrian activity reflects how people use the city at different times and places. This project examines recurring patterns, changes since the COVID-19 pandemic, differences between locations, and unusually busy or quiet days. It uses approximately 7.56 million hourly records from the City of Melbourne’s pedestrian counting system, covering May 2009 to October 2026, alongside event permits, weather records and public-holiday information.
 
-Using approximately 7.56 million hourly observations from the City of Melbourne's pedestrian counting system, covering May 2009 to October 2026, we examined recurring daily, weekly, monthly and seasonal rhythms, long-term changes, geographical differences and exceptional activity. The analysis combined descriptive visualisation, consistent-sensor comparisons, K-means clustering and comparisons against expected pedestrian activity.
+The analysis compared the same locations over time, grouped locations with similar weekday and weekend patterns, and identified dates when activity differed substantially from its expected level. Across 27 selected monitoring locations, typical recorded daily counts were 28.5% lower during 2023–2025 than during 2017–2019, although the timing of daily activity remained broadly similar. Locations showed different degrees of recovery and two broad patterns: sharper weekday peaks, and broader daytime activity with relatively stronger weekends. Selected unusually busy dates coincided with event permits, while substantial declines were more frequent on public holidays and in heavier-rain categories.
 
-Results revealed recurring temporal patterns alongside substantial changes over time. Across 27 consistently monitored locations, typical daily pedestrian activity was 28.5% lower during 2023–2025 than during 2017–2019, although the overall hourly pattern remained broadly similar. K-means clustering of 44 reliably observed locations identified two activity profiles: one characterised by pronounced weekday peaks and another showing broader daytime activity and relatively stronger weekend patterns. The analysis also identified unusual pedestrian surges, including a median uplift of 51.7% on 22 February 2014, which was subsequently investigated alongside permitted city events.
-
-These findings demonstrate that Melbourne's pedestrian activity varies not only in volume but also in timing and location. They highlight the importance of accounting for sensor coverage, data quality and location-specific patterns when interpreting long-term changes and unusual activity. The results provide useful insights for understanding urban movement and informing transport, public-space and event planning.
+These findings show that changes in pedestrian activity differ across times and locations. They can inform transport, public-space and event planning, while highlighting the importance of sensor coverage and recording conventions when interpreting change. The results describe the selected monitored locations rather than all pedestrian movement across Melbourne.
 
 # Introduction
 
@@ -60,9 +64,10 @@ These findings demonstrate that Melbourne's pedestrian activity varies not only 
 
 On 22 February 2014, pedestrian activity near Flinders Street and Elizabeth Street showed an unusual pattern as seen in @fig-flinders-introduction. Compared with other Saturdays in February, pedestrian counts remained noticeably higher, particularly into the evening. What would normally have been a relatively quiet period instead recorded sustained activity. This observation raised a broader question: was this an isolated occurrence at one location, or part of a larger change in how people were moving through Melbourne?
 
+
 ```{r}
 #| label: fig-flinders-introduction
-#| fig-cap: "Hourly pedestrian activity at Flinders Street–Elizabeth Street (East), 22 February 2014 compared with other February Saturdays."
+#| fig-cap: "Hourly recorded pedestrian counts at Flinders Street–Elizabeth Street (East) on 22 February 2014, compared with the median count at each hour on the other Saturdays in February 2014."
 
 # Load historical pedestrian data for the Flinders Street comparison
 csv_path <- here::here(
@@ -204,6 +209,7 @@ intro_interactive |>
   )
 ```
 
+The City of Melbourne measures pedestrian activity using sensors at individual locations across central Melbourne and surrounding activity areas. Each sensor records the number of pedestrian passages during an hour. Someone passing more than once may be counted repeatedly, so these records measure activity at monitored locations rather than the number of different people or every walking trip across the city.
 
 Melbourne's streets serve different purposes throughout the day. Morning activity often reflects commuting, while shopping, leisure and other activities contribute to movement during the afternoon, evenings and weekends. These patterns can also vary across locations, seasons and years. Major disruptions, public events and weather conditions may further influence how frequently and when people move through the city.
 
@@ -227,6 +233,59 @@ In line with the original project brief, the analysis addresses four related que
 
 Together, these questions allow the project to move beyond identifying where and when pedestrian counts are highest. They provide a framework for understanding how the city's movement patterns differ, how they have evolved, and what may be associated with substantial changes.
 
+This project brings together historical records, recent online data and additional files supplied by the City of Melbourne. It investigates conflicting counts, reconstructs unusable hour labels and accounts for changing coverage when comparing locations and periods. Combining these records with event, weather and holiday information connects the city’s regular pedestrian patterns with changes over time and unusually busy or quiet days.
+
+**How to read the results**
+
+```{r}
+#| label: tbl-reading-guide
+#| echo: false
+#| tbl-cap: "Key terms used in the report."
+
+reading_guide <- tibble::tribble(
+  ~Term, ~Meaning,
+
+  "Recorded pedestrian count",
+  "The number of passages recorded by a sensor. This is not necessarily the number of different people, because someone passing more than once may be counted repeatedly.",
+
+  "Sensor-hour / sensor-day",
+  "A sensor-hour is one location's observation for one hour. A sensor-day combines its recorded hourly counts for one date.",
+
+  "Median",
+  "The middle value after observations are ordered from lowest to highest, or the average of the two middle values when there is an even number.",
+
+  "Activity index",
+  "A comparison scale where 100 represents average activity within that year's daily or weekly profile. An index of 120 means 20% above that reference, while 80 means 20% below it.",
+
+  "Baseline",
+  "The reference level used for comparison, such as earlier activity at the same location or expected activity on similar weekdays.",
+
+  "Uplift",
+  "The percentage increase above expected activity. For example, 1,500 recorded passages compared with 1,000 expected passages represents a 50% uplift."
+)
+
+reading_guide |>
+  kableExtra::kbl(
+    format = "html",
+    align = c("l", "l")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "condensed"),
+    full_width = TRUE,
+    position = "left",
+    font_size = 14
+  ) |>
+  kableExtra::column_spec(
+    column = 1,
+    bold = TRUE,
+    width = "10em"
+  ) |>
+  kableExtra::column_spec(
+    column = 2,
+    extra_css = "white-space: normal; overflow-wrap: break-word;"
+  )
+```                   
+
 
 # Data Sources and Preparation
 
@@ -234,7 +293,7 @@ Together, these questions allow the project to move beyond identifying where and
 
 This project uses the City of Melbourne's Pedestrian Counting System as its primary dataset, supplemented by sensor-location records, event permits, historical weather observations and Victorian public-holiday information. Together, these sources support the investigation of Melbourne's pedestrian activity across time and space, including changes associated with major disruptions and unusual activity.
 
-The pedestrian data consist of hourly observations obtained through historical CSV files and the City of Melbourne's open data API [@melbourne_hourly]. Additional records covering 2022–2025 were obtained directly from the City of Melbourne through email correspondence to address gaps in publicly accessible records. Following integration and cleaning, the consolidated dataset contained **7,566,998 hourly observations**, covering **May 2009 to October 2026**.
+The pedestrian data combine historical CSV files with records retrieved through the City of Melbourne’s online data service, known as an API [@melbourne_hourly]. The City also supplied annual extracts of records, referred to as snapshots, for 2022–2025 to address gaps in publicly accessible data. After combining and cleaning these sources, the dataset contained **7,566,998 hourly observations**, covering **May 2009 to October 2026**.
 
 Supplementary datasets were used to provide geographical and contextual information. The City of Melbourne's sensor-location dataset provided coordinates and installation information for spatial analysis [@melbourne_locations]. Event permit records from the City of Melbourne were used to investigate whether unusual pedestrian activity coincided with permitted events[@melbourne_events]. Historical weather data from Open-Meteo provided rainfall and other weather observations [@openmeteo], while Victorian public-holiday information published by Business Victoria was used to identify public holidays [@victorian_holidays].
 
@@ -242,15 +301,15 @@ Because the pedestrian sensor network expanded over time and individual sensors 
 
 ## Data Integration and Preparation
 
-The datasets used in this project differed in their structure, coverage and level of detail. Before conducting the analysis, the pedestrian records were standardised and combined to create a consistent hourly dataset. Particular attention was given to differences between historical and recent records, repeated hour labels, overlapping observations and changes in sensor identification.
+Before comparing pedestrian activity, the different files needed to be made consistent. This involved giving equivalent information the same format, correcting unusable hour labels, comparing records that appeared in more than one source, and selecting which source to retain. The combined records were then checked for duplicates, missing information and invalid values.
 
 ### Standardising the Pedestrian Records
 
-The historical pedestrian records and more recent datasets were initially stored in different formats. To allow them to be combined, the main variables were standardised to a common structure containing the sensor identifier (`location_id`), observation date (`sensing_date`), hour of the day (`hourday`) and pedestrian count (`pedestrian_count`).
+Each observation was organised around four pieces of information: the monitoring location (`location_id`), date (`sensing_date`), hour (`hourday`) and recorded pedestrian count (`pedestrian_count`). Using the same structure allowed historical and recent files to be combined.
 
-Dates were converted to a consistent format, and sensor identifiers were used to link records across periods. This was particularly important because some sensor descriptions changed over time, meaning that the same monitoring location could appear under different names.
+Dates were converted to a common format. Location identifiers were used to connect records across periods because some location names had changed even though they referred to the same monitoring site.
 
-The combination of sensor identifier, date and hour was subsequently used as the observation key. This provided a consistent basis for identifying overlapping records and checking for duplicates.
+The combination of location, date and hour identified one observation. This allowed records describing the same observation to be compared across sources and prevented duplicate records from being counted more than once.
 
 ```{r}
 #| label: download-current-pedestrian-data
@@ -411,7 +470,7 @@ snapshot_standardised <- purrr::map_dfr(
 
 During data preparation, inconsistencies were identified in the historical hourly records. In particular, some sensor-day groups contained 24 observations but only one distinct hour label, preventing the observations from being directly assigned to their correct hours.
 
-A total of 510 sensor-day groups exhibited this issue, representing 12,240 records. For these groups, hourly labels were reconstructed from 0 to 23 using the order of the original record identifiers. The affected observations were flagged during processing.
+A total of 510 sensor-day groups exhibited this issue, representing 12,240 records. For these groups, hourly labels were reconstructed from 0 to 23 using the order of the original record identifiers. The affected observations were flagged during processing. 
 
 This correction relied on the assumption that record identifiers preserved the chronological order of observations. Because the original hour labels could not independently confirm this ordering, the reconstructed timestamps remain a source of uncertainty for analyses involving these records.
 
@@ -473,33 +532,6 @@ historical_clean <- historical_standardised |>
   ungroup() |>
   select(-id)
 ```
-
-```{r}
-#| label: check-source-duplicates
-# Check for duplicate records in each data source
-
-source_duplicates <- bind_rows(
-  historical_clean,
-  current_clean,
-  snapshot_standardised
-) |>
-  group_by(source) |>
-  summarise(
-    total_records = n(),
-    unique_records = n_distinct(
-      location_id, sensing_date, hourday
-    ),
-    duplicate_records = total_records - unique_records,
-    .groups = "drop"
-  )
-
-knitr::kable(
-  source_duplicates,
-  caption = "Duplicate checks across the original data sources"
-)
-```
-
-
 
 ```{r}
 #| label: compare-2022-records
@@ -826,7 +858,7 @@ comparison_summary |>
 
 Following standardisation, validation and source comparison, the pedestrian records were combined into a single hourly dataset. Historical records were retained for observations before 2022, while the City-supplied snapshots provided data for 2022–2025. More recent observations from 2026 were retained from the City of Melbourne's open data API.
 
-Where multiple sources contained records for the same sensor, date and hour, the selected source was retained to prevent duplicate observations. The combined dataset was then checked for duplicate sensor-date-hour keys, missing values, invalid hour labels and negative pedestrian counts.
+Where multiple sources contained records for the same sensor, date and hour, the selected source was retained to prevent duplicate observations. The combined dataset was then checked for repeated combinations of location, date and hour, missing values, invalid hour labels and negative pedestrian counts.
 
 Additional variables were created to support the temporal analyses, including year, month, day of the week, weekend status and Australian season. These variables allowed pedestrian activity to be summarised consistently across different time periods.
 
@@ -1086,6 +1118,7 @@ yearly_coverage |>
   )
 ```
 
+The quality checks describe the records retained in the dataset; they do not demonstrate that every sensor recorded every hour. In the annual coverage table, “Days recorded” counts dates with at least one observation somewhere in the network. A year containing 365 or 366 recorded dates therefore does not imply uninterrupted recording at every location.
 
 ### Dataset Description
 
@@ -1093,44 +1126,10 @@ After cleaning and combining the historical records, City-supplied snapshots and
 
 Each row represents the pedestrian count recorded at a particular sensor on a specific date and hour. The main variables identify the sensor location, observation date, hour and number of pedestrians counted. Additional variables were created to identify the year, month, day of the week, weekend status and season, allowing pedestrian activity to be examined across different time periods.
 
-The dataset also retains information about the original data source and whether an hourly label was reconstructed during cleaning. The table below summarises the variables in the final dataset.
+The dataset also retains information about the original data source and whether an hourly label was reconstructed during cleaning.
 
 
-```{r}
-#| label: final-dataset-variables
-#| echo: false
-# Describe the variables in the final pedestrian dataset
-
-variable_description <- tibble::tribble(
-  ~Variable, ~Description,
-  "location_id", "Unique identifier for each sensor location",
-  "sensing_date", "Date of the pedestrian observation",
-  "hourday", "Hour of the day (0–23)",
-  "pedestrian_count", "Number of pedestrians recorded during the hour",
-  "source", "Dataset from which the observation originated",
-  "hour_repaired", "Indicates whether the original hour label was reconstructed",
-  "year", "Year of observation",
-  "month", "Month of observation (1–12)",
-  "month_name", "Name of the month",
-  "day_name", "Day of the week",
-  "day_of_week", "Day of the week (Monday = 1, Sunday = 7)",
-  "is_weekend", "Indicates whether the observation occurred on a weekend",
-  "season", "Australian season (Summer, Autumn, Winter or Spring)"
-)
-
-variable_description |>
-  knitr::kable(
-    format = "html",
-    caption = "Variables in the consolidated pedestrian dataset",
-    align = c("l", "l")
-  ) |>
-  kableExtra::kable_styling(
-    bootstrap_options = c("striped", "hover"),
-    full_width = FALSE,
-    position = "center",
-    font_size = 13
-  )
-```
+Detailed variable definitions and source-duplicate checks are provided in the Appendix (@tbl-dataset-variables and @tbl-source-duplicates).
 
 
 ## Preparing Supporting Datasets
@@ -1433,6 +1432,8 @@ Different analyses use different subsets of locations because their periods and 
 
 ## Daily, Weekly, Monthly and Seasonal Patterns
 
+This analysis examines when pedestrian activity is concentrated during the day, across the week and throughout the year.
+
 Hourly profiles were calculated by averaging recorded counts for each sensor, year and hour, then averaging these sensor-level values across reporting locations. Weekly profiles used daily totals from sensor-days with at least 20 distinct recorded hours. Counts were averaged for each sensor, year and day of the week, then averaged across locations.
 
 For both profiles, each value was divided by the mean of its annual profile and multiplied by 100. An index of 100 therefore represents average activity within that profile. These indices describe the relative timing of activity within each year.
@@ -1441,6 +1442,8 @@ Monthly and seasonal summaries also retained sensor-days with at least 20 record
 
 ## Long-term and Pre-pandemic Comparisons
 
+This analysis compares the same monitored locations over time, reducing the influence of newly installed sensors on the results.
+
 The pre-pandemic comparison used 27 locations with observations on at least 300 distinct dates in every year of 2017–2019 and 2023–2025. This coverage requirement counts dates containing any recorded observations. Daily totals were calculated from the available hourly records, without applying an additional 20-hour filter. All recorded sensor-day totals were pooled within each period, and the percentage change was calculated between the two period medians.
 
 Hourly differences between these periods were examined using the median recorded count at each hour across the same selected locations.
@@ -1448,6 +1451,8 @@ Hourly differences between these periods were examined using the median recorded
 The long-term graph used available members of this 27-location panel during 2009–2026. Each sensor-month was summarised by its median recorded hourly count, retaining sensor-months with at least 15 observed dates. The median across eligible sensors was then calculated for each month. The number of contributing locations could therefore vary over time.
 
 ## Unusual Pedestrian Activity and Event Matching
+
+This analysis identifies unusually busy or quiet dates by comparing recorded activity with activity on similar weekdays at the same location.
 
 Unusual activity was assessed using daily totals with at least 20 recorded hours. The baseline dataset covered 2013–2019 and 2022–2026. For each sensor and date, expected activity was the median daily count from the four preceding and four following available observations on the same day of the week, excluding the date itself. All eight neighbouring observations were required. Because the window follows available observations, its calendar span can extend beyond four weeks on either side.
 
@@ -1459,21 +1464,27 @@ Surge summaries retained dates during 2013–2019 and 2024–2026. Consecutive q
 
 ## Public Holidays and Weather
 
+This analysis compares how often unusually quiet days occur on public holidays and under different weather conditions.
+
 Holiday and weather comparisons used eligible dates during 2019, 2023–2025, and 1 January–6 September 2026. Dip rates were calculated separately for Victorian public holidays and other dates by dividing the number of flagged dip dates by the total eligible dates in each category.
 
 Weather comparisons excluded public holidays and dates without rainfall information. Median rainfall, median daily maximum wind speed, and the proportion of days with at least 10 mm of rainfall were compared between dip dates and other dates. Dip rates were also calculated within six rainfall categories: no rain, positive rainfall below 2 mm, 2 to below 5 mm, 5 to below 10 mm, 10 to below 20 mm, and at least 20 mm.
 
 ## Spatial Activity and Recovery
 
+This analysis identifies busy locations and compares recent activity at each location with its own earlier level for the same calendar month.
+
 The spatial activity map and busiest-location ranking used median daily counts during 2025. Locations required valid coordinates and at least 292 days with 20 or more recorded hours.
 
 Spatial recovery was assessed separately using mean daily counts within each sensor-month, requiring at least 20 eligible days per month. Each calendar-month baseline was the median of the corresponding monthly means from at least three years during 2015–2019. Recent monthly means during 2024–2026 were divided by these positive baselines and multiplied by 100.
 
-Each location’s recovery index was the median of its recent monthly indices. Subtracting 100 expressed this as a percentage change. Locations required at least 20 recent months, valid coordinates and no relocation flag, leaving 31 locations.
+Each location’s recovery index was the median of its recent monthly indices. Subtracting 100 expressed this as a percentage change. Locations required at least 20 recent months, valid coordinates and no relocation flag, leaving 31 locations. A recovery index of 100 means activity matched the earlier reference level, while an index of 80 corresponds to a 20% decline.
 
 Flinders Underpass was investigated through its monthly mean daily counts, distinguished by data source and viewed alongside the recorded September 2021 upgrade date. The median spatial change was also compared with and without this location.
 
 ## K-means Clustering
+
+Clustering groups locations with similar pedestrian activity patterns. We used K-means to form these groups and compared alternative groupings using a silhouette score, also called mean silhouette width. A higher score indicates that locations generally fit more clearly within their assigned groups.
 
 Clustering used 44 locations with eligible observations on at least 80% of calendar days in each year during 2023–2025. Eligible days required at least 23 distinct recorded hours.
 
@@ -1490,12 +1501,12 @@ This section presents the main findings from the pedestrian counting data, begin
 
 Pedestrian activity in Melbourne varies throughout the day, across the week and between different times of the year. To understand these patterns, hourly and weekly activity indices were used to compare the relative timing of pedestrian activity across years. Monthly and seasonal summaries were also calculated to examine broader patterns in pedestrian counts.
 
-### Daily Pedestrian Activity Over Time
+### Hourly pedestrian rhythm across years
 
 The hourly activity profiles reveal a consistent daily pattern across the observed years. @fig-daily-rhythm shows that pedestrian activity is generally lowest overnight, increases sharply during the morning, and remains elevated throughout the middle of the day and late afternoon. The profiles show noticeable peaks during typical commuting periods, particularly in the morning and late afternoon, although their relative intensity varies between years.
 
 Despite differences in activity levels over time, the overall shape of the daily rhythm remains broadly recognisable. As the activity index is normalised against each year's average, the graph highlights differences in the timing and relative intensity of pedestrian movement rather than absolute changes in pedestrian volumes. These changes in overall activity are examined separately in Section 4.2.
-
+Click a year in the legend to hide or show its line, and hover over the graph to inspect individual values.
 ```{r}
 #| label: fig-daily-rhythm
 #| fig-cap: "Normalised hourly pedestrian activity profiles, 2009–2026. For each year, average hourly counts across reporting locations are expressed relative to the annual profile mean, with 100 representing average activity. The profiles describe relative timing rather than absolute pedestrian volumes; 2009 and 2026 cover partial years."
@@ -1589,11 +1600,11 @@ daily_interactive
 
 ### Weekly rhythm across the years
 
-The weekly activity index shows clear differences in pedestrian movement across weekdays and weekends. Across the observed years in @fig-weekly-rhythm, Friday generally records the highest relative activity, with a median index of 115.8, followed by Thursday (105.6) and Wednesday (103.6). Sunday records the lowest median index at 82.9.
+Friday generally has the highest relative pedestrian activity, while Sunday has the lowest (@fig-weekly-rhythm). Across the observed years, Friday’s median index is 115.8, meaning activity is typically 15.8% above the corresponding year’s weekly average. Sunday’s median index is 82.9, or 17.1% below that average.
 
-However, the relative difference between Friday and Saturday has narrowed. In 2019, Friday recorded an index of 115.5 compared with 94.5 on Saturday, a difference of 21.0 index points. By 2025, Friday and Saturday recorded indices of 108.9 and 107.5, respectively, reducing the gap to just 1.4 points. Over the same period, Monday's index decreased from 96.5 to 89.5, while Sunday's increased from 78.7 to 87.9.
+However, Saturday has become more comparable to Friday. In 2019, Friday and Saturday recorded indices of 115.5 and 94.5, respectively—a gap of 21.0 index points. By 2025, their indices were 108.9 and 107.5, reducing the gap to just 1.4 points.
 
-These findings suggest a shift in the distribution of pedestrian activity across the week, with Saturday becoming more comparable to Friday in relative terms.
+This suggests that pedestrian activity has become more evenly distributed between Friday and Saturday. Because each year is measured relative to its own average, these results describe changes in the weekly pattern rather than changes in total pedestrian counts.
 
 ```{r}
 #| label: fig-weekly-rhythm
@@ -1697,8 +1708,7 @@ weekly_interactive
 
 ### Monthly Pedestrian Rhythm
 
-Melbourne's pedestrian activity shows a recurring pattern throughout the year. Hourly counts were aggregated into daily totals for each sensor, and average daily activity was then calculated for each calendar month using the available observations from 2009 to 2026.
-
+Monthly averages show when pedestrian activity tends to be higher or lower during the year.
 The monthly results in @fig-monthly-rhythm reveal a recurring pattern in pedestrian activity, with relatively high average daily counts during March and December and lower activity during the winter months. March records the highest average daily count, while June records the lowest, followed by a gradual recovery towards the end of the year.
 
 These variations may be associated with seasonal weather conditions, university schedules, retail activity and major public events. However, the descriptive averages do not independently establish the influence of these factors.
@@ -1772,8 +1782,7 @@ monthly_profile |>
 
 ### Seasonal pedestrian rhythm
 
-To examine broader seasonal differences, pedestrian activity was grouped into summer, autumn, winter and spring. Average daily pedestrian counts were calculated for each season using the available sensor observations.
-
+Grouping the months into seasons provides a broader view of these recurring patterns.
 @fig-seasonal-rhythm shows higher average activity in summer and autumn, with winter recording the lowest counts. This agrees with the broad seasonal pattern in @fig-monthly-rhythm. However, the monthly calculation pools available dates within each sensor and calendar month, whereas the seasonal calculation averages within years before giving each available year equal weight. With changing sensor coverage and activity over time, these approaches can produce different overall levels, so their absolute counts should not be compared directly.
 
 These differences are relevant to transport planning, public-space management and businesses that experience changes in pedestrian demand throughout the year. However, the results should be interpreted with some caution because sensor coverage changed over time and the dataset includes partial years.
@@ -1841,7 +1850,7 @@ seasonal_profile |>
 
 ## Long-term and Covid-19 changes
 
-Melbourne's pedestrian activity has undergone substantial changes over time, particularly during and after the COVID-19 pandemic. While the previous section examined recurring daily, weekly and seasonal patterns, this section investigates changes in the overall level of pedestrian activity and compares recent observations with pre-pandemic conditions.
+Melbourne's pedestrian activity has undergone substantial changes over time, particularly during and after the COVID-19 pandemic. While the previous section examined recurring daily, weekly and seasonal patterns, this section investigates changes in the overall level of pedestrian activity and compares recent observations with conditions before the COVID-19 pandemic.
 
 A key consideration is the expansion of Melbourne's pedestrian sensor network. Comparing total pedestrian counts across different years may be misleading because the number and composition of reporting locations have changed over time.
 
@@ -1954,9 +1963,9 @@ plotly::ggplotly(long_term_plot)
 
 ### Pedestrian Activity Before and After Covid-19
 
-@fig-then-vs-now shows a substantial reduction in typical daily pedestrian activity across the 27 consistently monitored locations. Median daily counts declined from approximately 10,091 during 2017–2019 to 7,211 during 2023–2025, representing a decrease of 28.5%.
+@fig-then-vs-now compares recorded daily activity at the same 27 locations during 2017–2019 and 2023–2025. Within each period, all available location-day totals were pooled and their median—the middle value—was calculated. This median declined from approximately 10,091 to 7,211 recorded pedestrian passages, a reduction of 28.5%.
 
-Because the same locations were included in both periods, the comparison reduces the influence of sensor network expansion and provides a more consistent measure of long-term change. The findings indicate that pedestrian activity at these selected locations remained below its pre-pandemic level during 2023–2025.
+Using the same locations reduces the influence of the expanding sensor network. However, the result describes these selected locations rather than all pedestrian activity across Melbourne. Daily totals use the available hourly records, and differences in recording coverage and source conventions may affect the comparison, as discussed in Limitations.
 
 ```{r}
 #| label: fig-then-vs-now
@@ -2046,8 +2055,6 @@ period_summary_consistent |>
 @fig-then-vs-now-hourly shows that the general shape of Melbourne's pedestrian activity remained recognisable between the two periods. Both 2017–2019 and 2023–2025 exhibit relatively low activity overnight, followed by increasing pedestrian movement during the morning and higher counts throughout the daytime.
 
 However, the 2023–2025 profile remains below the pre-pandemic profile across much of the day, with particularly noticeable differences around the main daytime peaks. This suggests that although the timing of pedestrian movement remained broadly similar, its intensity declined at the selected monitoring locations.
-
-The observed differences may be associated with changes in commuting, workplace attendance and city-centre activity. 
 
 ```{r}
 #| label: fig-then-vs-now-hourly
@@ -2319,7 +2326,7 @@ top_locations |>
   theme_minimal()
 ```
 
-@fig-busiest-locations show that pedestrian activity is concentrated around Melbourne's major retail, transport and commercial areas. Flinders La–Swanston St (West) recorded the highest typical daily count at approximately 40,000 pedestrians, followed by Town Hall (West) at approximately 36,000. Other busy monitored locations include Southbank Promenade, Elizabeth Street and the QV precinct.
+@fig-busiest-locations shows that pedestrian activity is concentrated around Melbourne's major retail, transport and commercial areas. Flinders La–Swanston St (West) recorded the highest typical daily count at approximately 40,000 pedestrians, followed by Town Hall (West) at approximately 36,000. Other busy monitored locations include Southbank Promenade, Elizabeth Street and the QV precinct.
 
 @fig-spatial-intensity illustrates the geographic distribution of pedestrian activity, while the top-10 ranking identifies the busiest monitored locations in 2025. These findings highlight the importance of Melbourne's central pedestrian corridors.
 
@@ -2472,7 +2479,7 @@ The comparison uses same-month baselines to account for recurring seasonal diffe
 
 ### Checking the Flinders Underpass Result
 
-One location requiring closer examination was Flinders Underpass – Myki Barriers, where the recovery analysis(@fig-location-recovery) indicated a particularly large decline of approximately 72.6% compared with its pre-COVID baseline.
+One location requiring closer examination was Flinders Underpass – Myki Barriers, where the recovery analysis (@fig-location-recovery) indicated a particularly large decline of approximately 72.6% compared with its pre-COVID baseline.
 
 The sensor metadata records an upgrade in September 2021, raising the question of whether changes to the monitoring equipment could have affected the comparison. To investigate this, the monthly pedestrian counts were examined alongside the recorded upgrade date. A further sensitivity check compared the overall spatial results with and without this location.
 
@@ -2537,6 +2544,8 @@ flinders_monthly |>
   theme_minimal()
 ```
 
+@fig-flinders-underpass shows that the decline had already begun before the recorded sensor upgrade in September 2021. The upgrade date therefore does not, by itself, explain the reduction. Changes in pedestrian movement and recording conditions may both affect this location’s results.
+
 ```{r}
 #| label: flinders-sensitivity
 #| echo: false
@@ -2598,11 +2607,7 @@ Excluding Flinders Underpass changes the median spatial decline from 21.0% acros
 
 ### K-means Clustering for pedestrian patterns
 
-To understand how pedestrian activity differs between locations, K-means clustering was applied to 44 sensor locations with sufficient data coverage during 2023–2025. Rather than comparing locations based only on their total pedestrian counts, the analysis focused on how activity was distributed throughout the day.
-
-For each location, median hourly pedestrian counts were calculated separately for weekdays and weekends, producing 48 features: 24 weekday values and 24 weekend values. Each value was divided by the sum of all 48 values for that location. This joint normalisation allowed locations to be compared independently of their overall pedestrian volumes, while retaining differences in hourly timing and relative weekday/weekend activity.
-
-The number of clusters was selected by comparing the mean silhouette widths of K-means solutions with two to five clusters. The two-cluster solution achieved the highest score of approximately 0.442, compared with 0.252–0.270 for the other solutions. The final model assigned nine locations to Cluster 1 and 35 locations to Cluster 2.
+The analysis grouped 44 locations into two activity profiles using their weekday and weekend patterns during 2023–2025. The two-group solution provided the clearest separation among the alternatives tested, achieving the highest mean silhouette score of 0.442 (@tbl-cluster-selection). Nine locations were assigned to Cluster 1 and 35 to Cluster 2. The preparation and grouping procedure is explained in Section 3.6.
 
 
 ```{r}
@@ -2792,6 +2797,8 @@ sensor_clusters <- cluster_features |>
   )
 ```
 
+The silhouette score measures how clearly the groups are separated, with higher values indicating clearer separation. Among the solutions tested, two groups produced the highest score. This supports using two groups for this comparison, although individual locations may still share characteristics across groups.
+
 ```{r}
 #| label: tbl-cluster-selection
 #| echo: false
@@ -2952,15 +2959,9 @@ This section investigates two types of unusual activity. First, pedestrian surge
 
 ### Unusual Pedestrian Surges: associations with permitted events
 
-To identify unusually busy pedestrian days, daily counts were compared with expected activity at each sensor. Only sensor-days containing at least 20 distinct recorded hours were retained to reduce the influence of incomplete observations.
+Daily pedestrian counts were compared with expected activity for the same weekday using the procedure described in Section 3.3. Uplift expresses the percentage increase above that reference: for example, 1,500 recorded passages compared with 1,000 expected passages represents a 50% uplift. The median uplift across reporting locations summarised each date.
 
-Expected activity was estimated using the median daily count from the four preceding and four following available observations on the same day of the week, excluding the date being evaluated. This approach accounts for typical differences between weekdays and weekends. However, when observations are missing, the comparison window may extend beyond four calendar weeks.
-
-For each sensor-day, pedestrian uplift was calculated as the percentage difference between the observed and expected daily count. For example, an observed count of 1,500 pedestrians compared with an expected count of 1,000 represents an uplift of 50%. The median percentage uplift across reporting sensors was then used to summarise activity for each date.
-
-A date was classified as shown in @fig-event-surges, as a potential citywide pedestrian surge when at least 10 sensors reported valid comparisons, the median uplift reached at least 20%, and at least 30% of reporting sensors recorded an uplift of 20% or more. Consecutive qualifying dates were grouped into episodes to avoid treating related increases on adjacent dates as separate occurrences.
-
-The resulting episodes were compared with City of Melbourne event-permit records covering 2014–2018. Short-duration permits were matched using overlapping event and episode dates, and a match was retained when the episode's peak-uplift date fell within the permit period. 
+The accompanying table and @fig-event-surges present the ten largest selected surge peaks with date-matched event permits during 2014–2018.
 
 ```{r}
 #| label: non-covid-rises
@@ -3243,7 +3244,7 @@ event_date_overview |>
   mutate(
     Date = format(peak_date, "%d %b %Y"),
     `Median uplift` = paste0(round(peak_uplift, 1), "%"),
-    `Sensors above 20%` = paste0(
+    `Largest sensor share` = paste0(
       round(max_proportion_above_20 * 100), "%"
     ),
     `Matched permits` = number_of_events,
@@ -3255,7 +3256,7 @@ event_date_overview |>
   select(
     Date,
     `Median uplift`,
-    `Sensors above 20%`,
+    `Largest sensor share`,
     `Matched permits`,
     `Example permit`
   ) |>
@@ -3269,6 +3270,8 @@ event_date_overview |>
     position = "left"
   )
 ```
+
+“Largest sensor share” is the highest percentage of reporting sensors with activity at least 20% above expected during the surge episode. The date and median uplift refer to the episode’s peak date.
 
 ```{r}
 #| label: fig-event-surges
@@ -3346,7 +3349,7 @@ Returning to the opening example @fig-flinders-introduction, 22 February 2014 re
 
 Apart from major events, pedestrian activity can also fall substantially below its usual level. This section examines whether unusually quiet days are associated with Victorian public holidays and weather conditions, particularly rainfall.
 
-As in the event analysis, daily pedestrian activity was compared with nearby observations from the same sensor and day of the week. A significant pedestrian dip was identified when at least 10 sensors were reporting, the median change was −20% or lower, and at least 30% of reporting sensors recorded a decrease of 20% or more. These criteria help identify declines affecting several monitored locations rather than isolated changes at individual sensors.
+As in the event analysis, daily pedestrian activity was compared with nearby observations from the same sensor and day of the week. A substantial pedestrian dip was flagged when at least 10 sensors were reporting, the median change was −20% or lower, and at least 30% of reporting sensors recorded a decrease of 20% or more. These criteria help identify declines affecting several monitored locations rather than isolated changes at individual sensors.
 
 
 ```{r}
@@ -3493,7 +3496,7 @@ plotly::plot_ly(
   )
 ```
 
-@fig-holiday-dips indicate that Victorian public holidays are associated with unusually low pedestrian activity at several monitored locations. Although public holidays make up a relatively small proportion of the observed dates, they account for a noticeable share of significant pedestrian decreases.
+The comparison table shows that unusually quiet days occurred on 22 of 63 public holidays (34.9%), compared with 40 of 1,647 other dates (2.4%). This indicates that substantial declines were more common on public holidays within the dates analysed. @fig-holiday-dips illustrates when these declines occurred.
 
 Christmas Day was among the dates associated with particularly large declines. This may reflect changes in everyday routines, including commuting, shopping and other activities that usually contribute to pedestrian movement in the city.
 
@@ -3637,27 +3640,25 @@ plotly::plot_ly(
 ```
 
 
-@fig-rainfall-dips shows that significant pedestrian declines become more common as rainfall increases. On days without rain, approximately 1.3% experienced a significant pedestrian dip. This proportion increased to 6.4% for days with 5–10 mm of rainfall, 18.2% for 10–20 mm, and 47.4% for days with at least 20 mm.
-
-The increase is particularly noticeable once daily rainfall exceeds 5 mm. This suggests that heavier rainfall is associated with a greater likelihood of unusually low pedestrian activity across Melbourne's monitored locations.
+@fig-rainfall-dips shows that substantial pedestrian dips were more frequent in the heavier-rain categories. Dip rates were 1.3% on dry days, 6.4% with 5–10 mm of rainfall, 17.4% with 10–20 mm, and 50.0% with at least 20 mm. However, the light-rain categories had lower dip rates than dry days, so the relationship was not uniformly increasing. The highest rate represents 10 dip dates among 20 eligible dates.
 
 Overall, public holidays and rainfall both appear to be associated with unusually low pedestrian activity in Melbourne. Public holidays may change regular commuting and shopping patterns, while heavier rainfall may discourage outdoor movement.
 
 # Limitations
 
-Several limitations should be acknowledged. First, the analysis is observational. It identifies associations between pedestrian activity and holidays, events and weather, but cannot establish causal effects. Public holidays and events are not randomly assigned, weather is correlated with season, and unobserved factors such as transport disruptions, school holidays and construction could confound the results.
+The findings should be interpreted alongside several limitations.
 
-Second, the sensor network is not a random sample of the city. It is concentrated in the CBD and surrounding activity centres, and its composition has changed over time. The 27-sensor balanced panel reduces this problem for the long-term comparison, but may not represent the whole municipality. The 44-sensor clustering sample is also restricted to high-coverage locations. 
+**Associations do not establish causes.** The analysis identifies relationships between pedestrian activity, events, holidays and weather. It cannot establish that these conditions caused the observed changes. Other factors, including transport disruptions, construction and school holidays, may also influence pedestrian movement.
 
-The estimated 28.5% decline also depends on source conventions and aggregation choices. Comparisons of overlapping historical and City-supplied records suggest that zero-count hours are represented differently, meaning absent hourly records cannot uniformly be treated as either missing observations or zero activity. Furthermore, pooling sensor-day totals gives locations with more recorded days greater representation in the calculation. The estimate should therefore be interpreted as a descriptive comparison of recorded activity at the selected locations, with its magnitude dependent on coverage and weighting choices.
+**The monitored locations do not represent all of Melbourne.** Sensors are concentrated in the central business district and surrounding activity areas, and coverage has changed over time. Comparing the same 27 locations reduces the influence of network expansion, but the findings still describe selected monitored places. Similarly, the clustering results represent 44 locations with sufficiently consistent records.
 
-Third, the historical data required repair. The 2022 reconciliation identified 10,298 records with differing pedestrian counts, concentrated at location 6. In addition, 12,240 records from September 2010 required reconstruction of their hour labels using record order. Although the repaired records passed subsequent consistency checks, the reconstruction introduces some uncertainty into the hourly patterns.
+**Recording conventions affect the 28.5% comparison.** Historical and City-supplied sources appear to represent zero-count hours differently. An absent hourly record therefore cannot always be interpreted as either zero activity or a recording gap. The comparison also pools recorded location-day totals, giving locations with more recorded days greater representation. The 28.5% decline should consequently be understood as a descriptive comparison of recorded activity at the selected locations, with its size dependent on coverage and calculation choices.
 
-Fourth, the event analysis is limited by permit coverage. The permit dataset covers 2014-2018, so event matching could only be conducted for dates within this period. Surges outside 2014-2018 were identified statistically but could not be matched using this permit dataset. A single date may also host multiple events, making a surge difficult to attribute to one cause.
+**Some historical records required reconstruction or source selection.** Comparing overlapping sources for 2022 identified 10,298 records with different counts, concentrated at Flinders Underpass. Separately, 12,240 records from September 2010 required reconstruction of their hour labels using record order. Although the repaired records passed consistency checks, their hourly patterns retain some uncertainty.
 
-Fifth, the definition of a "significant" day uses thresholds-20% deviation and 30% of sensors-that are convenient but ultimately arbitrary; different thresholds would produce different counts of outlier days. The results therefore identify days meeting the selected thresholds rather than every possible unusual activity day.
+**Event matching and unusual-day classifications have limits.** Event permits were available only for 2014–2018, restricting the dates that could be matched. Multiple permits can also coincide with one date, so a matching permit does not establish which event contributed to a surge. Unusual days were identified using the stated percentage and sensor-coverage thresholds; different thresholds could identify different dates. The expected-activity calculation uses neighbouring available observations from the same weekday, which may be separated by gaps in the records.
 
-Sixth, the weather analysis uses daily aggregates from a single series. Rainfall can be localised, and a citywide total may not reflect conditions at a particular sensor. Finally, clustering is descriptive and cross-sectional; it shows that two profiles dominate 2023-2025, not that Melbourne has exactly two types of place or that locations cannot change type.
+**Weather and location groups simplify more complex conditions.** The weather analysis uses one daily weather series, which may not capture local conditions at every sensor. The clustering summarises weekday and weekend patterns during 2023–2025. Its two groups describe the selected locations during that period; individual locations may change their patterns over time.
 
 # Conclusion
 
@@ -3666,3 +3667,78 @@ Melbourne’s pedestrian activity follows recognisable daily, weekly and seasona
 The spatial analysis showed that recovery varied considerably between locations. Clustering of 44 locations identified two profiles: one with sharper weekday peaks and another with broader daytime and relatively stronger weekend activity. Unusual activity also provided a different perspective on the city’s movement. Selected surges coincided with event permits, while public holidays and heavier rainfall were associated with more frequent substantial pedestrian dips.
 
 These findings can inform staffing and service scheduling around monitored pedestrian corridors, provide context for event monitoring, and help identify locations requiring closer investigation. Their interpretation depends on sensor coverage, recording conventions and aggregation choices, and the selected locations do not represent every part of Melbourne.
+
+Future work should clarify how zero activity and absent hourly records are represented across sources, assess sensitivity to coverage and anomaly thresholds, and extend event matching to more recent years. These steps would strengthen comparisons over time and improve understanding of how pedestrian activity differs across the city.
+
+# AI Declaration {.unnumbered}
+
+Generative AI tools, including ChatGPT, supported technical troubleshooting, interpretation of error messages, resolution of Git-related issues, and adjustments to presentation and formatting. They were also used to assist with refining report wording, figure captions, methodological explanations, and descriptions of analytical procedures. In some cases, the tools helped clarify technical concepts, suggest possible solutions, and improve the overall readability and structure of the written work. The project team independently evaluated all suggestions, checked the accuracy and relevance of the generated content, and made the final decisions regarding the analysis, interpretation of results, and presentation. The team retained full responsibility for verifying the work and for the final submitted content.
+
+# Appendix: Supporting Data Tables {.unnumbered}
+
+
+```{r}
+#| label: tbl-source-duplicates
+#| echo: false
+#| tbl-cap: "Duplicate checks across the original pedestrian data sources."
+# Check for duplicate records in each data source
+
+source_duplicates |>
+  mutate(
+    across(
+      c(total_records, unique_records, duplicate_records),
+      scales::comma
+    )
+  ) |>
+  knitr::kable(
+    format = "html",
+    col.names = c(
+      "Source",
+      "Total records",
+      "Distinct records",
+      "Duplicate records"
+    ),
+    align = c("l", "r", "r", "r")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "condensed"),
+    full_width = FALSE,
+    position = "left"
+  )
+```
+
+```{r}
+#| label: tbl-dataset-variables
+#| echo: false
+#| tbl-cap: "Variables in the consolidated pedestrian dataset."
+# Describe the variables in the final pedestrian dataset
+
+variable_description <- tibble::tribble(
+  ~Variable, ~Description,
+  "location_id", "Unique identifier for each sensor location",
+  "sensing_date", "Date of the pedestrian observation",
+  "hourday", "Hour of the day (0–23)",
+  "pedestrian_count", "Number of pedestrians recorded during the hour",
+  "source", "Dataset from which the observation originated",
+  "hour_repaired", "Indicates whether the original hour label was reconstructed",
+  "year", "Year of observation",
+  "month", "Month of observation (1–12)",
+  "month_name", "Name of the month",
+  "day_name", "Day of the week",
+  "day_of_week", "Day of the week (Monday = 1, Sunday = 7)",
+  "is_weekend", "Indicates whether the observation occurred on a weekend",
+  "season", "Australian season (Summer, Autumn, Winter or Spring)"
+)
+
+variable_description |>
+  knitr::kable(
+    format = "html",
+    align = c("l", "l")
+  ) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 13
+  )
+```
