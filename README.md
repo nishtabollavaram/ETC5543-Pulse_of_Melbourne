@@ -190,7 +190,7 @@ Run `sessionInfo()` in R and `quarto --version` in a terminal to document the so
 
 ## Optional Data Refresh
 
-The report source retains API download code for obtaining updated pedestrian records, event permits and sensor metadata. These download chunks are disabled during ordinary rendering to preserve the input files used for the submitted analysis.
+The report source retains API download code for obtaining updated pedestrian records and sensor metadata. These download chunks are disabled during ordinary rendering to preserve the input files used for the submitted analysis.
 
 To obtain updated data, run the relevant download chunk manually after loading the required packages. Downloading replaces the corresponding local CSV, so preserve the original extract separately if it is still needed.
 
