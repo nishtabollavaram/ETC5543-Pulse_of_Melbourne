@@ -5,7 +5,7 @@
 ETC5543 · Business Analytics Project · Monash University · 2026  
 **Team:** Richa Anghan · Zhuo Zhang · Nishta Bollavaram
 
-[Read the report](report_final.html) · [Report source](report_final.qmd) · [View presentation](Presentation/Pulse_of_Melbourne-presentation.html) · [GitHub repository](https://github.com/nishtabollavaram/ETC5543-Pulse_of_Melbourne)
+[Read the report](report_final.html) · [Report source](report_final.qmd) · [PDF Report](report_final.pdf) · [View presentation](Presentation/Pulse_of_Melbourne-presentation.html) · [GitHub repository](https://github.com/nishtabollavaram/ETC5543-Pulse_of_Melbourne)
 
 ---
 
@@ -75,6 +75,7 @@ The methods and interpretation of the results are explained in [`report_final.qm
 |:--|:--|
 | [`report_final.qmd`](report_final.qmd) | Main Quarto report: methodology, explanations, analysis and R code. |
 | [`report_final.html`](report_final.html) | Rendered report with figures, tables and interactive visualisations. |
+| [`report_final.pdf`](report_final.pdf) | PDF version of the final report for submission. |
 | [`references.bib`](references.bib) | Bibliographic references for data, software and supporting materials. |
 | `Data_pedestrians/raw/` | Historical pedestrian CSV, including the dataset tracked with Git LFS. |
 | `Data_pedestrians/raw/data_pedestrian/` | City-supplied annual pedestrian snapshots for 2022–2025. |
