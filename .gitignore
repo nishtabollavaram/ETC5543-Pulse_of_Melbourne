@@ -4,6 +4,7 @@ Data_pedestrians/raw2/*
 !Data_pedestrians/raw2/important_dates_august_2026.csv
 !Data_pedestrians/raw2/melbourne_weather_daily.csv
 !Data_pedestrians/raw2/sensor_locations.csv
+!Data_pedestrians/raw2/pedestrian_counts_raw.csv
 analysis_drafts/Data_pedestrians/raw2/
 
 # RStudio files
