@@ -96,7 +96,7 @@ For exact reproduction, use the supplied files. Optional downloads from the publ
 To reproduce the analysis, install:
 
 - **R** and the **Quarto command-line interface**.
-- **Git LFS** to retrieve the historical pedestrian CSV stored through Git Large File Storage.
+- **Git LFS** to retrieve the historical and recent pedestrian CSV files.
 - **RStudio** (optional, but convenient for editing and rendering).
 
 The final-report analysis was tested in an isolated environment using R 4.4.2 and Quarto 1.7.33, with the saved input datasets and a local APA citation-style file.
@@ -141,7 +141,7 @@ All paths are relative to the **repository root** (the folder containing `README
 
 ## Reproducing the Report
 
-### 1. Clone the repository and retrieve historical data
+### 1. Clone the repository and retrieve the input data
 
 Install Git LFS first, then run these commands in a **terminal**:
 
@@ -180,7 +180,7 @@ The README’s report link opens the HTML file’s page on GitHub. To view the r
 
 The final report uses embedded resources. Online map backgrounds still require an internet connection.
 
-### 6. Record your software environment (optional)
+### 6. Record your software environment 
 
 Run `sessionInfo()` in R and `quarto --version` in a terminal to document the software versions used.
 
