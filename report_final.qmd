@@ -1847,7 +1847,7 @@ seasonal_profile |>
 ```
 
 
-## Long-term and Covid-19 changes
+## Long-term and COVID-19 changes
 
 Melbourne's pedestrian activity has undergone substantial changes over time, particularly during and after the COVID-19 pandemic. While the previous section examined recurring daily, weekly and seasonal patterns, this section investigates changes in the overall level of pedestrian activity and compares recent observations with conditions before the COVID-19 pandemic.
 
@@ -1960,7 +1960,7 @@ plotly::ggplotly(long_term_plot)
 ```
 
 
-### Pedestrian Activity Before and After Covid-19
+### Pedestrian Activity Before and After COVID-19
 
 @fig-then-vs-now compares recorded daily activity at the same 27 locations during 2017–2019 and 2023–2025. Within each period, all available location-day totals were pooled and their median—the middle value—was calculated. This median declined from approximately 10,091 to 7,211 recorded pedestrian passages, a reduction of 28.5%.
 
@@ -2325,7 +2325,7 @@ top_locations |>
   theme_minimal()
 ```
 
-@fig-busiest-locations shows that pedestrian activity is concentrated around Melbourne's major retail, transport and commercial areas. Flinders La–Swanston St (West) recorded the highest typical daily count at approximately 40,000 pedestrians, followed by Town Hall (West) at approximately 36,000. Other busy monitored locations include Southbank Promenade, Elizabeth Street and the QV precinct.
+@fig-busiest-locations shows that pedestrian activity is concentrated around Melbourne's major retail, transport and commercial areas. Flinders La–Swanston St (West) recorded the highest typical daily count at approximately 40,000 recorded pedestrians, followed by Town Hall (West) at approximately 36,000. Other busy monitored locations include Southbank Promenade, Elizabeth Street and the QV precinct.
 
 @fig-spatial-intensity illustrates the geographic distribution of pedestrian activity, while the top-10 ranking identifies the busiest monitored locations in 2025. These findings highlight the importance of Melbourne's central pedestrian corridors.
 
@@ -3418,7 +3418,7 @@ holiday_comparison |>
   select(
     `Day type` = day_type,
     `Total days` = total_days,
-    `Significant dip days` = significant_dip_days,
+    `Substantial dip days` = significant_dip_days,
     `Dip rate`
   ) |>
   kableExtra::kbl(
@@ -3518,7 +3518,7 @@ weather_dip_daily <- eligible_dip_days |>
 ```{r}
 #| label: weather-dip-comparison
 #| echo: false
-# Compare rainfall and wind conditions on significant dip days
+# Compare rainfall and wind conditions on substantial dip days
 
 weather_comparison <- weather_dip_daily |>
   filter(!public_holiday) |>
@@ -3541,7 +3541,7 @@ weather_comparison |>
   mutate(
     `Day category` = if_else(
       significant_dip,
-      "Significant dip",
+      "Substantial dip",
       "Other day"
     ),
     `Heavy rain days` = paste0(heavy_rain_pct, "%")
@@ -3563,9 +3563,9 @@ weather_comparison |>
     position = "left"
   )
 ```
-The weather comparison shows that unusually quiet pedestrian days tend to experience considerably more rainfall than other days. After excluding public holidays, the median rainfall was 11.3 mm on significant dip days, compared with 0.2 mm on other days. Heavy rainfall of at least 10 mm was also more common on significant dip days, occurring on approximately 55% of those dates compared with 4.2% of other days.
+The weather comparison shows that unusually quiet pedestrian days tend to experience considerably more rainfall than other days. After excluding public holidays, the median rainfall was 11.3 mm on substantial dip days, compared with 0.2 mm on other days. Heavy rainfall of at least 10 mm was also more common on substantial dip days, occurring on approximately 55% of those dates compared with 4.2% of other days.
 
-Wind speeds were also somewhat higher on significant dip days. These differences suggest that unfavourable weather conditions may be associated with reduced pedestrian movement, although other factors may also contribute.
+Wind speeds were also somewhat higher on substantial dip days. These differences suggest that unfavourable weather conditions may be associated with reduced pedestrian movement, although other factors may also contribute.
 
 
 ```{r}
@@ -3612,7 +3612,7 @@ rainfall_levels <- weather_dip_daily |>
     hover_text = paste0(
       "Rainfall: ", rainfall_group,
       "<br>Total days: ", total_days,
-      "<br>Significant dip days: ",
+      "<br>Substantial dip days: ",
       significant_dip_days,
       "<br>Dip rate: ", dip_percentage, "%"
     )
@@ -3631,7 +3631,7 @@ plotly::plot_ly(
     title = "Significant Pedestrian Dips by Daily Rainfall",
     xaxis = list(title = "Daily rainfall"),
     yaxis = list(
-      title = "Days with a significant dip (%)",
+      title = "Days with a substantial dip (%)",
       rangemode = "tozero"
     ),
     showlegend = FALSE
