@@ -294,7 +294,7 @@ This project uses the City of Melbourne's Pedestrian Counting System as its prim
 
 The pedestrian data combine historical CSV files with records retrieved through the City of Melbourne’s online data service, known as an API [@melbourne_hourly]. The City also supplied annual extracts of records, referred to as snapshots, for 2022–2025 to address gaps in publicly accessible data. After combining and cleaning these sources, the dataset contained **7,566,998 hourly observations**, covering **May 2009 to October 2026**.
 
-Supplementary datasets were used to provide geographical and contextual information. The City of Melbourne's sensor-location dataset provided coordinates and installation information for spatial analysis [@melbourne_locations]. Event permit records from the City of Melbourne were used to investigate whether unusual pedestrian activity coincided with permitted events[@melbourne_events]. Historical weather data from Open-Meteo provided rainfall and other weather observations [@openmeteo], while Victorian public-holiday information published by Business Victoria was used to identify public holidays [@victorian_holidays].
+Supplementary datasets were used to provide geographical and contextual information. The City of Melbourne's sensor-location dataset provided coordinates and installation information for spatial analysis [@melbourne_locations]. Event permit records from the City of Melbourne were used to investigate whether unusual pedestrian activity coincided with permitted events[@melbourne_events]. Historical weather data from Open-Meteo provided rainfall and other weather observations [@openmeteo]. Victorian public holidays were identified from the locally stored calendar file `important_dates_august_2026.csv`, retaining records classified as public holidays. The file includes year-specific Business Victoria source links. The holiday analysis uses dates from 2019, 2023–2025 and 1 January–6 September 2026, rather than relying only on the 2026 holiday calendar [@victorian_holidays_calendar].
 
 Because the pedestrian sensor network expanded over time and individual sensors did not always report continuously, coverage varied across locations and years. These differences were considered during data preparation and when selecting observations for subsequent analyses.
 
@@ -1141,6 +1141,7 @@ These supporting datasets were used to provide context for pedestrian activity, 
 
 ```{r}
 #| label: download-sensor-locations
+#| eval: false
 #| include: false
 # Download and save pedestrian sensor location data
 

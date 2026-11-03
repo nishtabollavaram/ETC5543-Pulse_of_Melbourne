@@ -139,10 +139,6 @@ All paths are relative to the **repository root** (the folder containing `README
 | `Data_pedestrians/raw2/` | `melbourne_weather_daily.csv` | Daily Open-Meteo weather extract. |
 | `Data_pedestrians/raw2/` | `important_dates_august_2026.csv` | Calendar records used to identify public holidays. |
 
-**Important:** The 2022–2025 snapshots were supplied directly by the City of Melbourne. If they are absent from the cloned repository, contact the project team to ask about access and any sharing conditions.
-
-The pedestrian analysis covers **May 2009–October 2026** (the team described the final extract as ending on **31 October 2026**). Weather and public-holiday comparisons use observations through **6 September 2026**. Fresh public API downloads may contain later or revised records, so The report uses a saved recent pedestrian-data extract to reproduce the submitted results. After cloning the repository, run `git lfs pull` to retrieve the historical and recent pedestrian datasets. The API download code remains in the report source but is disabled during ordinary rendering. It can be run separately to obtain updated data, which may produce different results.
-
 ## Reproducing the Report
 
 ### 1. Clone the repository and retrieve historical data
