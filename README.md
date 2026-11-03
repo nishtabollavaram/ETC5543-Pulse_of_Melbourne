@@ -85,7 +85,11 @@ The methods and interpretation of the results are explained in [`report_final.qm
 | `analysis_drafts/` | Earlier exploratory work; not necessary for a normal final-report render. |
 | `README.md` | Project overview and instructions for reproduction. |
 
-> **Data availability:** The table describes the working project structure. Some files were supplied directly to the team and might **not** be available in a fresh clone of the public repository.
+> **Data availability:** All ten input files required for the final report are supplied through this repository and Git LFS. Run `git lfs pull` after cloning to retrieve the historical and recent pedestrian files. The annual snapshots and supporting event, sensor, weather and public-holiday datasets are included.
+
+The final analysis uses frozen input extracts. The recent pedestrian file contains 1,628,822 records covering 1 November 2024 to 31 October 2026. Together with the historical records and annual snapshots, the pedestrian analysis covers May 2009 to October 2026. Weather and public-holiday comparisons end on 6 September 2026.
+
+For exact reproduction, use the supplied files. Optional downloads from the public APIs may contain revised or additional records and can produce different results.
 
 ## Software Requirements
 
@@ -95,6 +99,8 @@ To reproduce the analysis, install:
 - **Git LFS** to retrieve the historical pedestrian CSV stored through Git Large File Storage.
 - **RStudio** (optional, but convenient for editing and rendering).
 
+The final-report analysis was tested in an isolated environment using R 4.4.2 and Quarto 1.7.33, with the saved input datasets and a local APA citation-style file.
+
 Install the packages used by the report in the **R console**:
 
 ```r
@@ -102,11 +108,12 @@ install.packages(c(
   "tidyverse", "lubridate", "janitor", "fs",
   "httr2", "arrow", "here", "ggrepel",
   "plotly", "leaflet", "slider", "cluster",
-  "data.table", "kableExtra", "curl", "knitr", "scales"
+  "data.table", "kableExtra", "curl", "knitr",
+  "rmarkdown", "scales"
 ))
 ```
 
-An internet connection is required for package installation, public-data downloads, the sensor-metadata download performed during rendering, and online map backgrounds.
+An internet connection is required for package installation, Git LFS downloads, optional data refreshes and online map backgrounds. If the APA citation style is referenced through its online URL, rendering also requires access to that service.
 
 ## Required Data Files
 
@@ -134,7 +141,7 @@ All paths are relative to the **repository root** (the folder containing `README
 
 **Important:** The 2022–2025 snapshots were supplied directly by the City of Melbourne. If they are absent from the cloned repository, contact the project team to ask about access and any sharing conditions.
 
-The pedestrian analysis covers **May 2009–October 2026** (the team described the final extract as ending on **31 October 2026**). Weather and public-holiday comparisons use observations through **6 September 2026**. Fresh public API downloads may contain later or revised records, so they are not guaranteed to reproduce the reported figures exactly.
+The pedestrian analysis covers **May 2009–October 2026** (the team described the final extract as ending on **31 October 2026**). Weather and public-holiday comparisons use observations through **6 September 2026**. Fresh public API downloads may contain later or revised records, so The report uses a saved recent pedestrian-data extract to reproduce the submitted results. After cloning the repository, run `git lfs pull` to retrieve the historical and recent pedestrian datasets. The API download code remains in the report source but is disabled during ordinary rendering. It can be run separately to obtain updated data, which may produce different results.
 
 ## Reproducing the Report
 
@@ -157,11 +164,11 @@ Install R and Quarto, then execute the `install.packages(...)` command in [Softw
 
 Confirm that the files in [Required Data Files](#required-data-files) are present at their specified paths. In particular, check the City-supplied annual snapshots and the original weather and public-holiday extracts.
 
-### 4. Restore missing public extracts, if necessary
+### 4. Use the supplied data extracts
 
-The chunks labelled `download-current-pedestrian-data` and `download-event-permits` in `report_final.qmd` are marked `eval: false`, so they do not run during an ordinary render. If the corresponding CSV files are missing, run the R statements from those chunks manually after checking that the public endpoints are still available.
+Normal rendering uses the saved input files listed under Required Data Files. The API download chunks are disabled so that rendering does not replace these files with newer data.
 
-The `download-sensor-locations` chunk retrieves sensor metadata during rendering; an internet connection may therefore be needed.
+If either LFS-managed pedestrian file is missing, run `git lfs pull` from the repository root. Confirm that all required input files are available before rendering.
 
 ### 5. Render the report
 
@@ -171,11 +178,23 @@ From the **repository root**, run:
 quarto render report_final.qmd --to html
 ```
 
-Open `report_final.html` in a browser and review the figures, tables and interactive charts. If Quarto produces a `report_final_files/` directory for external resources, retain it alongside the HTML when sharing the report, unless those resources have been embedded.
+Open the generated `report_final.html` in a web browser to view the report, figures, tables and interactive visualisations.
+
+The README’s report link opens the HTML file’s page on GitHub. To view the rendered report, download the file using GitHub’s download option and open it locally, or open the copy obtained by cloning the repository.
+
+The final report uses embedded resources. Online map backgrounds still require an internet connection.
 
 ### 6. Record your software environment (optional)
 
 Run `sessionInfo()` in R and `quarto --version` in a terminal to document the software versions used.
+
+## Optional Data Refresh
+
+The report source retains API download code for obtaining updated pedestrian records, event permits and sensor metadata. These download chunks are disabled during ordinary rendering to preserve the input files used for the submitted analysis.
+
+To obtain updated data, run the relevant download chunk manually after loading the required packages. Downloading replaces the corresponding local CSV, so preserve the original extract separately if it is still needed.
+
+After refreshing any input, render the report again and check the figures, tables and written findings. Updated records or metadata may change the results. Use the supplied frozen extracts when reproducing the submitted report.
 
 ## Reproducibility and Interpretation Notes
 

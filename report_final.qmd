@@ -22,7 +22,6 @@ format:
 editor: visual
 bibliography: references.bib
 nocite: '@*'
-csl: https://www.zotero.org/styles/apa
 execute:
   message: false
   warning: false
@@ -209,9 +208,9 @@ intro_interactive |>
   )
 ```
 
-The City of Melbourne measures pedestrian activity using sensors at individual locations across central Melbourne and surrounding activity areas. Each sensor records the number of pedestrian passages during an hour. Someone passing more than once may be counted repeatedly, so these records measure activity at monitored locations rather than the number of different people or every walking trip across the city.
-
 Melbourne's streets serve different purposes throughout the day. Morning activity often reflects commuting, while shopping, leisure and other activities contribute to movement during the afternoon, evenings and weekends. These patterns can also vary across locations, seasons and years. Major disruptions, public events and weather conditions may further influence how frequently and when people move through the city.
+
+The City of Melbourne measures pedestrian activity using sensors at individual locations across central Melbourne and surrounding activity areas. Each sensor records the number of pedestrian passages during an hour. Someone passing more than once may be counted repeatedly, so these records measure activity at monitored locations rather than the number of different people or every walking trip across the city.
 
 Understanding these variations is important for urban planning and decision-making. Information about pedestrian activity can help identify busy periods and locations, support transport and infrastructure planning, and inform how public spaces are managed during major events. However, identifying meaningful changes requires more than simply comparing pedestrian counts. Activity recorded at a particular location may vary because of changes in travel behaviour, but also because of differences in sensor coverage, installation dates or data availability.
 
@@ -1184,7 +1183,6 @@ sensor_locations <- read_csv(
 ```{r}
 #| label: download-event-permits
 #| include: false
-#| eval: false
 # Download historical event permit records
 
 event_url <- paste0(
@@ -3676,6 +3674,27 @@ Generative AI tools, including ChatGPT, supported technical troubleshooting, int
 
 # Appendix: Supporting Data Tables {.unnumbered}
 
+```{r}
+#| label: calculate-source-duplicates
+#| include: false
+
+source_duplicates <- dplyr::bind_rows(
+  historical_clean,
+  current_clean,
+  snapshot_standardised
+) |>
+  dplyr::group_by(source) |>
+  dplyr::summarise(
+    total_records = dplyr::n(),
+    unique_records = dplyr::n_distinct(
+      location_id,
+      sensing_date,
+      hourday
+    ),
+    duplicate_records = total_records - unique_records,
+    .groups = "drop"
+  )
+```
 
 ```{r}
 #| label: tbl-source-duplicates
